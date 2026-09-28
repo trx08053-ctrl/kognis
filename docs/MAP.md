@@ -68,7 +68,7 @@
   - `make_engine` — `src/kognis/db/__init__.py`
   - `metadata` — `src/kognis/db/__init__.py`
   - `transaction` — `src/kognis/db/__init__.py`
-- Тесты: `tests/diary/test_diary.py`, `tests/gameplay/test_quests.py`, `tests/gameplay/test_service.py`, `tests/integration/test_postgres.py`, `tests/users/test_users.py`
+- Тесты: `tests/diary/test_diary.py`, `tests/gameplay/test_quests.py`, `tests/gameplay/test_service.py`, `tests/integration/test_postgres.py`, `tests/users/test_users.py`, `tests/web/test_hardening.py`
 
 ## `kognis.diary`
 
@@ -127,9 +127,10 @@
   - `SESSION_LIFETIME` — `src/kognis/users/_app.py`
   - `EmailTakenError` — `src/kognis/users/_domain.py`
   - `InvalidCredentialsError` — `src/kognis/users/_domain.py`
+  - `LoginBlockedError` — `src/kognis/users/_domain.py`
   - `User` — `src/kognis/users/_domain.py`
   - `UserService` — `src/kognis/users/_app.py`
-- Тесты: `tests/integration/test_postgres.py`, `tests/users/test_users.py`
+- Тесты: `tests/integration/test_postgres.py`, `tests/users/test_users.py`, `tests/web/test_hardening.py`
 
 ## `kognis.web`
 
@@ -137,7 +138,7 @@
 - Публичный интерфейс:
   - `create_app` — `src/kognis/web/_app.py`
   - `main` — `src/kognis/web/__init__.py`
-- Тесты: `tests/analysis/test_analysis.py`, `tests/e2e/test_ui.py`, `tests/web/test_crisis_review.py`, `tests/web/test_day_reviews.py`, `tests/web/test_gameplay.py`, `tests/web/test_http.py`, `tests/web/test_locked.py`, `tests/web/test_private.py`, `tests/web/test_quests.py`
+- Тесты: `tests/analysis/test_analysis.py`, `tests/e2e/test_ui.py`, `tests/web/test_crisis_review.py`, `tests/web/test_day_reviews.py`, `tests/web/test_gameplay.py`, `tests/web/test_hardening.py`, `tests/web/test_http.py`, `tests/web/test_locked.py`, `tests/web/test_private.py`, `tests/web/test_quests.py`
 
 ## Точки входа
 

@@ -1,18 +1,25 @@
 """Сценарии users. Изменяет данные пользователей и сессий только этот модуль (владелец)."""
 
+import math
 import secrets
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from sqlalchemy.orm import Session
 
 from ._domain import (
+    LOGIN_MAX_FAILURES_PER_EMAIL,
+    LOGIN_MAX_FAILURES_PER_IP,
+    LOGIN_WINDOW,
     InvalidCredentialsError,
+    LoginBlockedError,
     User,
+    attempt_key,
     hash_token,
     normalize_email,
     validate_password,
 )
 from ._infra import (
+    LoginAttemptRepository,
     SessionRepository,
     UserRepository,
     hash_password,
@@ -28,6 +35,7 @@ class UserService:
     def __init__(self, session: Session) -> None:
         self._users = UserRepository(session)
         self._sessions = SessionRepository(session)
+        self._attempts = LoginAttemptRepository(session)
 
     def register(self, raw_email: str, password: str) -> User:
         email = normalize_email(raw_email)
@@ -48,6 +56,34 @@ class UserService:
         if not verify_password(password_hash, password):
             raise InvalidCredentialsError("неверный email или пароль")
         return user
+
+    def ensure_login_allowed(self, raw_email: str, ip: str, now: datetime | None = None) -> None:
+        """Бросает LoginBlockedError, если с этого email или IP слишком много неудач за окно."""
+        now = now or utcnow()
+        since = now - LOGIN_WINDOW
+        email = attempt_key(raw_email)
+        by_email = self._attempts.latest_by_email(email, since, LOGIN_MAX_FAILURES_PER_EMAIL)
+        by_ip = self._attempts.latest_by_ip(ip, since, LOGIN_MAX_FAILURES_PER_IP)
+        # блок снимется, когда самая давняя из последних неудач выйдет из окна
+        unblock = [
+            recent[-1] + LOGIN_WINDOW
+            for recent, limit in (
+                (by_email, LOGIN_MAX_FAILURES_PER_EMAIL),
+                (by_ip, LOGIN_MAX_FAILURES_PER_IP),
+            )
+            if len(recent) >= limit
+        ]
+        if unblock:
+            raise LoginBlockedError(max(1, math.ceil((max(unblock) - now).total_seconds())))
+
+    def record_login_failure(self, raw_email: str, ip: str, now: datetime | None = None) -> None:
+        now = now or utcnow()
+        self._attempts.purge_before(now - LOGIN_WINDOW)
+        self._attempts.add(attempt_key(raw_email), ip, now)
+
+    def clear_login_failures(self, raw_email: str) -> None:
+        """Успешный вход сбрасывает счётчик email (счётчик IP остаётся: он про перебор с адреса)."""
+        self._attempts.clear_email(attempt_key(raw_email))
 
     def set_advanced(self, user_id: int, advanced: bool) -> None:
         """Сохранить режим интерфейса в профиле."""

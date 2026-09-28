@@ -12,11 +12,14 @@
 - режим интерфейса (`User.advanced`, по умолчанию простой) хранится в профиле: `UserService.set_advanced`, `PUT /api/me/settings`;
 - сессия — случайный токен; в БД только его SHA-256, срок 30 дней (`src/kognis/users/_domain.py::hash_token`), [ADR 0003](../adr/0003-auth-sessions-and-entry-protection.md).
 
+- ограничение перебора: 5 неудачных входов на email или 20 на IP за 15 минут → `LoginBlockedError` (HTTP 429 + `Retry-After`); успешный вход сбрасывает счётчик email; попытки хранятся в БД (`login_attempts`), `UserService.ensure_login_allowed`;
+
 ## Данные (владение)
 | Сущность / таблица | Владелец | Кто ещё читает | Кто может изменять |
 |---|---|---|---|
 | `User` / таблица `users` | `users` | `web` (через `UserService`) | только `users` (`src/kognis/users/_app.py::UserService.register`) |
 | сессии / таблица `sessions` | `users` | — | только `users` (`src/kognis/users/_app.py::UserService.start_session`) |
+| попытки входа / таблица `login_attempts` | `users` | — | только `users` (`src/kognis/users/_app.py::UserService.record_login_failure`) |
 
 ## Внешние зависимости
 - `db` — подключение и общий `metadata`; таблицы и запросы — `src/kognis/users/_infra.py::UserRepository`; схема — миграции `migrations/versions/`.

@@ -45,6 +45,15 @@ sessions_table = Table(
     Column("expires_at", DateTime, nullable=False),
 )
 
+login_attempts_table = Table(
+    "login_attempts",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("email", String(254), nullable=False, index=True),
+    Column("ip", String(64), nullable=False, index=True),
+    Column("at", DateTime, nullable=False, index=True),
+)
+
 _hasher = PasswordHasher()  # argon2id по умолчанию
 
 
@@ -119,4 +128,39 @@ class SessionRepository:
     def delete(self, token_hash: str) -> None:
         self._session.execute(
             delete(sessions_table).where(sessions_table.c.token_hash == token_hash)
+        )
+
+
+class LoginAttemptRepository:
+    """Неудачные попытки входа по email и IP: в БД, поэтому переживают перезапуск."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def add(self, email: str, ip: str, at: datetime) -> None:
+        self._session.execute(insert(login_attempts_table).values(email=email, ip=ip[:64], at=at))
+
+    def _latest(self, column: Any, value: str, since: datetime, limit: int) -> list[datetime]:
+        stmt = (
+            select(login_attempts_table.c.at)
+            .where(column == value, login_attempts_table.c.at > since)
+            .order_by(login_attempts_table.c.at.desc())
+            .limit(limit)
+        )
+        return list(self._session.execute(stmt).scalars())
+
+    def latest_by_email(self, email: str, since: datetime, limit: int) -> list[datetime]:
+        return self._latest(login_attempts_table.c.email, email, since, limit)
+
+    def latest_by_ip(self, ip: str, since: datetime, limit: int) -> list[datetime]:
+        return self._latest(login_attempts_table.c.ip, ip[:64], since, limit)
+
+    def clear_email(self, email: str) -> None:
+        self._session.execute(
+            delete(login_attempts_table).where(login_attempts_table.c.email == email)
+        )
+
+    def purge_before(self, before: datetime) -> None:
+        self._session.execute(
+            delete(login_attempts_table).where(login_attempts_table.c.at < before)
         )

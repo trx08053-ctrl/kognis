@@ -58,6 +58,7 @@ from kognis.users import (
     SESSION_LIFETIME,
     EmailTakenError,
     InvalidCredentialsError,
+    LoginBlockedError,
     User,
     UserService,
 )
@@ -800,57 +801,11 @@ def create_app(
     app = FastAPI(title="Kognis", dependencies=[Depends(require_json)])
     app.state.db = db
 
-    def open_session(response: Response, user: User) -> None:
-        with transaction(db) as session:
-            token = UserService(session).start_session(user.id)
-        response.set_cookie(
-            COOKIE,
-            token,
-            max_age=int(SESSION_LIFETIME.total_seconds()),
-            httponly=True,
-            samesite="lax",
-            secure=secure_cookie,
-        )
-
     @app.get("/health")
     def health() -> dict[str, str]:
         return {"status": "ok"}
 
-    @app.post("/api/auth/register", status_code=201)
-    def register(payload: Credentials, response: Response) -> UserOut:
-        try:
-            with transaction(db) as session:
-                user = UserService(session).register(payload.email, payload.password)
-        except EmailTakenError as err:
-            raise HTTPException(status_code=409, detail=str(err)) from err
-        except ValueError as err:
-            raise HTTPException(status_code=422, detail=str(err)) from err
-        open_session(response, user)
-        return user_out(user)
-
-    @app.post("/api/auth/login")
-    def login(payload: Credentials, response: Response) -> UserOut:
-        try:
-            with transaction(db) as session:
-                user = UserService(session).authenticate(payload.email, payload.password)
-        except InvalidCredentialsError as err:
-            raise HTTPException(status_code=401, detail=str(err)) from err
-        open_session(response, user)
-        return user_out(user)
-
-    @app.post("/api/auth/logout", status_code=204)
-    def logout(
-        response: Response, token: Annotated[str | None, Cookie(alias=COOKIE)] = None
-    ) -> None:
-        if token:
-            with transaction(db) as session:
-                UserService(session).end_session(token)
-        response.delete_cookie(COOKIE)
-
-    @app.get("/api/me")
-    def me(user: Authed) -> UserOut:
-        return user_out(user)
-
+    app.include_router(auth_router(db, secure_cookie))
     app.include_router(settings_router(db))
     app.include_router(diary_router(db, today, data_key))
     app.include_router(day_review_router(db, today))
@@ -874,3 +829,69 @@ def create_app(
         return FileResponse(page)
 
     return app
+
+
+def auth_router(db: Engine, secure_cookie: bool) -> APIRouter:
+    router = APIRouter()
+
+    def open_session(response: Response, user: User) -> None:
+        with transaction(db) as session:
+            token = UserService(session).start_session(user.id)
+        response.set_cookie(
+            COOKIE,
+            token,
+            max_age=int(SESSION_LIFETIME.total_seconds()),
+            httponly=True,
+            samesite="lax",
+            secure=secure_cookie,
+        )
+
+    @router.post("/api/auth/register", status_code=201)
+    def register(payload: Credentials, response: Response) -> UserOut:
+        try:
+            with transaction(db) as session:
+                user = UserService(session).register(payload.email, payload.password)
+        except EmailTakenError as err:
+            raise HTTPException(status_code=409, detail=str(err)) from err
+        except ValueError as err:
+            raise HTTPException(status_code=422, detail=str(err)) from err
+        open_session(response, user)
+        return user_out(user)
+
+    @router.post("/api/auth/login")
+    def login(payload: Credentials, request: Request, response: Response) -> UserOut:
+        ip = request.client.host if request.client else "unknown"
+        try:
+            with transaction(db) as session:
+                UserService(session).ensure_login_allowed(payload.email, ip)
+        except LoginBlockedError as err:
+            raise HTTPException(
+                status_code=429, detail=str(err), headers={"Retry-After": str(err.retry_after)}
+            ) from err
+        try:
+            with transaction(db) as session:
+                user = UserService(session).authenticate(payload.email, payload.password)
+        except InvalidCredentialsError as err:
+            # отдельная транзакция: откат authenticate не должен стереть учёт неудачи
+            with transaction(db) as session:
+                UserService(session).record_login_failure(payload.email, ip)
+            raise HTTPException(status_code=401, detail=str(err)) from err
+        with transaction(db) as session:
+            UserService(session).clear_login_failures(payload.email)
+        open_session(response, user)
+        return user_out(user)
+
+    @router.post("/api/auth/logout", status_code=204)
+    def logout(
+        response: Response, token: Annotated[str | None, Cookie(alias=COOKIE)] = None
+    ) -> None:
+        if token:
+            with transaction(db) as session:
+                UserService(session).end_session(token)
+        response.delete_cookie(COOKIE)
+
+    @router.get("/api/me")
+    def me(user: Authed) -> UserOut:
+        return user_out(user)
+
+    return router

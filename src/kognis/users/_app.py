@@ -49,6 +49,10 @@ class UserService:
             raise InvalidCredentialsError("неверный email или пароль")
         return user
 
+    def set_advanced(self, user_id: int, advanced: bool) -> None:
+        """Сохранить режим интерфейса в профиле."""
+        self._users.set_advanced(user_id, advanced)
+
     def start_session(self, user_id: int) -> str:
         """Новая сессия; возвращает токен для cookie (в БД лежит только его хэш)."""
         token = secrets.token_urlsafe(32)

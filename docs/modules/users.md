@@ -9,6 +9,7 @@
 - email нормализуется (нижний регистр, без пробелов), уникален (`src/kognis/users/_domain.py::normalize_email`);
 - пароль ≥ 8 символов, хранится только хэш argon2id (`src/kognis/users/_infra.py::hash_password`);
 - неверный пароль и неизвестный email неразличимы (`InvalidCredentialsError`);
+- режим интерфейса (`User.advanced`, по умолчанию простой) хранится в профиле: `UserService.set_advanced`, `PUT /api/me/settings`;
 - сессия — случайный токен; в БД только его SHA-256, срок 30 дней (`src/kognis/users/_domain.py::hash_token`), [ADR 0003](../adr/0003-auth-sessions-and-entry-protection.md).
 
 ## Данные (владение)

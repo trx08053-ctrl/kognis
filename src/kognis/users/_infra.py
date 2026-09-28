@@ -1,10 +1,25 @@
 """Хранение пользователей и сессий (таблицы `users`, `sessions` принадлежат модулю users)."""
 
 from datetime import UTC, datetime
+from typing import Any
 
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Table, delete, insert, select
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Table,
+    delete,
+    false,
+    insert,
+    select,
+    update,
+)
+from sqlalchemy.engine import Row
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -19,6 +34,7 @@ users_table = Table(
     Column("email", String(254), nullable=False, unique=True),
     Column("password_hash", String(255), nullable=False),
     Column("created_at", DateTime, nullable=False),
+    Column("advanced", Boolean, nullable=False, server_default=false()),
 )
 
 sessions_table = Table(
@@ -48,6 +64,10 @@ def verify_password(password_hash: str, password: str) -> bool:
         return False
 
 
+def _user(row: Row[Any]) -> User:
+    return User(id=row.id, email=row.email, advanced=bool(row.advanced))
+
+
 class UserRepository:
     def __init__(self, session: Session) -> None:
         self._session = session
@@ -67,11 +87,16 @@ class UserRepository:
 
     def get(self, user_id: int) -> User | None:
         row = self._session.execute(select(users_table).where(users_table.c.id == user_id)).first()
-        return User(id=row.id, email=row.email) if row else None
+        return _user(row) if row else None
+
+    def set_advanced(self, user_id: int, advanced: bool) -> None:
+        self._session.execute(
+            update(users_table).where(users_table.c.id == user_id).values(advanced=advanced)
+        )
 
     def find_with_hash(self, email: str) -> tuple[User, str] | None:
         row = self._session.execute(select(users_table).where(users_table.c.email == email)).first()
-        return (User(id=row.id, email=row.email), row.password_hash) if row else None
+        return (_user(row), row.password_hash) if row else None
 
 
 class SessionRepository:

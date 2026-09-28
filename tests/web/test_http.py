@@ -142,3 +142,24 @@ def test_u1_over_http_survives_restart_and_isolates_users(engine: Engine) -> Non
     assert other.get("/api/entries").json() == []
     assert other.get(f"/api/entries/{entry_id}").status_code == 404
     assert restarted.get(f"/api/entries/{entry_id}").status_code == 200
+
+
+@pytest.mark.acceptance("kognis-0wr", "AC2")
+def test_advanced_mode_is_stored_on_server_per_user(client: TestClient, engine: Engine) -> None:
+    signup(client, "ann@example.com")
+    assert client.get("/api/me").json()["advanced"] is False  # по умолчанию — простой режим
+    saved = client.put("/api/me/settings", json={"advanced": True})
+    assert saved.status_code == 200
+    assert saved.json()["advanced"] is True
+    again = TestClient(create_app(engine))  # новый сеанс: выбор хранится на сервере, не в браузере
+    login = again.post("/api/auth/login", json={"email": "ann@example.com", "password": VALID_PW})
+    assert login.json()["advanced"] is True
+    other = TestClient(create_app(engine))  # настройка не течёт к другим пользователям
+    signup(other, "bob@example.com")
+    assert other.get("/api/me").json()["advanced"] is False
+
+
+def test_settings_require_login_and_valid_body(client: TestClient) -> None:
+    assert client.put("/api/me/settings", json={"advanced": True}).status_code == 401
+    signup(client, "ann@example.com")
+    assert client.put("/api/me/settings", json={"advanced": "maybe"}).status_code == 422

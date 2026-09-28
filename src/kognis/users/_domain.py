@@ -12,6 +12,7 @@ MAX_PASSWORD_LENGTH = 256
 class User:
     id: int
     email: str
+    advanced: bool = False  # режим интерфейса: простой (по умолчанию) или Advanced
 
 
 class EmailTakenError(ValueError):

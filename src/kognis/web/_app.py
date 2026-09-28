@@ -9,6 +9,7 @@ import os
 import time
 from collections.abc import Callable, Generator
 from contextlib import contextmanager
+from dataclasses import replace
 from http import HTTPStatus
 from pathlib import Path
 from typing import Annotated, Any, Literal
@@ -84,6 +85,11 @@ class Credentials(BaseModel):
 class UserOut(BaseModel):
     id: int
     email: str
+    advanced: bool = False
+
+
+class SettingsIn(BaseModel):
+    advanced: bool
 
 
 class EntryIn(BaseModel):
@@ -183,7 +189,7 @@ def progress_out(progress: Progress) -> ProgressOut:
 
 
 def user_out(user: User) -> UserOut:
-    return UserOut(id=user.id, email=user.email)
+    return UserOut(id=user.id, email=user.email, advanced=user.advanced)
 
 
 def help_out(block: HelpBlock | None) -> HelpOut | None:
@@ -766,6 +772,18 @@ def quizzes_router(db: Engine, today: Callable[[], dt.date]) -> APIRouter:
     return router
 
 
+def settings_router(db: Engine) -> APIRouter:
+    router = APIRouter(prefix="/api/me/settings")
+
+    @router.put("")
+    def save_settings(payload: SettingsIn, user: Authed) -> UserOut:
+        with transaction(db) as session:
+            UserService(session).set_advanced(user.id, payload.advanced)
+        return user_out(replace(user, advanced=payload.advanced))
+
+    return router
+
+
 def create_app(
     engine: Engine | None = None,
     frontend_dist: Path | None = None,
@@ -833,6 +851,7 @@ def create_app(
     def me(user: Authed) -> UserOut:
         return user_out(user)
 
+    app.include_router(settings_router(db))
     app.include_router(diary_router(db, today, data_key))
     app.include_router(day_review_router(db, today))
     app.include_router(progress_router(db, today))

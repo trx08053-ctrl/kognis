@@ -1,0 +1,17 @@
+# Изменения здесь будут перезаписаны Copier. Не редактируйте вручную.
+_commit: v0.11.0
+_src_path: /home/spark/dev-harness
+age_public_key: age1l69wvdlhtwydswyvx6xaggu5ss8n4appwzjxcphlt5vg4kfywy4qwgaf65
+app_port: 8000
+author: jusk-one
+description: Дневник переживаний с ИИ-анализом по направлениям психологии и игровыми
+    квестами
+frontend: react
+package_name: kognis
+profile: M
+project_name: Kognis
+project_slug: kognis
+python_version: '3.12'
+sandbox: true
+stack: web
+tech_owner: jusk-one

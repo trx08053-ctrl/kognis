@@ -1,0 +1,33 @@
+# Git hooks. Файл защищён. Обход (--no-verify, LEFTHOOK=0) запрещён AGENTS.md и hook-ом Claude.
+# Краткий вывод: только ошибки и итог (экономит контекст агента).
+output:
+  - failure
+  - summary
+
+pre-commit:
+  parallel: true
+  commands:
+    ruff-format:
+      glob: "*.py"
+      run: uv run --locked ruff format --check {staged_files}
+    ruff-lint:
+      glob: "*.py"
+      run: uv run --locked ruff check {staged_files}
+    biome:
+      root: "frontend/"
+      glob: "*.{ts,tsx,js,json,css}"
+      run: pnpm exec biome check --error-on-warnings --no-errors-on-unmatched {staged_files}
+    secrets:
+      run: gitleaks git --pre-commit --staged --no-banner --redact -c .gitleaks.toml
+    no-weakening:
+      run: python3 scripts/check_no_weakening.py --staged
+
+commit-msg:
+  commands:
+    conventional:
+      run: python3 scripts/check_commit_msg.py {1}
+
+pre-push:
+  commands:
+    verify:
+      run: python3 scripts/verify.py

@@ -1,0 +1,37 @@
+# Архитектурные границы (import-linter). Файл защищён: меняется через ADR и решение человека.
+# Импорт внутренностей чужого модуля (`_*`) и циклы между модулями ловит scripts/check_boundaries.py.
+[importlinter]
+root_package = kognis
+include_external_packages = True
+
+[importlinter:contract:module-layers]
+name = Внутри каждого модуля: _app → _infra → _domain
+type = layers
+containers =
+    kognis.users
+layers =
+    _app
+    _infra
+    _domain
+
+[importlinter:contract:module-deps]
+name = Направление зависимостей между модулями (выше может использовать ниже)
+type = layers
+layers =
+    kognis.web
+    kognis.users
+    kognis.db
+
+[importlinter:contract:domain-pure]
+name = _domain без ввода-вывода и сторонних пакетов
+type = forbidden
+source_modules =
+    kognis.*._domain
+forbidden_modules =
+    fastapi
+    kognis.db
+    httpx
+    requests
+    sqlalchemy
+    subprocess
+    socket

@@ -1,0 +1,27 @@
+# Развёртывание: PostgreSQL + приложение. Запускается через `just stage` / `just deploy` (scripts/web.py).
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_DB: app
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "app"]
+      interval: 5s
+      retries: 20
+    restart: unless-stopped
+  app:
+    image: kognis:${IMAGE_TAG:?}
+    environment:
+      DATABASE_URL: postgresql+psycopg://app:${POSTGRES_PASSWORD}@db:5432/app
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${APP_BIND:-0.0.0.0}:${APP_PORT:-18000}:8000"
+    restart: unless-stopped
+volumes:
+  pgdata:

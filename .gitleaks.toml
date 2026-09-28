@@ -1,0 +1,19 @@
+title = "project gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Служебные каталоги и зашифрованные SOPS-файлы"
+paths = [
+  '''(^|/)\.venv/''',
+  '''(^|/)\.git/''',
+  '''(^|/)\.beads/''',
+  '''(^|/)\.evidence/''',
+  '''(^|/)\.agent-log/''',
+  '''(^|/)uv\.lock$''',
+  '''(^|/)node_modules/''',
+  '''(^|/)frontend/dist/''',
+  '''(^|/)pnpm-lock\.yaml$''',
+  '''\.enc\.(ya?ml|json|env)$''',
+]

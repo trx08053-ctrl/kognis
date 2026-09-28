@@ -1,0 +1,38 @@
+# CI — источник истины: та же команда, что локально. Файл защищён.
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # diff-cover и no-weakening сравнивают с main
+      - uses: jdx/mise-action@v3
+      - run: uv sync --locked
+      - run: pnpm --dir frontend install --frozen-lockfile
+      # e2e и скриншоты; Docker на раннере есть — интеграция с PostgreSQL выполняется, не пропускается
+      - run: uv run --locked playwright install --with-deps chromium
+      - run: python3 scripts/verify.py
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidence
+          path: .evidence/
+          include-hidden-files: true
+      - run: osv-scanner scan source --lockfile uv.lock --lockfile frontend/pnpm-lock.yaml
+
+  # Развёртывание проверяется по-настоящему: образ из коммита → PostgreSQL → миграции → /health
+  stage:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: python3 scripts/web.py stage
+      - run: python3 scripts/web.py status
+      - if: always()
+        run: python3 scripts/web.py down

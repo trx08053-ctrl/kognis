@@ -1,0 +1,3 @@
+creation_rules:
+  - path_regex: secrets/.*\.enc\.(ya?ml|json|env)$
+    age: age1l69wvdlhtwydswyvx6xaggu5ss8n4appwzjxcphlt5vg4kfywy4qwgaf65

@@ -19,7 +19,8 @@ def database_url() -> str:
 
 
 def make_engine(url: str | None = None) -> Engine:
-    return create_engine(url or database_url())
+    # hide_parameters: ошибки БД не несут значения запроса — иначе текст записей попал бы в логи
+    return create_engine(url or database_url(), hide_parameters=True)
 
 
 def transaction(engine: Engine) -> AbstractContextManager[Session]:

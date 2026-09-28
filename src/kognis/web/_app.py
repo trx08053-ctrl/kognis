@@ -71,6 +71,20 @@ COOKIE = "kognis_session"
 LOCK_ATTEMPTS = 5  # неверных паролей замка на запись за окно, затем 429
 LOCK_ATTEMPT_WINDOW = 300.0
 DEFAULT_TZ = ZoneInfo("Europe/Moscow")
+# Интерфейс — своя сборка без inline-скриптов/стилей и внешних ресурсов, поэтому CSP строгий
+SECURITY_HEADERS = {
+    "Content-Security-Policy": (
+        "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; "
+        "connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; "
+        "form-action 'self'; frame-ancestors 'none'"
+    ),
+    "X-Frame-Options": "DENY",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "no-referrer",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+    "Cross-Origin-Opener-Policy": "same-origin",
+}
+HSTS = "max-age=31536000; includeSubDomains"
 
 
 def local_today() -> dt.date:
@@ -800,6 +814,17 @@ def create_app(
     secure_cookie = os.environ.get("KOGNIS_ENV") != "dev"
     app = FastAPI(title="Kognis", dependencies=[Depends(require_json)])
     app.state.db = db
+
+    @app.middleware("http")
+    async def security_headers(request: Request, call_next: Callable[..., Any]) -> Response:
+        response: Response = await call_next(request)
+        for name, value in SECURITY_HEADERS.items():
+            response.headers.setdefault(name, value)
+        if secure_cookie:  # HSTS только там, где работает https (не в dev по http)
+            response.headers.setdefault("Strict-Transport-Security", HSTS)
+        if request.url.path.startswith("/api/"):
+            response.headers.setdefault("Cache-Control", "no-store")
+        return response
 
     @app.get("/health")
     def health() -> dict[str, str]:

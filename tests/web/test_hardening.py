@@ -1,10 +1,14 @@
 """Hardening (kognis-yaj): ограничение попыток входа, заголовки безопасности, приватность логов."""
 
+import base64
+import logging
 from datetime import timedelta
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import text
 from sqlalchemy.engine import Engine
+from sqlalchemy.exc import SQLAlchemyError
 
 from kognis.db import transaction
 from kognis.users import LoginBlockedError, UserService
@@ -90,3 +94,59 @@ def test_service_raises_blocked_error(engine: Engine) -> None:
         with pytest.raises(LoginBlockedError) as info:
             service.ensure_login_allowed("ann@example.com", "9.9.9.9")
     assert info.value.retry_after > 0
+
+
+ENTRY_TEXT = "Тайная мысль про начальника"
+LOCK_PW = "замок-пароль-123"
+
+
+@pytest.mark.acceptance("kognis-yaj", "AC3")
+def test_entry_texts_never_reach_logs(
+    engine: Engine, caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("KOGNIS_DATA_KEY", base64.b64encode(b"K" * 32).decode())
+    caplog.set_level(logging.DEBUG)  # всё, на любом уровне и от любого логгера
+    api = TestClient(create_app(engine), raise_server_exceptions=False)
+    api.post("/api/auth/register", json={"email": "ann@example.com", "password": VALID_PW})
+    body = {"text": ENTRY_TEXT, "tags": ["тег-тайна"], "emotions": ["эмоция-тайна"]}
+    assert api.post("/api/entries", json=body).status_code == 201
+    locked = {**body, "protection": "locked", "lock_password": LOCK_PW}
+    assert api.post("/api/entries", json=locked).status_code == 201
+    api.post("/api/entries", json={"text": ENTRY_TEXT, "protection": "private", "cipher": {"v": 1}})
+    api.post("/api/day-reviews", json={"wellbeing": 5, "mood": 5, "reflection": ENTRY_TEXT})
+    api.post("/api/auth/login", json={"email": "ann@example.com", "password": LOCK_PW})
+    # сбой хранилища: необработанная ошибка БД не должна тащить в лог параметры запроса с текстом
+    with engine.begin() as conn:
+        conn.exec_driver_sql("DROP TABLE entries")
+    assert api.post("/api/entries", json=body).status_code == 500
+    logged = caplog.text + "".join(str(r.exc_info[1]) for r in caplog.records if r.exc_info)
+    for hidden in (ENTRY_TEXT, "тег-тайна", "эмоция-тайна", LOCK_PW):
+        assert hidden not in logged
+
+
+def test_database_errors_hide_query_parameters(engine: Engine) -> None:
+    with pytest.raises(SQLAlchemyError) as info, engine.begin() as conn:
+        conn.execute(text("INSERT INTO no_such_table (body) VALUES (:body)"), {"body": ENTRY_TEXT})
+    assert ENTRY_TEXT not in str(info.value)
+
+
+@pytest.mark.acceptance("kognis-yaj", "AC2")
+def test_security_headers_on_pages_assets_and_api(client: TestClient) -> None:
+    for path in ("/", "/health", "/api/me", "/assets/missing.js"):
+        headers = client.get(path).headers
+        csp = headers["content-security-policy"]
+        assert "default-src 'self'" in csp
+        assert "frame-ancestors 'none'" in csp
+        assert "'unsafe-inline'" not in csp
+        assert "'unsafe-eval'" not in csp
+        assert headers["x-frame-options"] == "DENY"
+        assert headers["x-content-type-options"] == "nosniff"
+        assert headers["referrer-policy"] == "no-referrer"
+    assert client.get("/api/me").headers["cache-control"] == "no-store"
+    assert "strict-transport-security" not in client.get("/health").headers  # dev по http
+
+
+def test_hsts_when_not_dev(engine: Engine, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("KOGNIS_ENV")
+    headers = TestClient(create_app(engine)).get("/health").headers
+    assert "max-age=" in headers["strict-transport-security"]

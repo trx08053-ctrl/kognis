@@ -533,3 +533,26 @@ def test_key_screens_have_no_serious_a11y_violations_in_both_themes(
         page.get_by_role("link", name="Дневник").click()
         page.get_by_test_id("advanced-toggle").uncheck()
     context.close()
+
+
+@pytest.mark.acceptance("kognis-yaj", "AC2")
+@pytest.mark.e2e
+def test_interface_works_under_security_headers(browser: Browser, live_server: str) -> None:
+    """Со строгим CSP интерфейс грузится и работает, нарушений CSP в консоли нет; axe; скриншот."""
+    context = browser.new_context(viewport={"width": 1024, "height": 700}, locale="ru-RU")
+    page = context.new_page()
+    problems: list[str] = []
+    page.on(
+        "console", lambda m: problems.append(m.text) if m.type in {"error", "warning"} else None
+    )
+    page.on("pageerror", lambda e: problems.append(str(e)))
+    response = page.goto(live_server)
+    assert response is not None
+    assert "frame-ancestors 'none'" in response.headers["content-security-policy"]
+    register(page, "ann@example.com")
+    add_entry(page, "Сегодня был спокойный день")
+    SCREENS.mkdir(parents=True, exist_ok=True)
+    page.screenshot(path=str(SCREENS / "e2e-hardening.png"), full_page=True)
+    check_axe(page)
+    context.close()
+    assert not [p for p in problems if "Content Security Policy" in p], problems

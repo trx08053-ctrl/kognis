@@ -127,10 +127,18 @@ class EntryRepository:
     def set_protection(
         self, owner_id: int, entry_id: int, text: str, sealed: Sealed | None
     ) -> None:
-        """Сменить режим: `sealed` — закрыть замком (text очищается), `None` — вернуть `text`."""
+        """Сменить режим: `sealed` — закрыть замком (text очищается), `None` — вернуть `text`.
+
+        Условие по текущему режиму: проигравший гонку двух запросов ничего не перезапишет.
+        """
+        was = "plain" if sealed else "locked"
         self._session.execute(
             update(entries_table)
-            .where(entries_table.c.id == entry_id, entries_table.c.owner_id == owner_id)
+            .where(
+                entries_table.c.id == entry_id,
+                entries_table.c.owner_id == owner_id,
+                entries_table.c.protection == was,
+            )
             .values(
                 text="" if sealed else text,
                 protection="locked" if sealed else "plain",

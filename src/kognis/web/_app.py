@@ -6,8 +6,10 @@
 
 import datetime as dt
 import os
+import time
 from collections.abc import Callable, Generator
 from contextlib import contextmanager
+from http import HTTPStatus
 from pathlib import Path
 from typing import Annotated, Literal
 from zoneinfo import ZoneInfo
@@ -64,6 +66,8 @@ HERE = Path(__file__).resolve().parent
 DIST = Path(os.environ.get("FRONTEND_DIST", HERE.parents[2] / "frontend" / "dist"))
 COOKIE = "kognis_session"
 # часовой пояс профиля по умолчанию (D11); хранение своего пояса в профиле — отдельной задачей
+LOCK_ATTEMPTS = 5  # неверных паролей замка на запись за окно, затем 429
+LOCK_ATTEMPT_WINDOW = 300.0
 DEFAULT_TZ = ZoneInfo("Europe/Moscow")
 
 
@@ -234,31 +238,72 @@ def lock_errors() -> Generator[None]:
         raise HTTPException(status_code=503, detail=str(err)) from err
 
 
+class AttemptLimiter:
+    """Неверные пароли замка по (владелец, запись); в памяти процесса (TD-8)."""
+
+    def __init__(self) -> None:
+        self._failures: dict[tuple[int, int], list[float]] = {}
+
+    def _recent(self, key: tuple[int, int]) -> list[float]:
+        now = time.monotonic()
+        return [t for t in self._failures.get(key, []) if now - t < LOCK_ATTEMPT_WINDOW]
+
+    def check(self, key: tuple[int, int]) -> None:
+        if len(self._recent(key)) >= LOCK_ATTEMPTS:
+            raise HTTPException(status_code=429, detail="слишком много попыток, попробуйте позже")
+
+    def fail(self, key: tuple[int, int]) -> None:
+        self._failures[key] = [*self._recent(key), time.monotonic()]
+
+    def reset(self, key: tuple[int, int]) -> None:
+        self._failures.pop(key, None)
+
+
 def diary_router(db: Engine, today: Callable[[], dt.date], data_key: str | None) -> APIRouter:
     router = APIRouter(prefix="/api/entries")
+    limiter = AttemptLimiter()
 
-    def entry_action(user: User, entry_id: int, password: str, action: str) -> EntryOut:
-        with lock_errors(), transaction(db) as session:
-            entry = getattr(DiaryService(session, data_key), action)(user.id, entry_id, password)
+    def entry_action(
+        user: User, entry_id: int, password: str, action: str, response: Response
+    ) -> EntryOut:
+        response.headers["Cache-Control"] = "no-store"
+        key = (user.id, entry_id)
+        limiter.check(key)
+        try:
+            with lock_errors(), transaction(db) as session:
+                entry = getattr(DiaryService(session, data_key), action)(
+                    user.id, entry_id, password
+                )
+        except HTTPException as err:
+            if err.status_code == HTTPStatus.FORBIDDEN:
+                limiter.fail(key)
+            raise
+        limiter.reset(key)
         if entry is None:  # чужая запись неотличима от несуществующей
             raise HTTPException(status_code=404, detail="запись не найдена")
         return entry_out(entry)
 
     @router.post("/{entry_id}/open")
-    def open_entry(entry_id: int, payload: LockPassword, user: Authed) -> EntryOut:
+    def open_entry(
+        entry_id: int, payload: LockPassword, user: Authed, response: Response
+    ) -> EntryOut:
         """Текст записи «под замком» — только в этом ответе, в БД он остаётся зашифрованным."""
-        return entry_action(user, entry_id, payload.password, "open_entry")
+        return entry_action(user, entry_id, payload.password, "open_entry", response)
 
     @router.post("/{entry_id}/lock")
-    def lock_entry(entry_id: int, payload: LockPassword, user: Authed) -> EntryOut:
+    def lock_entry(
+        entry_id: int, payload: LockPassword, user: Authed, response: Response
+    ) -> EntryOut:
         try:
-            return entry_action(user, entry_id, payload.password, "lock_entry")
+            return entry_action(user, entry_id, payload.password, "lock_entry", response)
         except ValueError as err:
             raise HTTPException(status_code=422, detail=str(err)) from err
 
     @router.post("/{entry_id}/unlock")
-    def unlock_entry(entry_id: int, payload: LockPassword, user: Authed) -> EntryOut:
-        return entry_action(user, entry_id, payload.password, "unlock_entry")
+    def unlock_entry(
+        entry_id: int, payload: LockPassword, user: Authed, response: Response
+    ) -> EntryOut:
+        return entry_action(user, entry_id, payload.password, "unlock_entry", response)
 
     @router.post("", status_code=201)
     def create_entry(payload: EntryIn, user: Authed) -> EntryOut:

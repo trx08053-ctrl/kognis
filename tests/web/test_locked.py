@@ -161,6 +161,22 @@ def test_locked_entries_excluded_from_analysis_payload(api: TestClient) -> None:
     assert PRIVATE_TEXT not in response.text
 
 
+def test_wrong_password_attempts_are_limited(api: TestClient) -> None:
+    entry_id = create_locked(api)["id"]
+    url = f"/api/entries/{entry_id}/open"
+    for _ in range(5):
+        assert api.post(url, json={"password": "неверный-пароль"}).status_code == 403
+    blocked = api.post(url, json={"password": LOCK_PW})
+    assert blocked.status_code == 429
+    assert PRIVATE_TEXT not in blocked.text
+
+
+def test_open_response_is_not_cacheable(api: TestClient) -> None:
+    entry_id = create_locked(api)["id"]
+    response = api.post(f"/api/entries/{entry_id}/open", json={"password": LOCK_PW})
+    assert response.headers["cache-control"] == "no-store"
+
+
 def test_lock_endpoints_edge_cases(api: TestClient) -> None:
     plain_id = api.post("/api/entries", json={"text": "обычная"}).json()["id"]
     assert api.post(f"/api/entries/{plain_id}/lock", json={"password": "123"}).status_code == 422

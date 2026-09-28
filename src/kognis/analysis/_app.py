@@ -110,11 +110,10 @@ class AnalysisService:
         """Анализ периода. Защищённые и приватные записи не передаются никогда (D4)."""
         focus = direction_by_code(direction)
         validate_period(start, end)
-        entries = [
-            e
-            for e in self._diary.list_entries(owner_id)
-            if e.protection == "plain" and _in_period(e.entry_date, start, end)
+        in_period = [
+            e for e in self._diary.list_entries(owner_id) if _in_period(e.entry_date, start, end)
         ]
+        entries = [e for e in in_period if e.protection == "plain"]
         reviews = [
             r
             for r in self._diary.list_day_reviews(owner_id)
@@ -122,7 +121,8 @@ class AnalysisService:
         ]
         # локальная проверка (safety) до любой передачи: при сигнале — поддержка вместо паттернов
         block = _crisis_block([e.text for e in entries] + [r.reflection for r in reviews])
-        if block is not None or any(e.crisis for e in entries):
+        # флаг кризиса учитываем и у защищённых записей: их текст не читаем и не передаём
+        if block is not None or any(e.crisis for e in in_period):
             saved = self._repo.add(
                 Analysis(0, owner_id, None, direction, start, end, "crisis", None, ())
             )

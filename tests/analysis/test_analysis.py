@@ -7,6 +7,7 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
 from kognis.access import Feature, can_use
@@ -112,6 +113,28 @@ def test_only_period_entries_are_sent(engine: Engine) -> None:
     sent = provider.calls[0][1][0].content
     assert "обычная запись про работу" in sent
     assert "вне периода" not in sent
+
+
+@pytest.mark.acceptance("kognis-kai", "AC1")
+def test_protected_entries_never_sent(engine: Engine) -> None:
+    provider = ScriptedProvider()
+    client = make(engine, provider)
+    eid = add_entry(client, "обычная запись про работу")
+    secret_id = add_entry(client, "секрет под замком")
+    with engine.begin() as conn:
+        conn.execute(
+            text("UPDATE entries SET protection = 'locked' WHERE id = :i"), {"i": secret_id}
+        )
+    provider.replies.append(good([eid]))
+    assert analyze(client).status_code == 201
+    sent = provider.calls[0][1][0].content
+    assert "обычная запись" in sent
+    assert "секрет" not in sent
+    # кризисный флаг защищённой записи всё равно даёт поддержку, а не анализ
+    with engine.begin() as conn:
+        conn.execute(text("UPDATE entries SET crisis = 1 WHERE id = :i"), {"i": secret_id})
+    assert analyze(client).json()["status"] == "crisis"
+    assert len(provider.calls) == 1
 
 
 @pytest.mark.acceptance("kognis-kai", "AC2")

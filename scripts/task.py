@@ -152,10 +152,15 @@ def git_out(*args: str) -> str:
 
 
 def commit_state(task_id: str) -> None:
-    """Экспорт bd после закрытия — отдельным коммитом: следующий шаг начинается с чистого дерева."""
-    export = ".beads/issues.jsonl"
-    if git_out("status", "--porcelain", "--", export).strip():
-        git_out("commit", "-q", "-m", f"chore(bd): close {task_id}", "--", export)
+    """Экспорт bd и рост планки качества — отдельным коммитом: следующий шаг с чистого дерева.
+
+    verify только что прошёл: `check_ratchet --update` лишь поднимает планку (опустить — человек).
+    """
+    subprocess.run([sys.executable, "scripts/check_ratchet.py", "--update"], cwd=ROOT,
+                   capture_output=True, check=False)  # fmt: skip
+    state = [".beads/issues.jsonl", ".quality-baseline.json"]
+    if git_out("status", "--porcelain", "--", *state).strip():
+        git_out("commit", "-q", "-m", f"chore(bd): close {task_id}", "--", *state)
     rest = [ln[3:] for ln in git_out("status", "--porcelain", "--untracked-files=no").splitlines()]
     if rest:
         print(f"ВНИМАНИЕ: незакоммиченные изменения после закрытия: {rest} — закоммить их.")

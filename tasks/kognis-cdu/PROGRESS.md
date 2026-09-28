@@ -1,17 +1,19 @@
 # PROGRESS kognis-cdu
 
 ## Следующий шаг
-Шаг 1: `src/kognis/web/_app.py` — `check_text` для рефлексии в `save_review`, поле `help`, `allows_rewards`; тесты `tests/web/test_crisis_review.py`.
+Дождаться результата subagent `reviewer` (запущен по коммитам 7bbc9d8, c20f3af), устранить blocker/major, затем `just verify` и `python3 scripts/task.py done kognis-cdu`.
 
 ## Сделано
 | Дата | Шаг | Коммит | Evidence / проверка |
 |---|---|---|---|
+| 2026-09-29 | web: проверка рефлексии итога дня (`check_text`), поле `help`, XP через `allows_rewards`; тесты AC1–AC2; TD-4, карточка safety | 7bbc9d8 | verify OK, tree e663a4760697 |
+| 2026-09-29 | frontend: блок помощи в форме итога дня + тест | c20f3af | verify OK, tree 4fecc211ee99, `.evidence/4fecc211ee992c5ca61d4a26cda87505bd739212.json` |
 
 ## Блокеры и вопросы человеку
 - TASK.md и PROGRESS.md отсутствовали, описание bd пустое — постановка выведена из TD-4.
 
 ## Попытки и гипотезы (что пробовали и почему не сработало)
--
+- Тест «обычный итог даёт +20» на другой дате падал: дата итога позже «сегодня» XP не даёт; переписал тест на пересохранение того же дня.
 
 ## Затраты
 Сессии: 1

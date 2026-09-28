@@ -14,7 +14,7 @@
 | `kognis.ai` | Модуль ai: TODO ответственность (одно предложение). | — | 4 | [ai](modules/ai.md) |
 | `kognis.analysis` | Модуль analysis: TODO ответственность (одно предложение). | — | 4 | [analysis](modules/analysis.md) |
 | `kognis.db` | Платформа данных: подключение, метаданные таблиц, транзакции. | — | 1 | [db](modules/db.md) |
-| `kognis.diary` | Модуль diary: записи дневника (текст, теги, эмоции, дата); владеет `entries`. | `db` | 4 | [diary](modules/diary.md) |
+| `kognis.diary` | Модуль diary: записи дневника и итоги дня; владеет `entries` и `day_reviews`. | `db` | 4 | [diary](modules/diary.md) |
 | `kognis.gameplay` | Модуль gameplay: TODO ответственность (одно предложение). | — | 4 | [gameplay](modules/gameplay.md) |
 | `kognis.safety` | Модуль safety: TODO ответственность (одно предложение). | — | 4 | [safety](modules/safety.md) |
 | `kognis.users` | Модуль users: регистрация, вход, сессии. Владеет данными пользователей и сессий. | `db` | 4 | [users](modules/users.md) |
@@ -52,6 +52,7 @@
 
 - Код: `src/kognis/diary`
 - Публичный интерфейс:
+  - `DayReview` — `src/kognis/diary/_domain.py`
   - `DiaryService` — `src/kognis/diary/_app.py`
   - `Entry` — `src/kognis/diary/_domain.py`
 - Тесты: `tests/diary/test_diary.py`, `tests/integration/test_postgres.py`
@@ -85,7 +86,7 @@
 - Публичный интерфейс:
   - `create_app` — `src/kognis/web/_app.py`
   - `main` — `src/kognis/web/__init__.py`
-- Тесты: `tests/web/test_http.py`
+- Тесты: `tests/web/test_day_reviews.py`, `tests/web/test_http.py`
 
 ## Точки входа
 

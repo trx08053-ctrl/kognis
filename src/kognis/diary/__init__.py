@@ -1,6 +1,6 @@
-"""Модуль diary: записи дневника (текст, теги, эмоции, дата); владеет `entries`."""
+"""Модуль diary: записи дневника и итоги дня; владеет `entries` и `day_reviews`."""
 
 from ._app import DiaryService
-from ._domain import Entry
+from ._domain import DayReview, Entry
 
-__all__ = ["DiaryService", "Entry"]
+__all__ = ["DayReview", "DiaryService", "Entry"]

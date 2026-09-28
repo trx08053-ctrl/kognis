@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.engine import Engine
 
 from kognis.db import make_engine, transaction
-from kognis.diary import DiaryService, Entry
+from kognis.diary import DayReview, DiaryService, Entry
 from kognis.users import (
     SESSION_LIFETIME,
     EmailTakenError,
@@ -55,6 +55,30 @@ class EntryOut(BaseModel):
     tags: list[str]
     emotions: list[str]
     protection: str
+
+
+class DayReviewIn(BaseModel):
+    wellbeing: int
+    mood: int
+    reflection: str = ""
+
+
+class DayReviewOut(BaseModel):
+    id: int
+    date: dt.date
+    wellbeing: int
+    mood: int
+    reflection: str
+
+
+def review_out(review: DayReview) -> DayReviewOut:
+    return DayReviewOut(
+        id=review.id,
+        date=review.review_date,
+        wellbeing=review.wellbeing,
+        mood=review.mood,
+        reflection=review.reflection,
+    )
 
 
 def user_out(user: User) -> UserOut:
@@ -124,6 +148,28 @@ def diary_router(db: Engine) -> APIRouter:
     return router
 
 
+def day_review_router(db: Engine) -> APIRouter:
+    router = APIRouter(prefix="/api/day-reviews")
+
+    @router.put("/{review_date}")
+    def save_review(review_date: dt.date, payload: DayReviewIn, user: Authed) -> DayReviewOut:
+        try:
+            with transaction(db) as session:
+                review = DiaryService(session).save_day_review(
+                    user.id, review_date, payload.wellbeing, payload.mood, payload.reflection
+                )
+        except ValueError as err:
+            raise HTTPException(status_code=422, detail=str(err)) from err
+        return review_out(review)
+
+    @router.get("")
+    def list_reviews(user: Authed) -> list[DayReviewOut]:
+        with transaction(db) as session:
+            return [review_out(r) for r in DiaryService(session).list_day_reviews(user.id)]
+
+    return router
+
+
 def create_app(engine: Engine | None = None, frontend_dist: Path | None = None) -> FastAPI:
     db = engine or make_engine()
     dist = frontend_dist or DIST
@@ -184,6 +230,7 @@ def create_app(engine: Engine | None = None, frontend_dist: Path | None = None) 
         return user_out(user)
 
     app.include_router(diary_router(db))
+    app.include_router(day_review_router(db))
     app.mount("/assets", StaticFiles(directory=dist / "assets", check_dir=False), name="assets")
 
     @app.get("/{path:path}")

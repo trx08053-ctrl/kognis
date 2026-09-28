@@ -6,6 +6,9 @@ from datetime import date
 MAX_TEXT_LENGTH = 20_000
 MAX_LABELS = 20
 MAX_LABEL_LENGTH = 50
+MAX_REFLECTION_LENGTH = 5_000
+SCALE_MIN = 1
+SCALE_MAX = 10
 
 
 @dataclass(frozen=True)
@@ -17,6 +20,29 @@ class Entry:
     tags: tuple[str, ...]
     emotions: tuple[str, ...]
     protection: str = "plain"
+
+
+@dataclass(frozen=True)
+class DayReview:
+    id: int
+    owner_id: int
+    review_date: date
+    wellbeing: int
+    mood: int
+    reflection: str
+
+
+def validate_scale(value: int, what: str) -> int:
+    if not SCALE_MIN <= value <= SCALE_MAX:
+        raise ValueError(f"{what}: оценка от {SCALE_MIN} до {SCALE_MAX}")
+    return value
+
+
+def normalize_reflection(raw: str) -> str:
+    text = raw.strip()
+    if len(text) > MAX_REFLECTION_LENGTH:
+        raise ValueError("рефлексия слишком длинная")
+    return text
 
 
 def normalize_text(raw: str) -> str:

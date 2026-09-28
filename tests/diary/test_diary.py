@@ -48,3 +48,22 @@ def test_labels_are_unique_lowercase(raw: list[str]) -> None:
     result = normalize_labels(raw, "теги")
     assert len(set(result)) == len(result)
     assert all(label == label.strip().lower() and label for label in result)
+
+
+def test_day_review_upsert_is_per_owner_and_date(engine: Engine) -> None:
+    with transaction(engine) as session:
+        service = DiaryService(session)
+        first = service.save_day_review(1, date(2026, 9, 1), 5, 5, "")
+        again = service.save_day_review(1, date(2026, 9, 1), 6, 7, " ок ")
+        other = service.save_day_review(2, date(2026, 9, 1), 1, 1, "")
+    assert again.id == first.id
+    assert (again.wellbeing, again.mood, again.reflection) == (6, 7, "ок")
+    assert other.id != first.id
+    with transaction(engine) as session:
+        assert len(DiaryService(session).list_day_reviews(1)) == 1
+
+
+@pytest.mark.parametrize(("wellbeing", "mood"), [(0, 5), (5, 0), (11, 5), (5, 11)])
+def test_day_review_scale_bounds(engine: Engine, wellbeing: int, mood: int) -> None:
+    with pytest.raises(ValueError, match="от 1 до 10"), transaction(engine) as session:
+        DiaryService(session).save_day_review(1, date(2026, 9, 1), wellbeing, mood, "")

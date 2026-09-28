@@ -15,7 +15,7 @@
 | `kognis.analysis` | Модуль analysis: ИИ-анализ периода по направлениям и динамика настроения; владеет `analyses`. | `ai`, `db`, `diary`, `safety` | 4 | [analysis](modules/analysis.md) |
 | `kognis.db` | Платформа данных: подключение, метаданные таблиц, транзакции. | — | 1 | [db](modules/db.md) |
 | `kognis.diary` | Модуль diary: записи дневника и итоги дня; владеет `entries` и `day_reviews`. | `db` | 4 | [diary](modules/diary.md) |
-| `kognis.gameplay` | Модуль gameplay: опыт, уровни, серия дней, достижения (D8); владеет `xp_events` и др. | `db` | 4 | [gameplay](modules/gameplay.md) |
+| `kognis.gameplay` | Модуль gameplay: опыт, уровни, серия, достижения, квесты, квизы (D8). | `db` | 7 | [gameplay](modules/gameplay.md) |
 | `kognis.safety` | Модуль safety: кризисные сигналы в тексте (локально, без ИИ) и контакты помощи. | — | 4 | [safety](modules/safety.md) |
 | `kognis.users` | Модуль users: регистрация, вход, сессии. Владеет данными пользователей и сессий. | `db` | 4 | [users](modules/users.md) |
 | `kognis.web` | Модуль web: HTTP-вход приложения — страницы, JSON API, /health. Бизнес-логики не содержит. | `access`, `ai`, `analysis`, `db`, `diary`, `gameplay`, `safety`, `users` | 2 | [web](modules/web.md) |
@@ -40,7 +40,7 @@
   - `Message` — `src/kognis/ai/_domain.py`
   - `OpenAICompatibleProvider` — `src/kognis/ai/_infra.py`
   - `get_provider` — `src/kognis/ai/_app.py`
-- Тесты: `tests/ai/test_ai.py`, `tests/analysis/test_analysis.py`, `tests/e2e/test_ui.py`
+- Тесты: `tests/ai/test_ai.py`, `tests/analysis/test_analysis.py`, `tests/e2e/test_ui.py`, `tests/web/test_quests.py`
 
 ## `kognis.analysis`
 
@@ -85,9 +85,21 @@
 - Публичный интерфейс:
   - `ACHIEVEMENTS` — `src/kognis/gameplay/_domain.py`
   - `AchievementDef` — `src/kognis/gameplay/_domain.py`
+  - `AlreadyAcceptedError` — `src/kognis/gameplay/_quests.py`
   - `EarnedAchievement` — `src/kognis/gameplay/_domain.py`
   - `GameplayService` — `src/kognis/gameplay/_app.py`
   - `Progress` — `src/kognis/gameplay/_domain.py`
+  - `Quest` — `src/kognis/gameplay/_quests.py`
+  - `QuestService` — `src/kognis/gameplay/_quests_app.py`
+  - `QuestStep` — `src/kognis/gameplay/_quests.py`
+  - `QuestTemplate` — `src/kognis/gameplay/_quests.py`
+  - `QuizAnswers` — `src/kognis/gameplay/_quests.py`
+  - `QuizDef` — `src/kognis/gameplay/_quests.py`
+  - `QuizDoneTodayError` — `src/kognis/gameplay/_quests.py`
+  - `QuizOutcome` — `src/kognis/gameplay/_quests.py`
+  - `QuizStatus` — `src/kognis/gameplay/_quests.py`
+  - `StepOutcome` — `src/kognis/gameplay/_quests.py`
+  - `StepUnavailableError` — `src/kognis/gameplay/_quests.py`
 - Тесты: `tests/gameplay/test_domain.py`, `tests/gameplay/test_service.py`
 
 ## `kognis.safety`
@@ -120,7 +132,7 @@
 - Публичный интерфейс:
   - `create_app` — `src/kognis/web/_app.py`
   - `main` — `src/kognis/web/__init__.py`
-- Тесты: `tests/analysis/test_analysis.py`, `tests/e2e/test_ui.py`, `tests/web/test_crisis_review.py`, `tests/web/test_day_reviews.py`, `tests/web/test_gameplay.py`, `tests/web/test_http.py`
+- Тесты: `tests/analysis/test_analysis.py`, `tests/e2e/test_ui.py`, `tests/web/test_crisis_review.py`, `tests/web/test_day_reviews.py`, `tests/web/test_gameplay.py`, `tests/web/test_http.py`, `tests/web/test_quests.py`
 
 ## Точки входа
 

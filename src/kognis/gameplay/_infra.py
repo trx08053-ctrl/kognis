@@ -19,6 +19,8 @@ from sqlalchemy.orm import Session
 
 from kognis.db import metadata
 
+STREAK_KINDS = ("entry", "day_review")
+
 xp_events_table = Table(
     "xp_events",
     metadata,
@@ -80,7 +82,10 @@ class ProgressRepository:
 
     def active_days(self, owner_id: int) -> list[date]:
         t = xp_events_table
-        stmt = select(t.c.day).where(t.c.owner_id == owner_id).distinct()
+        # серия — только записи и итоги дня; XP за квесты и квизы дни серии не продлевает
+        stmt = (
+            select(t.c.day).where(t.c.owner_id == owner_id, t.c.kind.in_(STREAK_KINDS)).distinct()
+        )
         return [r.day for r in self._session.execute(stmt).all()]
 
     def achievements(self, owner_id: int) -> list[tuple[str, date]]:

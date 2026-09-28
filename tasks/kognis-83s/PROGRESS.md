@@ -3,7 +3,7 @@
 <!-- Статус задачи — только в bd (`bd show <id>`). Здесь — передача контекста: обновлять после каждого шага. -->
 
 ## Следующий шаг
-Устранить blocker/major из ревью (subagent `reviewer`), если есть; затем `python3 scripts/task.py done kognis-83s`.
+Ревью учтено (лимит попыток, гонки lock/unlock, no-store; fbca187); выполнить `python3 scripts/task.py done kognis-83s`.
 
 ## Сделано
 | Дата | Шаг | Коммит | Evidence / проверка |

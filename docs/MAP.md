@@ -55,7 +55,7 @@
   - `DayReview` — `src/kognis/diary/_domain.py`
   - `DiaryService` — `src/kognis/diary/_app.py`
   - `Entry` — `src/kognis/diary/_domain.py`
-- Тесты: `tests/diary/test_diary.py`, `tests/integration/test_postgres.py`
+- Тесты: `tests/diary/test_diary.py`, `tests/integration/test_postgres.py`, `tests/web/test_day_reviews.py`
 
 ## `kognis.gameplay`
 

@@ -41,7 +41,7 @@ day_reviews_table = Table(
     "day_reviews",
     metadata,
     Column("id", Integer, primary_key=True, autoincrement=True),
-    Column("owner_id", Integer, nullable=False, index=True),
+    Column("owner_id", Integer, nullable=False),
     Column("review_date", Date, nullable=False),
     Column("wellbeing", Integer, nullable=False),
     Column("mood", Integer, nullable=False),

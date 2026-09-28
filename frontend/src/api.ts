@@ -33,7 +33,10 @@ export class ApiError extends Error {
 async function parse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const body = (await response.json().catch(() => ({}))) as { detail?: unknown };
-    const detail = typeof body.detail === "string" ? body.detail : `ошибка ${response.status}`;
+    // detail списком — ошибка формы от валидатора (пустое или нечисловое поле)
+    let detail = `ошибка ${response.status}`;
+    if (typeof body.detail === "string") detail = body.detail;
+    else if (Array.isArray(body.detail)) detail = "Проверьте поля формы: значения указаны неверно";
     throw new ApiError(detail, response.status);
   }
   if (response.status === 204) return undefined as T;

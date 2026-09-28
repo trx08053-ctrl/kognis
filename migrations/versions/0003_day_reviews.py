@@ -26,7 +26,6 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(), nullable=False),
         sa.UniqueConstraint("owner_id", "review_date", name="uq_day_reviews_owner_date"),
     )
-    op.create_index("ix_day_reviews_owner_id", "day_reviews", ["owner_id"])
 
 
 def downgrade() -> None:

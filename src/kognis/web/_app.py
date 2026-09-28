@@ -12,8 +12,9 @@ from typing import Annotated
 from fastapi import APIRouter, Cookie, Depends, FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StrictInt
 from sqlalchemy.engine import Engine
+from sqlalchemy.exc import IntegrityError
 
 from kognis.db import make_engine, transaction
 from kognis.diary import DayReview, DiaryService, Entry
@@ -58,8 +59,8 @@ class EntryOut(BaseModel):
 
 
 class DayReviewIn(BaseModel):
-    wellbeing: int
-    mood: int
+    wellbeing: StrictInt
+    mood: StrictInt
     reflection: str = ""
 
 
@@ -153,11 +154,19 @@ def day_review_router(db: Engine) -> APIRouter:
 
     @router.put("/{review_date}")
     def save_review(review_date: dt.date, payload: DayReviewIn, user: Authed) -> DayReviewOut:
-        try:
+        def save() -> DayReview:
             with transaction(db) as session:
-                review = DiaryService(session).save_day_review(
+                return DiaryService(session).save_day_review(
                     user.id, review_date, payload.wellbeing, payload.mood, payload.reflection
                 )
+
+        try:
+            try:
+                review = save()
+            except IntegrityError:
+                # два одновременных сохранения за один день: проигравший (уникальность держит БД)
+                # повторяет и обновляет уже существующий итог
+                review = save()
         except ValueError as err:
             raise HTTPException(status_code=422, detail=str(err)) from err
         return review_out(review)

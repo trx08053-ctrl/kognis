@@ -1,5 +1,5 @@
 {
-  "coverage": 99.53,
+  "coverage": 99.66,
   "suppressions": [
     "tests/conftest.py: pytest.skip(\"нет Docker: PostgreSQL — в CI\")  # justified: harness-web песочница"
   ]

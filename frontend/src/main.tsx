@@ -4,6 +4,9 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router";
 import { App } from "./App";
 import "./style.css";
+import { applyTheme, currentTheme } from "./theme";
+
+applyTheme(currentTheme()); // до первой отрисовки, чтобы не мигало светлым
 
 const queryClient = new QueryClient();
 const root = document.getElementById("root");

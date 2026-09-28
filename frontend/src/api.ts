@@ -6,6 +6,7 @@ import type { Envelope } from "./privateCrypto";
 export interface User {
   id: number;
   email: string;
+  advanced: boolean;
 }
 
 export interface HelpContact {
@@ -76,6 +77,12 @@ export const register = (email: string, password: string): Promise<User> =>
   post<User>("/api/auth/register", { email, password });
 export const login = (email: string, password: string): Promise<User> =>
   post<User>("/api/auth/login", { email, password });
+export const saveSettings = (advanced: boolean): Promise<User> =>
+  fetch("/api/me/settings", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ advanced }),
+  }).then((r) => parse<User>(r));
 export const logout = (): Promise<void> => post<void>("/api/auth/logout");
 export const listEntries = (): Promise<Entry[]> =>
   fetch("/api/entries").then((r) => parse<Entry[]>(r));

@@ -6,3 +6,53 @@
   color: #0f172a;
   background: #f1f5f9;
 }
+
+/* Тёмная тема: палитра светлой темы переопределяется здесь, а не dark:-классами у каждого элемента.
+   Правила вне @layer, поэтому сильнее утилит Tailwind. Контраст проверяет axe в e2e (обе темы). */
+.dark {
+  color-scheme: dark;
+  color: #e2e8f0;
+  background: #0f172a;
+}
+.dark .bg-white {
+  background-color: #1e293b;
+}
+.dark .text-slate-900 {
+  color: #f1f5f9;
+}
+.dark .text-slate-700 {
+  color: #cbd5e1;
+}
+.dark .border-slate-400 {
+  border-color: #64748b;
+}
+.dark .border-slate-300 {
+  border-color: #334155;
+}
+.dark .text-indigo-800 {
+  color: #a5b4fc;
+}
+.dark .text-red-800 {
+  color: #fca5a5;
+}
+.dark .border-red-800 {
+  border-color: #f87171;
+}
+.dark .bg-red-50 {
+  background-color: #450a0a;
+}
+.dark .text-red-950 {
+  color: #fecaca;
+}
+.dark .border-amber-700 {
+  border-color: #f59e0b;
+}
+.dark .bg-amber-50 {
+  background-color: #451a03;
+}
+.dark .text-amber-900 {
+  color: #fde68a;
+}
+.dark .text-green-900 {
+  color: #86efac;
+}

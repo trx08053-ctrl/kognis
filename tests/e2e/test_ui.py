@@ -48,7 +48,8 @@ def fresh_page(browser: Browser, url: str) -> Page:
     frontend = ROOT / "frontend"
     if (frontend / "package.json").exists() and not (frontend / "dist" / "index.html").exists():
         pytest.fail("фронтенд не собран — pnpm --dir frontend build (verify собирает сам)")
-    page = browser.new_context(viewport={"width": 1024, "height": 700}).new_page()
+    context = browser.new_context(viewport={"width": 1024, "height": 700}, locale="ru-RU")
+    page = context.new_page()
     page.goto(url)
     return page
 
@@ -121,13 +122,13 @@ def test_wrong_password_shows_error(page: Page) -> None:
 def test_day_review_saved_error_shown_and_history_private(
     browser: Browser, live_server: str, page: Page
 ) -> None:
-    """Итог дня в браузере: значение вне 1–10 → понятная ошибка; исправление → итог в истории;
-    повторное сохранение за ту же дату не плодит записи; другой пользователь истории не видит."""
+    """Итог дня в браузере: шкалы-ползунки не выходят за 1–10 (kognis-0wr; проверка диапазона на
+    сервере — tests/web/test_day_reviews.py); итог в истории; повторное сохранение за ту же дату
+    не плодит записи; другой пользователь истории не видит."""
     register(page, "ann@example.com")
     page.get_by_role("link", name="Итог дня").click()
-    page.get_by_label("Самочувствие (1–10)").fill("11")
-    page.get_by_test_id("save-review").click()
-    expect(page.get_by_role("alert")).to_contain_text("от 1 до 10")
+    slider = page.get_by_label("Самочувствие (1–10)")
+    assert slider.evaluate("e => { e.value = '11'; return e.value }") == "10"
 
     page.get_by_label("Самочувствие (1–10)").fill("4")
     page.get_by_label("Настроение (1–10)").fill("7")
@@ -410,3 +411,125 @@ def test_no_serious_accessibility_violations(page: Page) -> None:
     violations = cast("list[dict[str, Any]]", Axe().run(page).response["violations"])
     serious = [v for v in violations if v["impact"] in {"serious", "critical"}]
     assert not serious, [f"{v['id']}: {v['help']}" for v in serious]
+
+
+def add_entry(page: Page, text: str, tags: str = "", emotions: str = "") -> None:
+    page.get_by_label("Что произошло и что вы чувствуете").fill(text)
+    page.get_by_label("Теги (через запятую)").fill(tags)
+    page.get_by_label("Эмоции (через запятую)").fill(emotions)
+    page.get_by_test_id("save-entry").click()
+    expect(page.get_by_test_id("entries")).to_contain_text(text)
+
+
+def is_dark(page: Page) -> bool:
+    return bool(page.evaluate("document.documentElement.classList.contains('dark')"))
+
+
+@pytest.mark.acceptance("kognis-0wr", "AC1")
+@pytest.mark.e2e
+def test_dark_theme_follows_system_and_is_remembered(browser: Browser, live_server: str) -> None:
+    """По умолчанию тема как в системе; переключатель включает тёмную, выбор переживает reload."""
+    light = browser.new_context(color_scheme="light", locale="ru-RU")
+    lp = light.new_page()
+    lp.goto(live_server)
+    assert not is_dark(lp)
+    dark = browser.new_context(color_scheme="dark", locale="ru-RU")
+    dp = dark.new_page()
+    dp.goto(live_server)
+    assert is_dark(dp)
+    dark.close()
+
+    register(lp, "ann@example.com")
+    toggle = lp.get_by_test_id("theme-toggle")
+    expect(toggle).to_have_attribute("aria-pressed", "false")
+    toggle.click()
+    assert is_dark(lp)
+    expect(toggle).to_have_attribute("aria-pressed", "true")
+    lp.reload()  # выбор хранится в браузере
+    expect(lp.get_by_test_id("whoami")).to_be_visible()
+    assert is_dark(lp)
+    lp.get_by_test_id("theme-toggle").click()
+    lp.reload()
+    expect(lp.get_by_test_id("whoami")).to_be_visible()
+    assert not is_dark(lp)
+    light.close()
+
+
+@pytest.mark.acceptance("kognis-0wr", "AC2")
+@pytest.mark.e2e
+def test_advanced_mode_shows_charts_and_filters_and_is_kept_on_server(
+    browser: Browser, live_server: str, page: Page
+) -> None:
+    """Простой режим скрывает графики и фильтры; Advanced их открывает и запоминается на сервере."""
+    register(page, "ann@example.com")
+    add_entry(page, "Про работу", tags="работа", emotions="тревога")
+    add_entry(page, "Про сон", tags="сон", emotions="покой")
+    expect(page.get_by_test_id("mood-chart")).to_have_count(0)
+    expect(page.get_by_test_id("entry-filters")).to_have_count(0)
+
+    page.get_by_test_id("advanced-toggle").check()
+    expect(page.get_by_test_id("mood-chart")).to_be_visible()
+    filters = page.get_by_test_id("entry-filters")
+    expect(filters).to_be_visible()
+    filters.get_by_label("Тег").select_option("сон")
+    expect(page.get_by_test_id("entries").get_by_role("listitem")).to_have_count(1)
+    expect(page.get_by_test_id("entries")).to_contain_text("Про сон")
+    filters.get_by_label("Тег").select_option("")
+    filters.get_by_label("Эмоция").select_option("тревога")
+    expect(page.get_by_test_id("entries")).to_contain_text("Про работу")
+    expect(page.get_by_test_id("entries").get_by_role("listitem")).to_have_count(1)
+
+    other = fresh_page(browser, live_server)  # другой браузер: режим пришёл с сервера
+    login(other, "ann@example.com")
+    expect(other.get_by_test_id("advanced-toggle")).to_be_checked()
+    expect(other.get_by_test_id("mood-chart")).to_be_visible()
+    other.get_by_test_id("advanced-toggle").uncheck()
+    expect(other.get_by_test_id("mood-chart")).to_have_count(0)
+    other.context.close()
+    page.reload()
+    expect(page.get_by_test_id("advanced-toggle")).not_to_be_checked()
+
+
+@pytest.mark.acceptance("kognis-0wr", "AC3")
+@pytest.mark.e2e
+def test_key_screens_have_no_serious_a11y_violations_in_both_themes(
+    browser: Browser, live_server: str
+) -> None:
+    """axe на главной (простой и Advanced), итоге дня и достижениях — в светлой и тёмной теме."""
+    SCREENS.mkdir(parents=True, exist_ok=True)
+    context = browser.new_context(
+        viewport={"width": 1024, "height": 900}, locale="ru-RU", color_scheme="light"
+    )
+    page = context.new_page()
+    page.goto(live_server)
+    register(page, "ann@example.com")
+    page.get_by_role("link", name="Итог дня").click()
+    page.get_by_label("Настроение (1–10)").fill("7")
+    page.get_by_test_id("save-review").click()
+    expect(page.get_by_test_id("reviews")).to_contain_text("Настроение: 7")
+    page.get_by_role("link", name="Дневник").click()
+    add_entry(page, "Спокойный день", tags="дом", emotions="покой")
+    page.get_by_test_id("onboarding").wait_for()
+
+    for theme in ("light", "dark"):
+        if theme == "dark":
+            page.get_by_test_id("theme-toggle").click()
+            assert is_dark(page)
+        for name, action in [
+            ("home", ""),
+            ("home-advanced", "advanced"),
+            ("day", "Итог дня"),
+            ("achievements", "Достижения"),
+        ]:
+            if action == "advanced":
+                page.get_by_test_id("advanced-toggle").check()
+                expect(page.get_by_test_id("mood-chart")).to_be_visible()
+            elif action:
+                page.get_by_role("link", name=action).click()
+                page.get_by_role("heading", level=2).first.wait_for()
+            page.wait_for_timeout(200)  # отрисовка графика
+            page.screenshot(path=str(SCREENS / f"0wr-{name}-{theme}.png"), full_page=True)
+            check_axe(page)
+        page.get_by_role("link", name="Дневник").click()
+        page.get_by_test_id("advanced-toggle").uncheck()
+    context.close()

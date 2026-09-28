@@ -23,10 +23,13 @@ import {
   register,
   runAnalysis,
   saveDayReview,
+  saveSettings,
   type User,
 } from "./api";
+import { MoodChart } from "./Charts";
 import { decryptText, encryptText, MIN_PRIVATE_PASSWORD } from "./privateCrypto";
 import { QuestsPage } from "./Quests";
+import { useTheme } from "./theme";
 
 const inputClass =
   "w-full rounded border border-slate-400 bg-white px-3 py-2 text-base text-slate-900";
@@ -429,11 +432,137 @@ function PrivateEntryBody({ entry }: { entry: Entry }) {
   );
 }
 
-function EntryList() {
+interface EntryFilters {
+  tag: string;
+  emotion: string;
+  from: string;
+  to: string;
+}
+
+const NO_FILTERS: EntryFilters = { tag: "", emotion: "", from: "", to: "" };
+
+function matchesFilters(entry: Entry, f: EntryFilters): boolean {
+  return (
+    (f.tag === "" || entry.tags.includes(f.tag)) &&
+    (f.emotion === "" || entry.emotions.includes(f.emotion)) &&
+    (f.from === "" || entry.date >= f.from) &&
+    (f.to === "" || entry.date <= f.to)
+  );
+}
+
+function uniqueSorted(values: string[]): string[] {
+  return [...new Set(values)].sort((a, b) => a.localeCompare(b, "ru"));
+}
+
+function EntryFilterBar({
+  entries,
+  filters,
+  onChange,
+}: {
+  entries: Entry[];
+  filters: EntryFilters;
+  onChange: (next: EntryFilters) => void;
+}) {
+  const tags = uniqueSorted(entries.flatMap((entry) => entry.tags));
+  const emotions = uniqueSorted(entries.flatMap((entry) => entry.emotions));
+  return (
+    <form
+      aria-label="Фильтры записей"
+      data-testid="entry-filters"
+      className="grid gap-3 rounded-lg border border-slate-300 bg-white p-4 sm:grid-cols-2"
+      onSubmit={(event) => event.preventDefault()}
+    >
+      <div>
+        <label htmlFor="filter-tag" className="mb-1 block">
+          Тег
+        </label>
+        <select
+          id="filter-tag"
+          className={inputClass}
+          value={filters.tag}
+          onChange={(event) => onChange({ ...filters, tag: event.target.value })}
+        >
+          <option value="">Все теги</option>
+          {tags.map((tag) => (
+            <option key={tag} value={tag}>
+              #{tag}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label htmlFor="filter-emotion" className="mb-1 block">
+          Эмоция
+        </label>
+        <select
+          id="filter-emotion"
+          className={inputClass}
+          value={filters.emotion}
+          onChange={(event) => onChange({ ...filters, emotion: event.target.value })}
+        >
+          <option value="">Все эмоции</option>
+          {emotions.map((emotion) => (
+            <option key={emotion} value={emotion}>
+              {emotion}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label htmlFor="filter-from" className="mb-1 block">
+          С даты
+        </label>
+        <input
+          id="filter-from"
+          type="date"
+          lang="ru"
+          className={inputClass}
+          value={filters.from}
+          onChange={(event) => onChange({ ...filters, from: event.target.value })}
+        />
+      </div>
+      <div>
+        <label htmlFor="filter-to" className="mb-1 block">
+          По дату
+        </label>
+        <input
+          id="filter-to"
+          type="date"
+          lang="ru"
+          className={inputClass}
+          value={filters.to}
+          onChange={(event) => onChange({ ...filters, to: event.target.value })}
+        />
+      </div>
+    </form>
+  );
+}
+
+const RECENT_LIMIT = 5;
+
+// простой режим — последние записи; Advanced — все записи с фильтрами
+function EntryList({ advanced }: { advanced: boolean }) {
+  const [filters, setFilters] = useState<EntryFilters>(NO_FILTERS);
   const entries = useQuery({ queryKey: ["entries"], queryFn: listEntries });
   if (entries.isError) return <ErrorMessage error={entries.error} />;
-  const items: Entry[] = entries.data ?? [];
-  if (items.length === 0) return <p className="text-slate-700">Пока нет записей.</p>;
+  const all: Entry[] = entries.data ?? [];
+  if (all.length === 0) return <p className="text-slate-700">Пока нет записей.</p>;
+  const items = advanced
+    ? all.filter((entry) => matchesFilters(entry, filters))
+    : all.slice(0, RECENT_LIMIT);
+  return (
+    <>
+      {advanced && <EntryFilterBar entries={all} filters={filters} onChange={setFilters} />}
+      {items.length === 0 ? (
+        <p className="text-slate-700">По фильтрам ничего не найдено.</p>
+      ) : (
+        <EntryItems items={items} />
+      )}
+    </>
+  );
+}
+
+function EntryItems({ items }: { items: Entry[] }) {
   return (
     <ul className="space-y-3" data-testid="entries">
       {items.map((entry) => (
@@ -460,6 +589,43 @@ function localToday(): string {
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const day = String(now.getDate()).padStart(2, "0");
   return `${now.getFullYear()}-${month}-${day}`;
+}
+
+interface ScaleFieldProps {
+  id: string;
+  label: string;
+  low: string;
+  high: string;
+  value: string;
+  onChange: (value: string) => void;
+}
+
+// шкала 1–10: ползунок с подписями концов и текущим значением
+function ScaleField({ id, label, low, high, value, onChange }: ScaleFieldProps) {
+  return (
+    <div>
+      <label htmlFor={id} className="mb-1 flex items-baseline justify-between font-semibold">
+        {label}
+        <output htmlFor={id} className="text-2xl text-indigo-800">
+          {value}
+        </output>
+      </label>
+      <input
+        id={id}
+        type="range"
+        min={1}
+        max={10}
+        step={1}
+        className="w-full accent-indigo-700"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
+      <div aria-hidden="true" className="flex justify-between text-sm text-slate-700">
+        <span>1 · {low}</span>
+        <span>{high} · 10</span>
+      </div>
+    </div>
+  );
 }
 
 function DayReviewForm() {
@@ -503,36 +669,22 @@ function DayReviewForm() {
           onChange={(event) => setDate(event.target.value)}
         />
       </div>
-      <div>
-        <label htmlFor="wellbeing" className="mb-1 block font-semibold">
-          Самочувствие (1–10)
-        </label>
-        <input
-          id="wellbeing"
-          type="number"
-          min={1}
-          max={10}
-          step={1}
-          className={inputClass}
-          value={wellbeing}
-          onChange={(event) => setWellbeing(event.target.value)}
-        />
-      </div>
-      <div>
-        <label htmlFor="mood" className="mb-1 block font-semibold">
-          Настроение (1–10)
-        </label>
-        <input
-          id="mood"
-          type="number"
-          min={1}
-          max={10}
-          step={1}
-          className={inputClass}
-          value={mood}
-          onChange={(event) => setMood(event.target.value)}
-        />
-      </div>
+      <ScaleField
+        id="wellbeing"
+        label="Самочувствие (1–10)"
+        low="плохо"
+        high="отлично"
+        value={wellbeing}
+        onChange={setWellbeing}
+      />
+      <ScaleField
+        id="mood"
+        label="Настроение (1–10)"
+        low="тяжёлое"
+        high="радостное"
+        value={mood}
+        onChange={setMood}
+      />
       <div>
         <label htmlFor="reflection" className="mb-1 block font-semibold">
           Рефлексия: что запомнилось сегодня
@@ -927,15 +1079,51 @@ function Shell({ user, children }: { user: User; children: ReactNode }) {
       return client.invalidateQueries({ queryKey: ["me"] });
     },
   });
+  const [theme, toggleTheme] = useTheme();
+  // переключатель откликается сразу (локальное состояние); при ошибке сервера возвращаем прежнее
+  const [advanced, setAdvanced] = useState(user.advanced === true);
+  const mode = useMutation({
+    mutationFn: saveSettings,
+    onMutate: (next) => client.setQueryData(["me"], { ...user, advanced: next }),
+    onSuccess: (saved) => client.setQueryData(["me"], saved),
+    onError: (_error, next) => {
+      setAdvanced(!next);
+      client.setQueryData(["me"], { ...user, advanced: !next });
+    },
+  });
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <p data-testid="whoami">{user.email}</p>
-        <button type="button" className="text-indigo-800 underline" onClick={() => out.mutate()}>
-          Выйти
-        </button>
+        <div className="flex flex-wrap items-center gap-4">
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              data-testid="advanced-toggle"
+              checked={advanced}
+              onChange={(event) => {
+                setAdvanced(event.target.checked);
+                mode.mutate(event.target.checked);
+              }}
+            />
+            Advanced
+          </label>
+          <button
+            type="button"
+            data-testid="theme-toggle"
+            aria-pressed={theme === "dark"}
+            className="rounded border border-slate-400 px-3 py-1"
+            onClick={toggleTheme}
+          >
+            Тёмная тема
+          </button>
+          <button type="button" className="text-indigo-800 underline" onClick={() => out.mutate()}>
+            Выйти
+          </button>
+        </div>
       </div>
-      <nav aria-label="Разделы" className="flex gap-4">
+      <ErrorMessage error={mode.error} />
+      <nav aria-label="Разделы" className="flex flex-wrap gap-4">
         <Link to="/" className="text-indigo-800 underline">
           Дневник
         </Link>
@@ -961,15 +1149,103 @@ function Shell({ user, children }: { user: User; children: ReactNode }) {
   );
 }
 
-function DiaryPage() {
+const ONBOARDING_KEY = "kognis-onboarded";
+
+// первый вход: короткое объяснение и дисклеймер; закрытие запоминается в браузере
+function Onboarding() {
+  const [hidden, setHidden] = useState(() => {
+    try {
+      return window.localStorage.getItem(ONBOARDING_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  if (hidden) return null;
+  const close = () => {
+    try {
+      window.localStorage.setItem(ONBOARDING_KEY, "1");
+    } catch {
+      // без хранилища подсказка вернётся при следующем входе
+    }
+    setHidden(true);
+  };
+  return (
+    <section
+      aria-labelledby="onboarding-title"
+      data-testid="onboarding"
+      className="space-y-2 rounded-lg border border-amber-700 bg-amber-50 p-4 text-amber-900"
+    >
+      <h2 id="onboarding-title" className="text-xl font-semibold">
+        Добро пожаловать в Kognis
+      </h2>
+      <p>
+        Записывайте мысли и переживания, подводите итог дня, получайте опыт и уровни. Режим Advanced
+        (переключатель вверху) открывает графики и фильтры записей.
+      </p>
+      <p className="font-semibold">
+        Kognis не медицинская помощь и не заменяет специалиста. В кризисной ситуации звоните 112.
+      </p>
+      <button type="button" className={buttonClass} data-testid="onboarding-close" onClick={close}>
+        Понятно
+      </button>
+    </section>
+  );
+}
+
+function DaySummary() {
+  const reviews = useQuery({ queryKey: ["day-reviews"], queryFn: listDayReviews });
+  if (reviews.isError) return <ErrorMessage error={reviews.error} />;
+  if (!reviews.data) return null;
+  const today = reviews.data.find((review) => review.date === localToday());
+  return (
+    <section
+      aria-labelledby="day-summary-title"
+      data-testid="day-summary"
+      className="space-y-1 rounded-lg border border-slate-300 bg-white p-4"
+    >
+      <h2 id="day-summary-title" className="text-xl font-semibold">
+        Итог дня
+      </h2>
+      {today ? (
+        <p>
+          Самочувствие: {today.wellbeing} из 10 · Настроение: {today.mood} из 10
+        </p>
+      ) : (
+        <p>
+          Сегодня итог ещё не подведён.{" "}
+          <Link to="/day" className="text-indigo-800 underline">
+            Заполнить за сегодня
+          </Link>
+        </p>
+      )}
+    </section>
+  );
+}
+
+function HomePage({ advanced }: { advanced: boolean }) {
   return (
     <div className="space-y-6">
+      <Onboarding />
+      <DaySummary />
+      <button
+        type="button"
+        data-testid="write-cta"
+        className="w-full rounded-lg bg-indigo-700 px-6 py-4 text-xl font-bold text-white hover:bg-indigo-800"
+        onClick={() => {
+          const field = document.getElementById("text");
+          field?.scrollIntoView({ block: "center" });
+          field?.focus();
+        }}
+      >
+        Записать
+      </button>
       <EntryForm />
+      {advanced && <MoodChart />}
       <section aria-labelledby="entries-title" className="space-y-3">
         <h2 id="entries-title" className="text-xl font-semibold">
-          Мои записи
+          {advanced ? "Мои записи" : "Последние записи"}
         </h2>
-        <EntryList />
+        <EntryList advanced={advanced} />
       </section>
     </div>
   );
@@ -992,7 +1268,7 @@ export function App() {
           path="/"
           element={
             <Shell user={user}>
-              <DiaryPage />
+              <HomePage advanced={user.advanced === true} />
             </Shell>
           }
         />

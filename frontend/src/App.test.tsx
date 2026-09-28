@@ -139,6 +139,7 @@ test("запись под замком: заглушка, ошибка неве�
   stubApi({
     "GET /api/me": () => reply(200, { id: 1, email: "ann@example.com" }),
     "GET /api/progress": () => reply(200, emptyProgress),
+    "GET /api/day-reviews": () => reply(200, []),
     "GET /api/entries": () =>
       reply(200, [
         {
@@ -192,6 +193,7 @@ test("приватная запись: предупреждение, на сер
   stubApi({
     "GET /api/me": () => reply(200, { id: 1, email: "ann@example.com" }),
     "GET /api/progress": () => reply(200, emptyProgress),
+    "GET /api/day-reviews": () => reply(200, []),
     "GET /api/entries": () => reply(200, stored),
     // «сервер» сохраняет присланное как есть — так же, как настоящий, ничего не расшифровывая
     "POST /api/entries": (init) => {

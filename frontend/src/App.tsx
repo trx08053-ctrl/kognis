@@ -4,6 +4,7 @@ import { Link, Navigate, Route, Routes } from "react-router";
 import {
   type Analysis,
   ApiError,
+  acceptQuestFromAnalysis,
   answerAnalysis,
   createEntry,
   type DayReview,
@@ -23,6 +24,7 @@ import {
   saveDayReview,
   type User,
 } from "./api";
+import { QuestsPage } from "./Quests";
 
 const inputClass =
   "w-full rounded border border-slate-400 bg-white px-3 py-2 text-base text-slate-900";
@@ -504,7 +506,50 @@ function AnalysisView({ analysis, directions }: { analysis: Analysis; directions
           ))}
         </ul>
       )}
+      <QuestIdeas analysis={analysis} />
     </article>
+  );
+}
+
+function QuestIdeas({ analysis }: { analysis: Analysis }) {
+  const client = useQueryClient();
+  const take = useMutation({
+    mutationFn: (idea: number) => acceptQuestFromAnalysis(analysis.id, idea),
+    onSuccess: () => client.invalidateQueries({ queryKey: ["quests"] }),
+  });
+  if (analysis.quest_ideas.length === 0) return null;
+  return (
+    <section aria-labelledby={`ideas-${analysis.id}`} className="space-y-2">
+      <h4 id={`ideas-${analysis.id}`} className="font-semibold">
+        Идеи для квестов
+      </h4>
+      <ul className="space-y-1">
+        {analysis.quest_ideas.map((idea, i) => (
+          <li key={idea} className="flex items-center justify-between gap-3">
+            <span>{idea}</span>
+            <button
+              type="button"
+              className="text-indigo-800 underline"
+              aria-label={`Принять квест: ${idea}`}
+              disabled={take.isPending}
+              onClick={() => take.mutate(i)}
+            >
+              Принять квест
+            </button>
+          </li>
+        ))}
+      </ul>
+      {take.isSuccess && (
+        <p role="status">
+          Квест принят — он в разделе{" "}
+          <Link to="/quests" className="text-indigo-800 underline">
+            Квесты
+          </Link>
+          .
+        </p>
+      )}
+      <ErrorMessage error={take.error} />
+    </section>
   );
 }
 
@@ -676,6 +721,9 @@ function Shell({ user, children }: { user: User; children: ReactNode }) {
         <Link to="/analysis" className="text-indigo-800 underline">
           Разбор
         </Link>
+        <Link to="/quests" className="text-indigo-800 underline">
+          Квесты
+        </Link>
         <Link to="/achievements" className="text-indigo-800 underline">
           Достижения
         </Link>
@@ -745,6 +793,14 @@ export function App() {
           element={
             <Shell user={user}>
               <AchievementsPage />
+            </Shell>
+          }
+        />
+        <Route
+          path="/quests"
+          element={
+            <Shell user={user}>
+              <QuestsPage />
             </Shell>
           }
         />

@@ -177,3 +177,63 @@ export const saveDayReview = (date: string, review: DayReviewInput): Promise<Day
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(review),
   }).then((r) => parse<DayReview>(r));
+
+export interface QuestStep {
+  idx: number;
+  title: string;
+  done_on: string | null;
+}
+
+export interface Quest {
+  id: number;
+  source: "library" | "analysis";
+  template_code: string | null;
+  kind: "quest" | "challenge";
+  title: string;
+  description: string;
+  created_on: string;
+  completed_on: string | null;
+  steps: QuestStep[];
+}
+
+export interface QuestTemplate {
+  code: string;
+  title: string;
+  description: string;
+  direction: string;
+  kind: "quest" | "challenge";
+  steps: string[];
+}
+
+export interface StepDone {
+  quest: Quest;
+  xp: number;
+}
+
+export interface Quiz {
+  code: string;
+  title: string;
+  questions: string[];
+  done_today: boolean;
+}
+
+export interface QuizResult {
+  xp: number;
+  saved: { date: string; answers: string[] };
+  help: HelpBlock | null;
+}
+
+export const listQuestLibrary = (): Promise<QuestTemplate[]> =>
+  fetch("/api/quests/library").then((r) => parse<QuestTemplate[]>(r));
+export const listQuests = (): Promise<Quest[]> =>
+  fetch("/api/quests").then((r) => parse<Quest[]>(r));
+export const acceptQuest = (template: string): Promise<Quest> =>
+  post<Quest>("/api/quests", { template });
+export const acceptQuestFromAnalysis = (analysisId: number, idea: number): Promise<Quest> =>
+  post<Quest>("/api/quests/from-analysis", { analysis_id: analysisId, idea });
+export const completeQuestStep = (questId: number, idx: number): Promise<StepDone> =>
+  post<StepDone>(`/api/quests/${questId}/steps/${idx}/done`);
+export const listQuizzes = (): Promise<Quiz[]> =>
+  fetch("/api/quizzes").then((r) => parse<Quiz[]>(r));
+export const submitQuiz = (code: string, answers: string[]): Promise<QuizResult> =>
+  post<QuizResult>(`/api/quizzes/${code}/answers`, { answers });

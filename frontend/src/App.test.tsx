@@ -259,3 +259,46 @@ test("разбор: без согласия кнопка выключена, с 
   expect(result.textContent).toContain("Избегание");
   expect(screen.getByLabelText("Что помогло бы начать?")).toBeTruthy();
 });
+
+test("экран квестов: принять из библиотеки и отметить шаг", async () => {
+  const steps = [{ idx: 0, title: "Первый шаг", done_on: null }];
+  const quest = {
+    id: 5,
+    source: "library",
+    template_code: "catch_thought",
+    kind: "quest",
+    title: "Поймай мысль",
+    description: "",
+    created_on: "2026-09-01",
+    completed_on: null,
+    steps,
+  };
+  let taken = false;
+  stubApi({
+    "GET /api/me": () => reply(200, { id: 1, email: "ann@example.com" }),
+    "GET /api/entries": () => reply(200, []),
+    "GET /api/progress": () => reply(200, emptyProgress),
+    "GET /api/quests": () => reply(200, taken ? [quest] : []),
+    "GET /api/quizzes": () => reply(200, []),
+    "GET /api/quests/library": () =>
+      reply(200, [
+        {
+          code: "catch_thought",
+          title: "Поймай мысль",
+          description: "Описание",
+          direction: "cbt",
+          kind: "quest",
+          steps: ["Первый шаг"],
+        },
+      ]),
+    "POST /api/quests": () => {
+      taken = true;
+      return reply(201, quest);
+    },
+  });
+  renderApp();
+  fireEvent.click(await screen.findByRole("link", { name: "Квесты" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Принять: Поймай мысль" }));
+  const card = await screen.findByTestId("quest");
+  expect(card.textContent).toContain("Выполнено шагов: 0 из 1");
+});

@@ -208,7 +208,7 @@ class CannedProvider:
                     }
                 ],
                 "questions": ["Что помогло бы начать?"],
-                "quest_ideas": [],
+                "quest_ideas": ["Позвонить одному человеку"],
             }
         )
 
@@ -271,6 +271,53 @@ def test_analysis_screen(browser: Browser, engine: Engine) -> None:
         expect(page.get_by_test_id("analysis-result")).to_have_count(0)
         page.screenshot(path=str(SCREENS / "e2e-analysis-crisis.png"), full_page=True)
         check_axe(page)
+        page.context.close()
+
+
+@pytest.mark.acceptance("kognis-99x", "AC4")
+@pytest.mark.e2e
+def test_quests_screen(browser: Browser, engine: Engine) -> None:
+    """Экран «Квесты»: квест из анализа и из библиотеки, отметка шагов, квиз; axe."""
+    with serve(create_app(engine, ai_provider=CannedProvider())) as url:
+        page = fresh_page(browser, url)
+        register(page, "ann@example.com")
+        page.get_by_label("Что произошло и что вы чувствуете").fill("Сегодня страшно звонить")
+        page.get_by_test_id("save-entry").click()
+        expect(page.get_by_test_id("xp")).to_have_text("Опыт: 10 из 50")
+        page.get_by_role("link", name="Разбор").click()
+        page.get_by_label("Согласен(на) передать записи").check()
+        page.get_by_test_id("run-analysis").click()
+        page.get_by_role("button", name="Принять квест: Позвонить одному человеку").click()
+        expect(page.get_by_role("status")).to_contain_text("Квест принят")
+
+        page.get_by_label("Разделы").get_by_role("link", name="Квесты").click()
+        quest = page.get_by_test_id("quest")
+        expect(quest).to_have_count(1)
+        expect(quest).to_contain_text("Выполнено шагов: 0 из 3")
+        quest.get_by_role("button", name="Отметить").first.click()
+        expect(quest).to_contain_text("Выполнено шагов: 1 из 3")
+        expect(page.get_by_test_id("xp")).to_have_text("Опыт: 25 из 50")
+
+        page.get_by_role("button", name="Принять: Поймай автоматическую мысль").click()
+        expect(page.get_by_test_id("quest")).to_have_count(2)
+        expect(
+            page.get_by_role("button", name="Принять: Поймай автоматическую мысль")
+        ).to_be_disabled()
+
+        quiz = page.get_by_test_id("quiz").first
+        for box in quiz.get_by_role("textbox").all():
+            box.fill("Ответ")
+        quiz.get_by_role("button", name="Сохранить ответы").click()
+        expect(quiz.get_by_test_id("quiz-done")).to_contain_text("+10")
+        expect(page.get_by_test_id("xp")).to_have_text("Опыт: 35 из 50")
+        SCREENS.mkdir(parents=True, exist_ok=True)
+        page.screenshot(path=str(SCREENS / "e2e-quests.png"), full_page=True)
+        check_axe(page)
+
+        # после перезагрузки прогресс на месте, квиз сегодня уже пройден
+        page.reload()
+        expect(page.get_by_test_id("quest").first).to_be_visible()
+        expect(page.get_by_test_id("quiz-done")).to_have_count(1)
         page.context.close()
 
 

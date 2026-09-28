@@ -9,6 +9,12 @@ CRISIS_PATTERNS: tuple[str, ...] = (
     # русский
     r"(?<!не )хочу умереть",
     r"хочу сдохнуть",
+    r"хочется (?:умереть|сдохнуть)",
+    r"умереть хочу",
+    r"не хочу просыпаться",
+    r"нет смысла в жизни",
+    r"перерезать вены",
+    r"выброситься из окна",
     r"не хочу (?:больше )?жить(?! (?:в|во|здесь|там|с|со|у|на|рядом|так|как)\b)",
     r"жить не хочу",
     r"(?:нет|не вижу) смысла (?:больше )?жить",
@@ -34,16 +40,20 @@ CRISIS_PATTERNS: tuple[str, ...] = (
     r"(?:do not|don't|dont) want to (?:live|be alive)(?! (?:in|here|there|with|like|this way)\b)",
     r"no reason to live",
     r"hang myself",
+    r"wanna die",
+    r"wish i (?:was|were) dead",
+    r"end it all",
 )
 
-_COMPILED = tuple(re.compile(p) for p in CRISIS_PATTERNS)
+_COMPILED = tuple(re.compile(rf"\b(?:{p})\b") for p in CRISIS_PATTERNS)
 
 
 def normalize(text: str) -> str:
     """Нижний регистр, ё→е, единые апострофы и пробелы, без знаков препинания."""
     lowered = text.lower().replace("ё", "е").replace("’", "'").replace("`", "'")
-    no_punct = re.sub(r"[^\w\s']", " ", lowered)
-    return re.sub(r"\s+", " ", no_punct).strip()
+    # знак препинания — граница клаузы: «не хочу жить, с меня хватит» не то же, что «жить с мамой»
+    marked = re.sub(r"[^\w\s']", " | ", lowered)
+    return re.sub(r"\s+", " ", marked).strip()
 
 
 @dataclass(frozen=True)

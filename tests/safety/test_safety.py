@@ -37,10 +37,15 @@ def test_help_contacts_are_configurable(monkeypatch: pytest.MonkeyPatch) -> None
     assert [(c.name, c.phone) for c in help_block().contacts] == [("Линия", "8-800")]
 
 
-def test_broken_contacts_config_is_reported(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_broken_contacts_config_falls_back_to_112_and_entry_is_saved(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setenv("KOGNIS_HELP_CONTACTS", "не json")
-    with pytest.raises(ValueError, match="KOGNIS_HELP_CONTACTS"):
-        help_block()
+    assert [c.phone for c in help_block().contacts] == ["112"]
+    signup(client)
+    response = client.post("/api/entries", json={"text": "хочу умереть"})
+    assert response.status_code == 201
+    assert response.json()["help"]["contacts"][0]["phone"] == "112"
 
 
 def test_check_text_returns_help_only_for_crisis() -> None:

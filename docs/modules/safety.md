@@ -9,7 +9,7 @@
 ## Бизнес-правила
 - детектор — данные-конфигурация `src/kognis/safety/_domain.py::CRISIS_PATTERNS`: фразы после нормализации (регистр, «ё», пунктуация); отрицания и обороты вроде «умираю от смеха», «не хочу жить в этом городе», «don't want to die» не срабатывают (`src/kognis/safety/_domain.py::assess`);
 - при сигнале запись не даёт XP и не порождает квестов: `Assessment.allows_rewards` — `False` (`src/kognis/safety/_domain.py::Assessment`); учитывать обязаны gameplay/analysis через `web` (D2, D5);
-- блок помощи: поддерживающее сообщение и контакты; по умолчанию только **112**, список задаёт `KOGNIS_HELP_CONTACTS` — JSON `[{"name", "phone", "note"}]`; ошибка формата — `ValueError` (`src/kognis/safety/_infra.py::load_contacts`);
+- блок помощи: поддерживающее сообщение и контакты; по умолчанию только **112**, список задаёт `KOGNIS_HELP_CONTACTS` — JSON `[{"name", "phone", "note"}]`; при ошибке формата берётся 112 и пишется error в лог — запись человека в кризисе не должна ломаться (`src/kognis/safety/_infra.py::load_contacts`);
 - **владельцу проверить и дополнить список горячих линий** (номера не выдуманы, D5);
 - ложные срабатывания дешевле пропуска, но новую фразу добавляйте только с примером в `tests/safety/phrases.json`.
 

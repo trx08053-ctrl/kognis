@@ -149,7 +149,9 @@ def diary_router(db: Engine) -> APIRouter:
     def create_entry(payload: EntryIn, user: Authed) -> EntryOut:
         try:
             # кризисный сигнал ищем локально (safety); запись сохраняется всегда
-            assessment, block = check_text(payload.text)
+            assessment, block = check_text(
+                " | ".join([payload.text, *payload.tags, *payload.emotions])
+            )
             with transaction(db) as session:
                 diary = DiaryService(session)
                 entry = diary.create_entry(

@@ -89,6 +89,7 @@ ENVELOPE_KDF = "PBKDF2-SHA256"
 ENVELOPE_MIN_ITERATIONS = 600_000
 ENVELOPE_MAX_ITERATIONS = 10_000_000
 ENVELOPE_MIN_SALT = 16
+ENVELOPE_MAX_SALT = 64
 ENVELOPE_IV_SIZE = 12
 ENVELOPE_MIN_CIPHER = 16  # AES-GCM: минимум — тег аутентификации
 MAX_ENVELOPE_CIPHER = 4 * MAX_TEXT_LENGTH * 2  # base64 шифртекста (UTF-8 до 4 байт на символ)
@@ -117,7 +118,10 @@ def validate_envelope(raw: dict[str, Any]) -> dict[str, Any]:
     ):
         raise ValueError("шифртекст: слишком мало итераций вывода ключа")
     salt_size = _b64_len(raw.get("salt"), "соль")
-    if salt_size < ENVELOPE_MIN_SALT or _b64_len(raw.get("iv"), "iv") != ENVELOPE_IV_SIZE:
+    if (
+        not ENVELOPE_MIN_SALT <= salt_size <= ENVELOPE_MAX_SALT
+        or _b64_len(raw.get("iv"), "iv") != ENVELOPE_IV_SIZE
+    ):
         raise ValueError("шифртекст: некорректные соль или iv")
     cipher = raw.get("ct")
     if _b64_len(cipher, "данные") < ENVELOPE_MIN_CIPHER or len(str(cipher)) > MAX_ENVELOPE_CIPHER:

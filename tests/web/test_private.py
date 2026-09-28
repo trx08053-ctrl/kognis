@@ -47,7 +47,7 @@ class Recorder:
         self, system: str, messages: Sequence[Message], schema: dict[str, Any] | None = None
     ) -> str:
         self.sent.extend(m.content for m in messages)
-        return '{"summary": "ок", "patterns": [], "questions": [], "quest_suggestions": []}'
+        return '{"summary": "ок", "patterns": [], "questions": [], "quest_ideas": []}'
 
 
 @pytest.fixture
@@ -112,10 +112,14 @@ def test_envelope_returned_intact_for_decryption_in_browser(api: TestClient) -> 
 def test_private_entries_never_reach_analysis(api: TestClient, provider: Recorder) -> None:
     env = envelope()
     create_private(api, env)
+    api.post("/api/entries", json={"text": "обычная запись про сон", "tags": ["сон"]})
     response = api.post(
         "/api/analyses",
         json={"direction": "cbt", "start": "2026-09-01", "end": "2026-09-07", "consent": True},
     )
+    assert response.status_code == 201, response.text
+    # обычная запись в анализ ушла — значит, приватная исключена фильтром, а не данными нет
+    assert any("обычная запись про сон" in sent for sent in provider.sent)
     assert env["ct"] not in response.text
     assert all(env["ct"] not in sent for sent in provider.sent)
     assert "работа" not in " ".join(provider.sent)

@@ -6,6 +6,7 @@ export const FORMAT_VERSION = 1;
 export const KDF_NAME = "PBKDF2-SHA256";
 export const KDF_ITERATIONS = 600_000;
 export const MIN_PRIVATE_PASSWORD = 8;
+const MAX_ITERATIONS = 10_000_000;
 const SALT_BYTES = 16;
 const IV_BYTES = 12;
 // версия формата привязана к шифртексту: подмена заголовка конверта расшифровку не пройдёт
@@ -86,7 +87,12 @@ export async function encryptText(password: string, text: string): Promise<Envel
 }
 
 export async function decryptText(password: string, envelope: Envelope): Promise<string> {
-  if (envelope.v !== FORMAT_VERSION || envelope.kdf !== KDF_NAME)
+  // iter приходит с сервера: без границ он мог бы подвесить браузер
+  if (
+    envelope.v !== FORMAT_VERSION ||
+    envelope.kdf !== KDF_NAME ||
+    !(envelope.iter >= KDF_ITERATIONS && envelope.iter <= MAX_ITERATIONS)
+  )
     throw new UnsupportedFormatError();
   try {
     const key = await deriveKey(password, fromBase64(envelope.salt), envelope.iter);

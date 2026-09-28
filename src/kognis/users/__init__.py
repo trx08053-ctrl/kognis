@@ -1,6 +1,6 @@
-"""Модуль users: регистрация и поиск пользователей. Владеет данными пользователей."""
+"""Модуль users: регистрация, вход, сессии. Владеет данными пользователей и сессий."""
 
-from ._app import UserService
-from ._domain import User
+from ._app import SESSION_LIFETIME, UserService
+from ._domain import EmailTakenError, InvalidCredentialsError, User
 
-__all__ = ["User", "UserService"]
+__all__ = ["SESSION_LIFETIME", "EmailTakenError", "InvalidCredentialsError", "User", "UserService"]

@@ -3,52 +3,6 @@
 
 :root {
   font-family: system-ui, sans-serif;
-  color: #1a1a1a;
-  background: #fafafa;
-}
-main {
-  max-width: 640px;
-  margin: 40px auto;
-  padding: 0 16px;
-}
-.card {
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 16px;
-}
-label {
-  display: block;
-  margin-bottom: 6px;
-  font-weight: 600;
-}
-.row {
-  display: flex;
-  gap: 8px;
-}
-input {
-  flex: 1;
-  padding: 8px;
-  font-size: 16px;
-  border: 1px solid #888;
-  border-radius: 4px;
-}
-button {
-  padding: 8px 16px;
-  font-size: 16px;
-  border: 0;
-  border-radius: 4px;
-  background: #1c64d1;
-  color: #fff;
-  cursor: pointer;
-}
-.error {
-  color: #b3261e;
-  margin: 8px 0 0;
-}
-.users {
-  padding-left: 20px;
-}
-.empty {
-  color: #555;
+  color: #0f172a;
+  background: #f1f5f9;
 }

@@ -1,3 +1,6 @@
-"""Модуль diary: TODO ответственность (одно предложение)."""
+"""Модуль diary: записи дневника (текст, теги, эмоции, дата); владеет `entries`."""
 
-__all__: list[str] = []
+from ._app import DiaryService
+from ._domain import Entry
+
+__all__ = ["DiaryService", "Entry"]

@@ -26,35 +26,39 @@
 Архитектура — **модульный монолит**, общая БД, у каждой таблицы один владелец.
 
 ```mermaid
-flowchart LR
-  web --> users
-  web --> diary
+flowchart TB
   web --> analysis
   web --> gameplay
-  diary --> users
-  diary --> access
   analysis --> diary
-  analysis --> ai
-  analysis --> access
-  gameplay --> users
+  gameplay --> diary
+  diary --> ai
+  diary --> safety
+  diary --> access
+  ai --> users
+  safety --> users
+  access --> users
   users --> db
-  diary --> db
-  gameplay --> db
 ```
+
+Диаграмма = правила import-linter (слои; «выше» может использовать «ниже»): `web` → `analysis | gameplay` → `diary` →
+`ai | safety | access` → `users` → `db`. Межмодульные эффекты (XP за запись, квесты из анализа) связывает `web`
+(сценарии приложения); модули друг о друге не знают ([DECISIONS-NIGHT](DECISIONS-NIGHT.md) D2).
 
 | Модуль | Ответственность | Владеет данными | Публичный API | Может использовать |
 |---|---|---|---|---|
 | [web](modules/web.md) | HTTP: JSON API, раздача интерфейса, /health, сессии | — | `create_app`, `main` | все модули через их API |
-| [users](modules/users.md) | регистрация, вход, хэш пароля, сессии | `users`, сессии | `User`, `UserService` | `db` |
-| diary (план, U1) | записи, теги, эмоции, оценка дня, режим защиты (шифртекст) | `entries`, `day_reviews` | `DiaryService` | `users`, `access`, `db` |
-| analysis (план, U4) | ИИ-анализ периода, направления психологии, уточняющие вопросы, проверка согласия | `analyses` | `AnalysisService` | `diary`, `ai`, `access` |
-| ai (план, U4) | адаптер провайдера ИИ (DeepSeek/Ollama Cloud, фейк для тестов, позже локальный/Claude) | — | `AiProvider` | — |
-| gameplay (план, U5–U6) | XP, уровни, streaks, достижения, квесты/челленджи/квизы | `progress`, `quests` | `GameplayService` | `users`, `db` |
-| access (план) | проверка доступа к функциям по плану (сейчас всё разрешено) | `plans` (позже) | `can_use(user, feature)` | `users` |
+| [users](modules/users.md) | регистрация, вход/выход, хэш пароля (argon2id), сессии | `users`, `sessions` | `User`, `UserService` | `db` |
+| [diary](modules/diary.md) | записи: текст, теги, эмоции, дата; позже оценка дня и режим защиты | `entries` | `DiaryService`, `Entry` | `db` |
+| safety (план) | детектор кризисных сигналов, контакты помощи | — | — | `users` |
+| ai (план) | адаптер провайдера ИИ (фейк для тестов; OpenAI-совместимый) | — | `AiProvider` | `users` |
+| analysis (план) | ИИ-анализ периода, направления психологии, согласие | `analyses` | `AnalysisService` | `diary`, `ai`, `safety`, `access` |
+| gameplay (план) | XP, уровни, streaks, достижения, квесты | `progress`, `quests` | `GameplayService` | `diary`, `users`, `db` |
+| access (план) | `can_use(user, feature)` — доступ по плану (сейчас всё разрешено) | `plans` (позже) | `can_use` | `users` |
 | [db](modules/db.md) | подключение, `metadata`, транзакции | — | `make_engine`, `transaction`, `metadata` | — |
 
-Планируемые модули создаются по мере сценариев (`just module-new`) вместе с правилами import-linter — это решение
-человека, фиксируется в ADR 0002.
+Каркасы всех модулей и правила import-linter внесены владельцем (ADR 0002, [D1–D11](DECISIONS-NIGHT.md));
+наполняются по задачам сценариев. Аутентификация и защита записей — [ADR 0003](adr/0003-auth-sessions-and-entry-protection.md),
+интерфейс — [ADR 0004](adr/0004-frontend.md).
 
 Хранение: PostgreSQL в продакшене (Docker, `deploy/compose.yml`), SQLite локально и в быстрых тестах;
 схема — только миграции Alembic. Интерфейс: `frontend/` (React + TS) ходит только в `/api/*`, отдаётся `web`.
@@ -92,9 +96,9 @@ flowchart LR
 ## 8. Неизвестные и рискованные предположения
 | # | Предположение | Риск, если неверно | Проверка: эксперимент / задача | Результат |
 |---|---|---|---|---|
-| R1 | Пользователь A не может прочитать записи B ни по какому пути запроса | утечка чувствительных данных | приёмочный тест U1 (AC2), проверка изоляции | — |
-| R2 | Шифрование в браузере (PBKDF2/Argon2 + AES-GCM, WebCrypto) работает на целевых браузерах | режим «приватная» непригоден | отдельная задача (spike) после U1 | — |
-| R3 | Качество ИИ-анализа DeepSeek достаточно, латентность и стоимость приемлемы | продукт малоценен | отдельная задача (spike с реальным провайдером) | — |
+| R1 | Пользователь A не может прочитать записи B ни по какому пути запроса | утечка чувствительных данных | приёмочный тест U1 (AC2), проверка изоляции | закрыт тестом AC2: чужая запись → 404 по API и не видна в интерфейсе |
+| R2 | Шифрование в браузере (PBKDF2/Argon2 + AES-GCM, WebCrypto) работает на целевых браузерах | режим «приватная» непригоден | отдельная задача bd (spike WebCrypto) | вынесен из kognis-b8z |
+| R3 | Качество ИИ-анализа DeepSeek достаточно, латентность и стоимость приемлемы | продукт малоценен | отдельная задача bd (spike с реальным провайдером) | вынесен из kognis-b8z |
 
 ## Данные и контракты
 Форматы, схемы, внешние API — в [contracts](contracts/README.md).

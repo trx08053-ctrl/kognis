@@ -134,6 +134,58 @@ test("запись с кризисным сигналом показывает �
   expect(screen.getByTestId("disclaimer").textContent).toContain("не медицинская помощь");
 });
 
+test("запись под замком: заглушка, ошибка неверного пароля, затем текст", async () => {
+  const opens: string[] = [];
+  stubApi({
+    "GET /api/me": () => reply(200, { id: 1, email: "ann@example.com" }),
+    "GET /api/progress": () => reply(200, emptyProgress),
+    "GET /api/entries": () =>
+      reply(200, [
+        {
+          id: 5,
+          date: "2026-09-29",
+          text: "",
+          tags: [],
+          emotions: [],
+          protection: "locked",
+          crisis: false,
+          help: null,
+        },
+      ]),
+    "POST /api/entries/5/open": () => {
+      // первая попытка — с неверным паролем, вторая — с верным
+      opens.push("open");
+      return opens.length > 1
+        ? reply(200, {
+            id: 5,
+            date: "2026-09-29",
+            text: "Тайная мысль",
+            tags: [],
+            emotions: [],
+            protection: "locked",
+            crisis: false,
+            help: null,
+          })
+        : reply(403, { detail: "неверный пароль замка" });
+    },
+  });
+  renderApp();
+
+  expect((await screen.findByTestId("locked-stub")).textContent).toContain("закрыта замком");
+  expect(screen.queryByText("Тайная мысль")).toBeNull();
+  fireEvent.change(screen.getByLabelText("Пароль замка"), { target: { value: "неверный-пароль" } });
+  fireEvent.click(screen.getByRole("button", { name: "Открыть" }));
+  expect((await screen.findByRole("alert")).textContent).toContain("неверный пароль замка");
+  expect(screen.queryByText("Тайная мысль")).toBeNull();
+
+  fireEvent.change(screen.getByLabelText("Пароль замка"), {
+    target: { value: "правильный-пароль" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Открыть" }));
+  expect((await screen.findByTestId("opened-text")).textContent).toBe("Тайная мысль");
+  expect(opens).toHaveLength(2);
+});
+
 test("виджет показывает уровень, серию и опыт", async () => {
   stubApi({
     "GET /api/me": () => reply(200, { id: 1, email: "ann@example.com" }),

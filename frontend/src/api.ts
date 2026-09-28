@@ -32,6 +32,8 @@ export interface NewEntry {
   text: string;
   tags: string[];
   emotions: string[];
+  protection?: "plain" | "locked";
+  lock_password?: string;
 }
 
 export class ApiError extends Error {
@@ -237,3 +239,6 @@ export const listQuizzes = (): Promise<Quiz[]> =>
   fetch("/api/quizzes").then((r) => parse<Quiz[]>(r));
 export const submitQuiz = (code: string, answers: string[]): Promise<QuizResult> =>
   post<QuizResult>(`/api/quizzes/${code}/answers`, { answers });
+
+export const openEntry = (id: number, password: string): Promise<Entry> =>
+  post<Entry>(`/api/entries/${id}/open`, { password });

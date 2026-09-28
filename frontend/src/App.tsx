@@ -19,6 +19,7 @@ import {
   listEntries,
   login,
   logout,
+  openEntry,
   register,
   runAnalysis,
   saveDayReview,
@@ -146,12 +147,22 @@ function EntryForm() {
   const [text, setText] = useState("");
   const [tags, setTags] = useState("");
   const [emotions, setEmotions] = useState("");
+  const [locked, setLocked] = useState(false);
+  const [lockPassword, setLockPassword] = useState("");
   const add = useMutation({
-    mutationFn: () => createEntry({ text, tags: splitList(tags), emotions: splitList(emotions) }),
+    mutationFn: () =>
+      createEntry({
+        text,
+        tags: splitList(tags),
+        emotions: splitList(emotions),
+        ...(locked ? { protection: "locked", lock_password: lockPassword } : {}),
+      }),
     onSuccess: () => {
       setText("");
       setTags("");
       setEmotions("");
+      setLocked(false);
+      setLockPassword("");
       void client.invalidateQueries({ queryKey: ["progress"] });
       return client.invalidateQueries({ queryKey: ["entries"] });
     },
@@ -200,11 +211,95 @@ function EntryForm() {
           onChange={(event) => setEmotions(event.target.value)}
         />
       </div>
+      <div>
+        <label className="flex items-center gap-2 font-semibold">
+          <input
+            type="checkbox"
+            checked={locked}
+            onChange={(event) => setLocked(event.target.checked)}
+          />
+          Закрыть запись замком
+        </label>
+        {locked && (
+          <div className="mt-2">
+            <label htmlFor="lock-password" className="mb-1 block">
+              Пароль замка (от 8 символов). Забытый пароль восстановить нельзя.
+            </label>
+            <input
+              id="lock-password"
+              type="password"
+              required
+              minLength={8}
+              autoComplete="new-password"
+              className={inputClass}
+              value={lockPassword}
+              onChange={(event) => setLockPassword(event.target.value)}
+            />
+          </div>
+        )}
+      </div>
       <button type="submit" className={buttonClass} data-testid="save-entry">
         Сохранить
       </button>
       <ErrorMessage error={add.error} />
       {add.data?.help && <HelpPanel help={add.data.help} />}
+    </form>
+  );
+}
+
+function LockedEntryBody({ entry }: { entry: Entry }) {
+  // текст открытой записи живёт только в состоянии компонента — не в кэше запросов
+  const [password, setPassword] = useState("");
+  const [opened, setOpened] = useState<string | null>(null);
+  const open = useMutation({
+    mutationFn: () => openEntry(entry.id, password),
+    onSuccess: (result) => {
+      setOpened(result.text);
+      setPassword("");
+    },
+  });
+
+  if (opened !== null) {
+    return (
+      <>
+        <p className="whitespace-pre-wrap" data-testid="opened-text">
+          {opened}
+        </p>
+        <button
+          type="button"
+          className="mt-2 text-indigo-800 underline"
+          onClick={() => setOpened(null)}
+        >
+          Скрыть
+        </button>
+      </>
+    );
+  }
+  return (
+    <form
+      className="space-y-2"
+      onSubmit={(event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        open.mutate();
+      }}
+    >
+      <p data-testid="locked-stub">🔒 Запись закрыта замком</p>
+      <label htmlFor={`open-${entry.id}`} className="block text-sm">
+        Пароль замка
+      </label>
+      <input
+        id={`open-${entry.id}`}
+        type="password"
+        required
+        autoComplete="off"
+        className={inputClass}
+        value={password}
+        onChange={(event) => setPassword(event.target.value)}
+      />
+      <button type="submit" className={buttonClass}>
+        Открыть
+      </button>
+      <ErrorMessage error={open.error} />
     </form>
   );
 }
@@ -219,7 +314,11 @@ function EntryList() {
       {items.map((entry) => (
         <li key={entry.id} className="rounded-lg border border-slate-300 bg-white p-4">
           <p className="text-sm text-slate-700">{entry.date}</p>
-          <p className="whitespace-pre-wrap">{entry.text}</p>
+          {entry.protection === "locked" ? (
+            <LockedEntryBody entry={entry} />
+          ) : (
+            <p className="whitespace-pre-wrap">{entry.text}</p>
+          )}
           {(entry.tags.length > 0 || entry.emotions.length > 0) && (
             <p className="mt-2 text-sm text-slate-700">
               {[...entry.emotions, ...entry.tags.map((tag) => `#${tag}`)].join(" · ")}

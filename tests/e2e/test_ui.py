@@ -3,6 +3,7 @@
 Скриншоты — в .evidence/screens/ (агент может открыть их и посмотреть на интерфейс).
 """
 
+import base64
 import importlib
 import json
 import socket
@@ -166,6 +167,42 @@ def test_crisis_entry_shows_accessible_help_block(page: Page) -> None:
     violations = cast("list[dict[str, Any]]", Axe().run(page).response["violations"])
     serious = [v for v in violations if v["impact"] in {"serious", "critical"}]
     assert not serious, [f"{v['id']}: {v['help']}" for v in serious]
+
+
+@pytest.fixture
+def data_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Ключ данных для записей «под замком»; объявляется до live_server, который читает env."""
+    monkeypatch.setenv("KOGNIS_DATA_KEY", base64.b64encode(b"K" * 32).decode())
+
+
+@pytest.mark.acceptance("kognis-83s", "AC4")
+@pytest.mark.e2e
+@pytest.mark.usefixtures("data_key")
+def test_locked_entry_flow_and_accessibility(page: Page) -> None:
+    """Запись под замком: заглушка без текста, неверный пароль — ошибка, верный — текст; axe."""
+    register(page, "ann@example.com")
+    page.get_by_label("Что произошло и что вы чувствуете").fill("Личное под замком")
+    page.get_by_label("Закрыть запись замком").check()
+    page.get_by_label("Пароль замка (от 8 символов). Забытый пароль восстановить нельзя.").fill(
+        "замок-12345"
+    )
+    page.get_by_test_id("save-entry").click()
+    entries = page.get_by_test_id("entries")
+    expect(page.get_by_test_id("locked-stub")).to_be_visible()
+    expect(entries).not_to_contain_text("Личное под замком")
+    SCREENS.mkdir(parents=True, exist_ok=True)
+    page.screenshot(path=str(SCREENS / "e2e-locked.png"), full_page=True)
+    violations = cast("list[dict[str, Any]]", Axe().run(page).response["violations"])
+    serious = [v for v in violations if v["impact"] in {"serious", "critical"}]
+    assert not serious, [f"{v['id']}: {v['help']}" for v in serious]
+
+    page.get_by_label("Пароль замка", exact=True).fill("неверный-пароль")
+    page.get_by_role("button", name="Открыть").click()
+    expect(entries.get_by_role("alert")).to_contain_text("неверный пароль замка")
+    expect(entries).not_to_contain_text("Личное под замком")
+    page.get_by_label("Пароль замка", exact=True).fill("замок-12345")
+    page.get_by_role("button", name="Открыть").click()
+    expect(page.get_by_test_id("opened-text")).to_have_text("Личное под замком")
 
 
 @pytest.mark.acceptance("kognis-50k", "AC3")

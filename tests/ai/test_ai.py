@@ -90,7 +90,7 @@ def test_retries_with_pause_then_succeeds(status: int) -> None:
     assert make(handler, sleep=pauses.append).complete("s", MESSAGES) == "Ответ"
     assert len(calls) == 3
     assert len(pauses) == 2
-    assert all(p > 0 for p in pauses)
+    assert pauses == [1.0, 2.0]
 
 
 @pytest.mark.acceptance("kognis-1gr", "AC2")

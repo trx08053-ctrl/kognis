@@ -41,6 +41,8 @@ test("аноним видит форму входа и после входа —
           tags: ["работа"],
           emotions: [],
           protection: "plain",
+          crisis: false,
+          help: null,
         },
       ]),
     );
@@ -72,4 +74,40 @@ test("показывает ошибку входа", async () => {
   fireEvent.change(screen.getByLabelText("Пароль"), { target: { value: "wrong wrong" } });
   fireEvent.click(screen.getByTestId("auth-submit"));
   expect((await screen.findByRole("alert")).textContent).toContain("неверный");
+});
+
+test("запись с кризисным сигналом показывает блок помощи с контактами", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(reply(200, { id: 1, email: "ann@example.com" }))
+      .mockResolvedValueOnce(reply(200, []))
+      .mockResolvedValueOnce(
+        reply(201, {
+          id: 2,
+          date: "2026-09-29",
+          text: "хочу умереть",
+          tags: [],
+          emotions: [],
+          protection: "plain",
+          crisis: true,
+          help: {
+            message: "Вы не одни",
+            contacts: [{ name: "Экстренные службы", phone: "112", note: "круглосуточно" }],
+          },
+        }),
+      )
+      .mockResolvedValue(reply(200, [])),
+  );
+  renderApp();
+  fireEvent.change(await screen.findByLabelText("Что произошло и что вы чувствуете"), {
+    target: { value: "хочу умереть" },
+  });
+  fireEvent.click(screen.getByTestId("save-entry"));
+  const block = await screen.findByTestId("help-block");
+  expect(block.getAttribute("role")).toBe("alert");
+  expect(block.textContent).toContain("Вы не одни");
+  expect(screen.getByRole("link", { name: "112" }).getAttribute("href")).toBe("tel:112");
+  expect(screen.getByTestId("disclaimer").textContent).toContain("не медицинская помощь");
 });

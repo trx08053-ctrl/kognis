@@ -138,6 +138,25 @@ def test_day_review_saved_error_shown_and_history_private(
     other.context.close()
 
 
+@pytest.mark.acceptance("kognis-d5q", "AC1")
+@pytest.mark.e2e
+def test_crisis_entry_shows_accessible_help_block(page: Page) -> None:
+    """Запись с кризисной фразой сохраняется, интерфейс заметно показывает контакты помощи."""
+    register(page, "ann@example.com")
+    page.get_by_label("Что произошло и что вы чувствуете").fill("Не хочу больше жить")
+    page.get_by_test_id("save-entry").click()
+    block = page.get_by_test_id("help-block")
+    expect(block).to_be_visible()
+    expect(block.get_by_role("link", name="112")).to_be_visible()
+    expect(page.get_by_test_id("entries")).to_contain_text("Не хочу больше жить")
+    expect(page.get_by_test_id("disclaimer")).to_contain_text("не медицинская помощь")
+    SCREENS.mkdir(parents=True, exist_ok=True)
+    page.screenshot(path=str(SCREENS / "e2e-crisis-help.png"), full_page=True)
+    violations = cast("list[dict[str, Any]]", Axe().run(page).response["violations"])
+    serious = [v for v in violations if v["impact"] in {"serious", "critical"}]
+    assert not serious, [f"{v['id']}: {v['help']}" for v in serious]
+
+
 @pytest.mark.e2e
 def test_no_serious_accessibility_violations(page: Page) -> None:
     expect(page.get_by_role("heading", level=1)).to_be_visible()

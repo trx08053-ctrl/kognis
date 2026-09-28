@@ -7,6 +7,7 @@ import {
   type DayReview,
   type Entry,
   getMe,
+  type HelpBlock,
   listDayReviews,
   listEntries,
   login,
@@ -104,6 +105,33 @@ function AuthPage() {
   );
 }
 
+function HelpPanel({ help }: { help: HelpBlock }) {
+  return (
+    <section
+      role="alert"
+      aria-labelledby="help-title"
+      data-testid="help-block"
+      className="rounded-lg border-2 border-red-800 bg-red-50 p-4 text-red-950"
+    >
+      <h3 id="help-title" className="text-lg font-bold">
+        Вам может понадобиться помощь
+      </h3>
+      <p className="mt-1">{help.message}</p>
+      <ul className="mt-2 space-y-1">
+        {help.contacts.map((contact) => (
+          <li key={`${contact.name}-${contact.phone}`}>
+            {contact.name}:{" "}
+            <a href={`tel:${contact.phone}`} className="text-xl font-bold underline">
+              {contact.phone}
+            </a>
+            {contact.note && <span> — {contact.note}</span>}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function EntryForm() {
   const client = useQueryClient();
   const [text, setText] = useState("");
@@ -166,6 +194,7 @@ function EntryForm() {
         Сохранить
       </button>
       <ErrorMessage error={add.error} />
+      {add.data?.help && <HelpPanel help={add.data.help} />}
     </form>
   );
 }
@@ -352,6 +381,9 @@ function Shell({ user, children }: { user: User; children: ReactNode }) {
         </Link>
       </nav>
       {children}
+      <p className="border-t border-slate-300 pt-3 text-sm text-slate-700" data-testid="disclaimer">
+        Kognis — не медицинская помощь и не заменяет специалиста. В кризисной ситуации звоните 112.
+      </p>
     </div>
   );
 }

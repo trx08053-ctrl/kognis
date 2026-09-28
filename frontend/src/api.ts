@@ -6,6 +6,17 @@ export interface User {
   email: string;
 }
 
+export interface HelpContact {
+  name: string;
+  phone: string;
+  note: string;
+}
+
+export interface HelpBlock {
+  message: string;
+  contacts: HelpContact[];
+}
+
 export interface Entry {
   id: number;
   date: string;
@@ -13,6 +24,8 @@ export interface Entry {
   tags: string[];
   emotions: string[];
   protection: string;
+  crisis: boolean;
+  help: HelpBlock | null;
 }
 
 export interface NewEntry {

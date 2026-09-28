@@ -45,6 +45,8 @@ entries_table = Table(
     Column("lock_nonce", LargeBinary, nullable=True),
     Column("lock_hash", String(255), nullable=True),
     Column("lock_version", Integer, nullable=True),
+    # «приватная» (D4): text пуст, конверт (версия, KDF, соль, iv, шифртекст) собран в браузере
+    Column("private_envelope", JSON, nullable=True),
     Column("created_at", DateTime, nullable=False),
 )
 
@@ -73,6 +75,7 @@ def _to_entry(row: Row[tuple[object, ...]]) -> Entry:
         emotions=tuple(row.emotions),
         protection=row.protection,
         crisis=row.crisis,
+        envelope=row.private_envelope,
     )
 
 
@@ -92,10 +95,13 @@ class EntryRepository:
     def add(self, entry: Entry, sealed: Sealed | None = None) -> Entry:
         """Сохранить новую запись (`entry.id` игнорируется); с `sealed` текст в БД не пишется."""
         protection = "locked" if sealed else "plain"
+        if entry.envelope is not None:
+            protection = "private"
         stored = "" if sealed else entry.text
         stmt = (
             insert(entries_table)
             .values(
+                private_envelope=entry.envelope,
                 owner_id=entry.owner_id,
                 entry_date=entry.entry_date,
                 text=stored,

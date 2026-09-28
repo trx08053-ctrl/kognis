@@ -2,6 +2,7 @@
 
 from dataclasses import replace
 from datetime import UTC, date, datetime
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -13,6 +14,7 @@ from ._domain import (
     normalize_labels,
     normalize_reflection,
     normalize_text,
+    validate_envelope,
     validate_scale,
 )
 from ._infra import DayReviewRepository, EntryRepository
@@ -38,6 +40,26 @@ class DiaryService:
     def create_locked_entry(self, owner_id: int, draft: EntryDraft, password: str) -> Entry:
         """Запись «под замком»: в БД только шифртекст, текст в результате пуст."""
         return self._add(owner_id, draft, password)
+
+    def create_private_entry(
+        self,
+        owner_id: int,
+        envelope: dict[str, Any],
+        tags: list[str],
+        emotions: list[str],
+        entry_date: date | None = None,
+    ) -> Entry:
+        """Приватная запись: сервер хранит только конверт из браузера (текста у него нет)."""
+        entry = Entry(
+            0,
+            owner_id,
+            entry_date or datetime.now(UTC).date(),
+            "",
+            normalize_labels(tags, "теги"),
+            normalize_labels(emotions, "эмоции"),
+            envelope=validate_envelope(envelope),
+        )
+        return self._repo.add(entry)
 
     def _add(self, owner_id: int, draft: EntryDraft, password: str | None) -> Entry:
         clean = normalize_text(draft.text)

@@ -11,7 +11,7 @@ from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from http import HTTPStatus
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Cookie, Depends, FastAPI, HTTPException, Request, Response
@@ -87,12 +87,14 @@ class UserOut(BaseModel):
 
 
 class EntryIn(BaseModel):
-    text: str
+    text: str = ""
     tags: list[str] = Field(default_factory=list)
     emotions: list[str] = Field(default_factory=list)
     date: dt.date | None = None
-    protection: Literal["plain", "locked"] = "plain"
+    protection: Literal["plain", "locked", "private"] = "plain"
     lock_password: str | None = Field(default=None, max_length=256)
+    # `private`: конверт шифртекста, собранный в браузере (текст и пароль на сервер не идут)
+    cipher: dict[str, Any] | None = None
 
 
 class LockPassword(BaseModel):
@@ -118,6 +120,7 @@ class EntryOut(BaseModel):
     emotions: list[str]
     protection: str
     crisis: bool = False
+    cipher: dict[str, Any] | None = None
     help: HelpOut | None = None
 
 
@@ -199,6 +202,7 @@ def entry_out(entry: Entry, block: HelpBlock | None = None) -> EntryOut:
         emotions=list(entry.emotions),
         protection=entry.protection,
         crisis=entry.crisis,
+        cipher=entry.envelope,
         help=help_out(block),
     )
 
@@ -259,6 +263,30 @@ class AttemptLimiter:
         self._failures.pop(key, None)
 
 
+def check_protection_fields(payload: EntryIn) -> None:
+    """Поля режима защиты согласованы: `private` — только шифртекст, `locked` — с паролем замка."""
+    if payload.protection == "private":
+        if payload.cipher is None or payload.text or payload.lock_password:
+            raise HTTPException(
+                status_code=422, detail="приватная запись передаётся только шифртекстом"
+            )
+    elif payload.cipher is not None:
+        raise HTTPException(status_code=422, detail="шифртекст только у приватной записи")
+    if payload.protection == "locked" and not payload.lock_password:
+        raise HTTPException(status_code=422, detail="для записи «под замком» нужен пароль замка")
+
+
+def store_entry(diary: DiaryService, owner_id: int, payload: EntryIn, day: dt.date) -> Entry:
+    if payload.cipher is not None:
+        return diary.create_private_entry(
+            owner_id, payload.cipher, payload.tags, payload.emotions, day
+        )
+    if payload.protection == "locked" and payload.lock_password:
+        draft = EntryDraft(payload.text, payload.tags, payload.emotions, day)
+        return diary.create_locked_entry(owner_id, draft, payload.lock_password)
+    return diary.create_entry(owner_id, payload.text, payload.tags, payload.emotions, day)
+
+
 def diary_router(db: Engine, today: Callable[[], dt.date], data_key: str | None) -> APIRouter:
     router = APIRouter(prefix="/api/entries")
     limiter = AttemptLimiter()
@@ -307,25 +335,17 @@ def diary_router(db: Engine, today: Callable[[], dt.date], data_key: str | None)
 
     @router.post("", status_code=201)
     def create_entry(payload: EntryIn, user: Authed) -> EntryOut:
-        if payload.protection == "locked" and not payload.lock_password:
-            raise HTTPException(
-                status_code=422, detail="для записи «под замком» нужен пароль замка"
-            )
+        check_protection_fields(payload)
         try:
-            # кризисный сигнал ищем локально (safety); запись сохраняется всегда
+            # кризисный сигнал ищем локально (safety); запись сохраняется всегда.
+            # У приватной текста на сервере нет — проверяются только теги и эмоции.
             assessment, block = check_text(
                 " | ".join([payload.text, *payload.tags, *payload.emotions])
             )
             with lock_errors(), transaction(db) as session:
                 diary = DiaryService(session, data_key)
                 day = payload.date or today()
-                if payload.protection == "locked" and payload.lock_password:
-                    draft = EntryDraft(payload.text, payload.tags, payload.emotions, day)
-                    entry = diary.create_locked_entry(user.id, draft, payload.lock_password)
-                else:
-                    entry = diary.create_entry(
-                        user.id, payload.text, payload.tags, payload.emotions, day
-                    )
+                entry = store_entry(diary, user.id, payload, day)
                 if not assessment.allows_rewards:
                     # кризисная запись опыта не даёт (D5)
                     entry = diary.mark_crisis(user.id, entry.id) or entry

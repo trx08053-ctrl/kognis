@@ -2,6 +2,7 @@
 
 from datetime import date
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ._infra import ProgressRepository
@@ -38,6 +39,7 @@ from ._quests_infra import NewQuest, QuestRepository, QuizRepository
 
 class QuestService:
     def __init__(self, session: Session) -> None:
+        self._session = session
         self._quests = QuestRepository(session)
         self._quizzes = QuizRepository(session)
         self._xp = ProgressRepository(session)
@@ -97,11 +99,18 @@ class QuestService:
             return StepOutcome(quest, 0)
         if quest.kind == TYPE_CHALLENGE and any(s.done_on == today for s in quest.steps):
             raise StepUnavailableError("шаг челленджа — не чаще одного раза в день")
-        self._quests.mark_step(quest_id, idx, today)
-        xp = self._grant(owner_id, KIND_QUEST_STEP, f"{quest_id}:{idx}", today, QUEST_STEP_XP)
-        if all(s.done_on is not None or s.idx == idx for s in quest.steps):
-            self._quests.complete(quest_id, today)
-            xp += self._grant(owner_id, KIND_QUEST, str(quest_id), today, QUEST_XP)
+        try:
+            with self._session.begin_nested():
+                self._quests.mark_step(quest_id, idx, today)
+                xp = self._grant(
+                    owner_id, KIND_QUEST_STEP, f"{quest_id}:{idx}", today, QUEST_STEP_XP
+                )
+                if all(s.done_on is not None or s.idx == idx for s in quest.steps):
+                    self._quests.complete(quest_id, today)
+                    xp += self._grant(owner_id, KIND_QUEST, str(quest_id), today, QUEST_XP)
+        except IntegrityError:
+            # параллельная отметка того же шага успела раньше: XP уже начислен ей
+            return StepOutcome(self._quests.fetch(quest_id), 0)
         return StepOutcome(self._quests.fetch(quest_id), xp)
 
     def quiz_statuses(self, owner_id: int, today: date) -> list[QuizStatus]:
@@ -120,9 +129,13 @@ class QuestService:
         answers = normalize_quiz_answers(quiz, raw_answers)
         if code in self._quizzes.done_codes(owner_id, today):
             raise QuizDoneTodayError("этот квиз сегодня уже пройден")
-        self._quizzes.add(owner_id, code, today, answers)
         ref = f"{code}:{today.isoformat()}"
-        xp = self._grant(owner_id, KIND_QUIZ, ref, today, QUIZ_XP) if reward else 0
+        try:
+            with self._session.begin_nested():
+                self._quizzes.add(owner_id, code, today, answers)
+                xp = self._grant(owner_id, KIND_QUIZ, ref, today, QUIZ_XP) if reward else 0
+        except IntegrityError:  # параллельный запрос успел раньше (уникальность держит БД)
+            raise QuizDoneTodayError("этот квиз сегодня уже пройден") from None
         return QuizOutcome(xp, QuizAnswers(code, today, answers))
 
     def _accept(self, owner_id: int, new: NewQuest, today: date) -> Quest:

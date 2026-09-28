@@ -106,7 +106,7 @@
 - Публичный интерфейс:
   - `create_app` — `src/kognis/web/_app.py`
   - `main` — `src/kognis/web/__init__.py`
-- Тесты: `tests/web/test_day_reviews.py`, `tests/web/test_gameplay.py`, `tests/web/test_http.py`
+- Тесты: `tests/web/test_crisis_review.py`, `tests/web/test_day_reviews.py`, `tests/web/test_gameplay.py`, `tests/web/test_http.py`
 
 ## Точки входа
 

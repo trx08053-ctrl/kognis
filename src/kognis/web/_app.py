@@ -94,15 +94,17 @@ class DayReviewOut(BaseModel):
     wellbeing: int
     mood: int
     reflection: str
+    help: HelpOut | None = None
 
 
-def review_out(review: DayReview) -> DayReviewOut:
+def review_out(review: DayReview, block: HelpBlock | None = None) -> DayReviewOut:
     return DayReviewOut(
         id=review.id,
         date=review.review_date,
         wellbeing=review.wellbeing,
         mood=review.mood,
         reflection=review.reflection,
+        help=help_out(block),
     )
 
 
@@ -199,7 +201,7 @@ def diary_router(db: Engine, today: Callable[[], dt.date]) -> APIRouter:
                 entry = diary.create_entry(
                     user.id, payload.text, payload.tags, payload.emotions, payload.date or today()
                 )
-                if assessment.crisis:
+                if not assessment.allows_rewards:
                     # кризисная запись опыта не даёт (D5)
                     entry = diary.mark_crisis(user.id, entry.id) or entry
                 else:
@@ -231,12 +233,16 @@ def day_review_router(db: Engine, today: Callable[[], dt.date]) -> APIRouter:
 
     @router.put("/{review_date}")
     def save_review(review_date: dt.date, payload: DayReviewIn, user: Authed) -> DayReviewOut:
+        # рефлексию проверяем так же, как запись (TD-4); итог сохраняется всегда
+        assessment, block = check_text(payload.reflection)
+
         def save() -> DayReview:
             with transaction(db) as session:
                 review = DiaryService(session).save_day_review(
                     user.id, review_date, payload.wellbeing, payload.mood, payload.reflection
                 )
-                GameplayService(session).award_day_review(user.id, review_date, today())
+                if assessment.allows_rewards:
+                    GameplayService(session).award_day_review(user.id, review_date, today())
                 return review
 
         try:
@@ -248,7 +254,7 @@ def day_review_router(db: Engine, today: Callable[[], dt.date]) -> APIRouter:
                 review = save()
         except ValueError as err:
             raise HTTPException(status_code=422, detail=str(err)) from err
-        return review_out(review)
+        return review_out(review, block)
 
     @router.get("")
     def list_reviews(user: Authed) -> list[DayReviewOut]:

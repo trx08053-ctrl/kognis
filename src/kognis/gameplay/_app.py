@@ -13,6 +13,7 @@ from ._domain import (
     achievement_def,
     earned_achievements,
     entry_xp,
+    is_rewardable_day,
     level_for,
     level_start,
     streak_length,
@@ -30,7 +31,7 @@ class GameplayService:
         Сверх лимита событие пишется с 0 XP — день всё равно считается активным для серии.
         """
         ref = str(entry_id)
-        if not self._repo.has_event(owner_id, KIND_ENTRY, ref):
+        if is_rewardable_day(day, today) and not self._repo.has_event(owner_id, KIND_ENTRY, ref):
             xp = entry_xp(self._repo.count_events(owner_id, KIND_ENTRY, day))
             self._repo.add_event(owner_id, KIND_ENTRY, ref, day, xp)
         return self._grant(owner_id, today)
@@ -38,7 +39,8 @@ class GameplayService:
     def award_day_review(self, owner_id: int, day: date, today: date) -> Progress:
         """Итог дня за `day`: +20 XP один раз за дату (повторное сохранение XP не даёт)."""
         ref = day.isoformat()
-        if not self._repo.has_event(owner_id, KIND_DAY_REVIEW, ref):
+        rewardable = is_rewardable_day(day, today)
+        if rewardable and not self._repo.has_event(owner_id, KIND_DAY_REVIEW, ref):
             self._repo.add_event(owner_id, KIND_DAY_REVIEW, ref, day, DAY_REVIEW_XP)
         return self._grant(owner_id, today)
 

@@ -12,6 +12,7 @@ DAY_REVIEW_XP = 20
 KIND_ENTRY = "entry"
 KIND_DAY_REVIEW = "day_review"
 
+BACKDATE_DAYS = 7  # насколько назад можно записать день и получить за него опыт
 ONE_MISSED_DAY = 2  # разница дат при ровно одном пропущенном дне между активными
 
 # суммарный XP, с которого начинается уровень (уровень 1 — с нуля);
@@ -40,6 +41,11 @@ REVIEWS_FOR_ACHIEVEMENT = 10
 
 def achievement_def(code: str) -> AchievementDef:
     return next(a for a in ACHIEVEMENTS if a.code == code)
+
+
+def is_rewardable_day(day: date, today: date) -> bool:
+    """Опыт и серия — за сегодня и последнюю неделю: будущие и давние даты копить нельзя."""
+    return today - timedelta(days=BACKDATE_DAYS) <= day <= today
 
 
 def entry_xp(entries_already_today: int) -> int:

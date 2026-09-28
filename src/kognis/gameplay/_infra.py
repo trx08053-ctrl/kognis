@@ -14,6 +14,7 @@ from sqlalchemy import (
     insert,
     select,
 )
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from kognis.db import metadata
@@ -88,8 +89,16 @@ class ProgressRepository:
         return [(r.code, r.earned_on) for r in self._session.execute(stmt).all()]
 
     def add_achievement(self, owner_id: int, code: str, earned_on: date) -> None:
-        self._session.execute(
-            insert(achievements_table).values(
-                owner_id=owner_id, code=code, earned_on=earned_on, created_at=_now()
-            )
-        )
+        """Выдать достижение; если параллельный запрос успел раньше — тихо ничего не делать.
+
+        Savepoint не даёт конфликту откатить всю транзакцию (вместе с записью дневника).
+        """
+        try:
+            with self._session.begin_nested():
+                self._session.execute(
+                    insert(achievements_table).values(
+                        owner_id=owner_id, code=code, earned_on=earned_on, created_at=_now()
+                    )
+                )
+        except IntegrityError:
+            return

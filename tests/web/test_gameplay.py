@@ -22,9 +22,14 @@ class Clock:
         return self.day
 
 
+CLOCKS: list[Clock] = []  # «сегодня» текущего теста: write/review по умолчанию пишут «в этот день»
+
+
 @pytest.fixture
 def clock() -> Clock:
-    return Clock(dt.date(2026, 9, 1))
+    current = Clock(dt.date(2026, 9, 1))
+    CLOCKS[:] = [current]
+    return current
 
 
 @pytest.fixture
@@ -37,7 +42,14 @@ def signup(client: TestClient, email: str = "ann@example.com") -> None:
     assert response.status_code == 201
 
 
-def write(client: TestClient, day: str, text: str = "Хороший день") -> None:
+def at(day: str, *, live: bool = True) -> None:
+    """Пользователь действует в этот день (live) — «сегодня» совпадает с датой действия."""
+    if live:
+        CLOCKS[0].day = dt.date.fromisoformat(day)
+
+
+def write(client: TestClient, day: str, text: str = "Хороший день", *, live: bool = True) -> None:
+    at(day, live=live)
     response = client.post("/api/entries", json={"text": text, "date": day})
     assert response.status_code == 201
 
@@ -48,7 +60,8 @@ def progress(client: TestClient) -> dict[str, Any]:
     return response.json()
 
 
-def review(client: TestClient, day: str) -> None:
+def review(client: TestClient, day: str, *, live: bool = True) -> None:
+    at(day, live=live)
     response = client.put(f"/api/day-reviews/{day}", json={"wellbeing": 5, "mood": 5})
     assert response.status_code == 200
 
@@ -143,13 +156,27 @@ def test_one_freeze_per_week_bridges_single_missed_day(api: TestClient, clock: C
 
 
 @pytest.mark.acceptance("kognis-50k", "AC2")
-def test_streak_uses_local_dates_of_each_user(api: TestClient, clock: Clock) -> None:
+def test_progress_is_private_to_each_user(api: TestClient) -> None:
     signup(api, "ann@example.com")
     write(api, "2026-09-01")
-    signup(api, "bob@example.com")  # другой пользователь не видит чужую серию
-    clock.day = dt.date(2026, 9, 1)
-    assert progress(api)["streak"] == 0
-    assert progress(api)["xp"] == 0
+    signup(api, "bob@example.com")  # другой пользователь не видит чужую серию и опыт
+    state = progress(api)
+    assert (state["streak"], state["xp"], state["achievements"]) == (0, 0, [])
+
+
+@pytest.mark.acceptance("kognis-50k", "AC2")
+def test_future_and_old_dates_give_no_xp_or_streak(api: TestClient, clock: Clock) -> None:
+    signup(api)
+    clock.day = dt.date(2026, 9, 10)
+    write(api, "2026-09-11", live=False)  # будущее
+    write(api, "2026-09-02", live=False)  # старше недели: задним числом опыт не копится
+    review(api, "2026-09-11", live=False)
+    review(api, "2026-09-02", live=False)
+    state = progress(api)
+    assert (state["xp"], state["streak"], state["achievements"]) == (0, 0, [])
+
+    write(api, "2026-09-03", live=False)  # ровно неделя назад — ещё можно
+    assert progress(api)["xp"] == 10
 
 
 @pytest.mark.acceptance("kognis-50k", "AC3")

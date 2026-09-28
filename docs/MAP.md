@@ -54,7 +54,7 @@
   - `make_engine` — `src/kognis/db/__init__.py`
   - `metadata` — `src/kognis/db/__init__.py`
   - `transaction` — `src/kognis/db/__init__.py`
-- Тесты: `tests/diary/test_diary.py`, `tests/integration/test_postgres.py`, `tests/users/test_users.py`
+- Тесты: `tests/diary/test_diary.py`, `tests/gameplay/test_service.py`, `tests/integration/test_postgres.py`, `tests/users/test_users.py`
 
 ## `kognis.diary`
 
@@ -74,7 +74,7 @@
   - `EarnedAchievement` — `src/kognis/gameplay/_domain.py`
   - `GameplayService` — `src/kognis/gameplay/_app.py`
   - `Progress` — `src/kognis/gameplay/_domain.py`
-- Тесты: `tests/gameplay/test_domain.py`
+- Тесты: `tests/gameplay/test_domain.py`, `tests/gameplay/test_service.py`
 
 ## `kognis.safety`
 

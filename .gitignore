@@ -1,0 +1,46 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.hypothesis/
+.coverage
+coverage.xml
+htmlcov/
+dist/
+build/
+
+# Harness: доказательства проверок и журнал агента (локальные, в CI — артефакты)
+.evidence/
+.agent-log/
+.claude/settings.local.json
+.claude/worktrees/
+
+# Секреты: только зашифрованные *.enc.* попадают в git
+.env
+.env.*
+!.env.example
+secrets/*
+!secrets/*.enc.*
+!secrets/README.md
+*.dec.*
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
+
+# Веб-стек: локальная БД, состояние развёртываний, собранный фронтенд
+local.db
+*.db-journal
+.deploy/
+frontend/node_modules/
+frontend/dist/
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
+.beads/proxieddb/
+*.gate.lock*

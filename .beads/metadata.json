@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "kognis",
+  "project_id": "9c2d7c87-e8ff-441d-b014-24f195830f5a"
+}

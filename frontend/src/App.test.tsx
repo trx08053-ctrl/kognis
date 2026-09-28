@@ -207,3 +207,55 @@ test("итог дня с кризисным сигналом в рефлекси
   const block = await screen.findByTestId("help-block");
   expect(block.textContent).toContain("Вы не одни");
 });
+
+test("разбор: без согласия кнопка выключена, с согласием показывает паттерны", async () => {
+  const analysis = {
+    id: 5,
+    parent_id: null,
+    direction: "cbt",
+    start: "2026-09-23",
+    end: "2026-09-29",
+    status: "done",
+    summary: "Неделя прошла напряжённо",
+    patterns: [
+      {
+        title: "Избегание",
+        description: "Откладываешь звонки",
+        entry_ids: [1],
+        quotes: ["страшно"],
+      },
+    ],
+    questions: ["Что помогло бы начать?"],
+    quest_ideas: [],
+    answers: [],
+    help: null,
+  };
+  const fetchMock = stubApi({
+    "GET /api/me": () => reply(200, { id: 1, email: "ann@example.com" }),
+    "GET /api/entries": () => reply(200, []),
+    "GET /api/progress": () => reply(200, emptyProgress),
+    "GET /api/analyses/directions": () => reply(200, [{ code: "cbt", title: "КПТ" }]),
+    "POST /api/analyses": () => reply(201, analysis),
+  });
+  vi.stubGlobal(
+    "fetch",
+    vi.fn<typeof fetch>((input, init) => {
+      if (String(input).startsWith("/api/analyses/mood")) {
+        return Promise.resolve(
+          reply(200, { points: [], average_mood: null, average_wellbeing: null, trend: "unknown" }),
+        );
+      }
+      return fetchMock(input, init);
+    }),
+  );
+  renderApp();
+  fireEvent.click(await screen.findByRole("link", { name: "Разбор" }));
+  const run = await screen.findByTestId("run-analysis");
+  expect((run as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.click(screen.getByLabelText(/Согласен\(на\) передать записи/));
+  expect((run as HTMLButtonElement).disabled).toBe(false);
+  fireEvent.click(run);
+  const result = await screen.findByTestId("analysis-result");
+  expect(result.textContent).toContain("Избегание");
+  expect(screen.getByLabelText("Что помогло бы начать?")).toBeTruthy();
+});

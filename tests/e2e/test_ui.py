@@ -4,12 +4,23 @@
 """
 
 import importlib
-from collections.abc import Iterator
+import json
+import socket
+import threading
+import time
+from collections.abc import Generator, Iterator, Sequence
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, cast
 
 import pytest
+import uvicorn
+from fastapi import FastAPI
 from playwright.sync_api import Browser, Page, expect, sync_playwright
+from sqlalchemy.engine import Engine
+
+from kognis.ai import Message
+from kognis.web import create_app
 
 # axe-playwright-python без аннотаций типов — загружаем как Any, результат проверяем явно
 Axe: Any = importlib.import_module("axe_playwright_python.sync_playwright").Axe
@@ -179,6 +190,88 @@ def test_progress_widget_and_achievements_page(page: Page) -> None:
     violations = cast("list[dict[str, Any]]", Axe().run(page).response["violations"])
     serious = [v for v in violations if v["impact"] in {"serious", "critical"}]
     assert not serious, [f"{v['id']}: {v['help']}" for v in serious]
+
+
+class CannedProvider:
+    """Всегда отвечает корректным разбором; запись №1 — опора паттерна."""
+
+    def complete(self, system: str, messages: Sequence[Message], schema: object = None) -> str:
+        return json.dumps(
+            {
+                "summary": "Неделя прошла напряжённо, но вы держались.",
+                "patterns": [
+                    {
+                        "title": "Избегание",
+                        "description": "Неприятные задачи откладываются.",
+                        "entry_ids": [1],
+                        "quotes": ["страшно звонить"],
+                    }
+                ],
+                "questions": ["Что помогло бы начать?"],
+                "quest_ideas": [],
+            }
+        )
+
+
+@contextmanager
+def serve(app: FastAPI) -> Generator[str]:
+    """Приложение на свободном порту в фоне (свой провайдер ИИ вместо фейкового)."""
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        port = s.getsockname()[1]
+    server = uvicorn.Server(uvicorn.Config(app, port=port, log_level="warning"))
+    thread = threading.Thread(target=server.run, daemon=True)
+    thread.start()
+    while not server.started:
+        time.sleep(0.05)
+    yield f"http://127.0.0.1:{port}"
+    server.should_exit = True
+    thread.join(timeout=5)
+
+
+def check_axe(page: Page) -> None:
+    violations = cast("list[dict[str, Any]]", Axe().run(page).response["violations"])
+    serious = [v for v in violations if v["impact"] in {"serious", "critical"}]
+    assert not serious, [f"{v['id']}: {v['help']}" for v in serious]
+
+
+@pytest.mark.acceptance("kognis-kai", "AC6")
+@pytest.mark.e2e
+def test_analysis_screen(browser: Browser, engine: Engine) -> None:
+    """Экран разбора: согласие, результат с паттернами, вопросы; кризис без паттернов; axe."""
+    with serve(create_app(engine, ai_provider=CannedProvider())) as url:
+        page = fresh_page(browser, url)
+        register(page, "ann@example.com")
+        page.get_by_label("Что произошло и что вы чувствуете").fill("Сегодня страшно звонить")
+        page.get_by_test_id("save-entry").click()
+        expect(page.get_by_test_id("entries")).to_contain_text("страшно звонить")
+        page.get_by_role("link", name="Разбор").click()
+        run = page.get_by_test_id("run-analysis")
+        expect(run).to_be_disabled()
+        page.get_by_label("Согласен(на) передать записи").check()
+        run.click()
+        result = page.get_by_test_id("analysis-result")
+        expect(result).to_contain_text("Избегание")
+        expect(result).to_contain_text("страшно звонить")
+        expect(page.get_by_test_id("mood")).to_be_visible()
+        page.get_by_label("Что помогло бы начать?").fill("Позвонить утром")
+        SCREENS.mkdir(parents=True, exist_ok=True)
+        page.screenshot(path=str(SCREENS / "e2e-analysis.png"), full_page=True)
+        check_axe(page)
+
+        page.get_by_role("link", name="Дневник").click()
+        page.get_by_label("Что произошло и что вы чувствуете").fill("Не хочу больше жить")
+        page.get_by_test_id("save-entry").click()
+        expect(page.get_by_test_id("help-block")).to_be_visible()
+        page.get_by_role("link", name="Разбор").click()
+        page.get_by_label("Согласен(на) передать записи").check()
+        page.get_by_test_id("run-analysis").click()
+        crisis = page.get_by_test_id("analysis-crisis")
+        expect(crisis.get_by_role("link", name="112")).to_be_visible()
+        expect(page.get_by_test_id("analysis-result")).to_have_count(0)
+        page.screenshot(path=str(SCREENS / "e2e-analysis-crisis.png"), full_page=True)
+        check_axe(page)
+        page.context.close()
 
 
 @pytest.mark.e2e

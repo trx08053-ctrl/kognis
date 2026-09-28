@@ -110,6 +110,67 @@ export const getProgress = (): Promise<Progress> =>
 
 export const listDayReviews = (): Promise<DayReview[]> =>
   fetch("/api/day-reviews").then((r) => parse<DayReview[]>(r));
+export interface Direction {
+  code: string;
+  title: string;
+}
+
+export interface Pattern {
+  title: string;
+  description: string;
+  entry_ids: number[];
+  quotes: string[];
+}
+
+export interface Analysis {
+  id: number;
+  parent_id: number | null;
+  direction: string;
+  start: string;
+  end: string;
+  status: "done" | "crisis";
+  summary: string | null;
+  patterns: Pattern[];
+  questions: string[];
+  quest_ideas: string[];
+  answers: string[];
+  help: HelpBlock | null;
+}
+
+export interface MoodPoint {
+  date: string;
+  mood: number;
+  wellbeing: number;
+}
+
+export interface MoodDynamics {
+  points: MoodPoint[];
+  average_mood: number | null;
+  average_wellbeing: number | null;
+  trend: "up" | "down" | "flat" | "unknown";
+}
+
+export interface AnalysisRequest {
+  direction: string;
+  start: string;
+  end: string;
+  consent: boolean;
+}
+
+export const listDirections = (): Promise<Direction[]> =>
+  fetch("/api/analyses/directions").then((r) => parse<Direction[]>(r));
+export const getMood = (start: string, end: string): Promise<MoodDynamics> =>
+  fetch(`/api/analyses/mood?start=${start}&end=${end}`).then((r) => parse<MoodDynamics>(r));
+export const listAnalyses = (): Promise<Analysis[]> =>
+  fetch("/api/analyses").then((r) => parse<Analysis[]>(r));
+export const runAnalysis = (request: AnalysisRequest): Promise<Analysis> =>
+  post<Analysis>("/api/analyses", request);
+export const answerAnalysis = (
+  id: number,
+  answers: string[],
+  consent: boolean,
+): Promise<Analysis> => post<Analysis>(`/api/analyses/${id}/answers`, { answers, consent });
+
 export const saveDayReview = (date: string, review: DayReviewInput): Promise<DayReview> =>
   fetch(`/api/day-reviews/${date}`, {
     method: "PUT",

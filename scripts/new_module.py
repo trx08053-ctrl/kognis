@@ -3,7 +3,7 @@
 
     new_module.py <name> [--card-only]
 
-Создаёт src/<pkg>/<name>/ (__init__.py — публичный API, _domain.py, _app.py)
+Создаёт src/<pkg>/<name>/ (__init__.py — публичный API, _domain.py, _app.py, _infra.py)
 и docs/modules/<name>.md. Напоминает про .importlinter и ARCHITECTURE.md (границы — ADR).
 Файл защищён.
 """
@@ -40,7 +40,9 @@ def main() -> int:
         (comp / "_app.py").write_text(
             '"""Сценарии модуля; публичное — реэкспорт в __init__.py."""\n'
         )
-        print(f"создано: {comp.relative_to(ROOT)}/ (__init__.py, _domain.py, _app.py)")
+        # все три слоя: import-linter требует каждый слой в каждом контейнере
+        (comp / "_infra.py").write_text('"""Хранение и внешние системы (адаптеры)."""\n')
+        print(f"создано: {comp.relative_to(ROOT)}/ (__init__.py, _domain.py, _app.py, _infra.py)")
     card = ROOT / "docs" / "modules" / f"{args.name}.md"
     if card.exists():
         print(f"карточка уже есть: {card.relative_to(ROOT)}")

@@ -9,6 +9,12 @@ name = Внутри каждого модуля: _app → _infra → _domain
 type = layers
 containers =
     kognis.users
+    kognis.diary
+    kognis.safety
+    kognis.ai
+    kognis.analysis
+    kognis.gameplay
+    kognis.access
 layers =
     _app
     _infra
@@ -19,6 +25,9 @@ name = Направление зависимостей между модулям
 type = layers
 layers =
     kognis.web
+    kognis.analysis | kognis.gameplay
+    kognis.diary
+    kognis.ai | kognis.safety | kognis.access
     kognis.users
     kognis.db
 

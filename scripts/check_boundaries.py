@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import ast
 import configparser
+import re
 import sys
 from pathlib import Path
 
@@ -72,11 +73,10 @@ def declared_modules(pkg: str) -> dict[str, set[str]]:
     for section in config.sections():
         for key in ("containers", "layers"):
             raw = config.get(section, key, fallback="")
-            names = {
-                line.strip().split(".")[1]
-                for line in raw.splitlines()
-                if line.strip().startswith(pkg + ".") and line.strip().count(".") == 1
-            }
+            # строка слоя может перечислять соседей: `a | b` (независимые) или `a : b`
+            items = [i.strip() for line in raw.splitlines() for i in re.split(r"[|:]", line)]
+            ours = [i for i in items if i.startswith(pkg + ".") and i.count(".") == 1]
+            names = {i.split(".")[1] for i in ours}
             if names:
                 result[f"{section.split(':')[-1]}.{key}"] = names
     return result

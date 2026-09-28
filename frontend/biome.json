@@ -15,5 +15,10 @@
         "noExplicitAny": "error"
       }
     }
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
   }
 }

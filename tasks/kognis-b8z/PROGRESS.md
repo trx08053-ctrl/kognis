@@ -11,6 +11,7 @@
 | 2026-09-28 | Шаг 1: ARCHITECTURE.md + ADR 0002 (Proposed) | см. git log | docs-only, verify ниже |
 
 ## Блокеры и вопросы человеку
+- 2026-09-28 [needs_input] Нужно принять docs/ARCHITECTURE.md и ADR 0002 (AC1) и разрешить новые модули diary/analysis/ai/gameplay/access с правилами import-linter. Затем шаг 3: сквозной U1.
 - Шаг 1 плана требует ревью человека (AC1): принять ARCHITECTURE.md и ADR 0002; разрешить добавление модулей и правил import-linter (изменение защищённого конфига).
 
 ## Попытки и гипотезы (что пробовали и почему не сработало)

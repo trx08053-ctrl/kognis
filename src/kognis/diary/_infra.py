@@ -4,6 +4,7 @@ from datetime import UTC, date, datetime
 
 from sqlalchemy import (
     JSON,
+    Boolean,
     Column,
     Date,
     DateTime,
@@ -12,6 +13,7 @@ from sqlalchemy import (
     Table,
     Text,
     UniqueConstraint,
+    false,
     insert,
     select,
     update,
@@ -34,6 +36,7 @@ entries_table = Table(
     Column("tags", JSON, nullable=False),
     Column("emotions", JSON, nullable=False),
     Column("protection", String(16), nullable=False, server_default="plain"),
+    Column("crisis", Boolean, nullable=False, server_default=false()),
     Column("created_at", DateTime, nullable=False),
 )
 
@@ -61,6 +64,7 @@ def _to_entry(row: Row[tuple[object, ...]]) -> Entry:
         tags=tuple(row.tags),
         emotions=tuple(row.emotions),
         protection=row.protection,
+        crisis=row.crisis,
     )
 
 
@@ -91,6 +95,14 @@ class EntryRepository:
         )
         entry_id = self._session.execute(stmt).scalar_one()
         return Entry(int(entry_id), owner_id, entry_date, text, tags, emotions)
+
+    def set_crisis(self, owner_id: int, entry_id: int) -> Entry | None:
+        self._session.execute(
+            update(entries_table)
+            .where(entries_table.c.id == entry_id, entries_table.c.owner_id == owner_id)
+            .values(crisis=True)
+        )
+        return self.get(owner_id, entry_id)
 
     def get(self, owner_id: int, entry_id: int) -> Entry | None:
         stmt = select(entries_table).where(

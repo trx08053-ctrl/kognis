@@ -16,9 +16,9 @@
 | `kognis.db` | Платформа данных: подключение, метаданные таблиц, транзакции. | — | 1 | [db](modules/db.md) |
 | `kognis.diary` | Модуль diary: записи дневника и итоги дня; владеет `entries` и `day_reviews`. | `db` | 4 | [diary](modules/diary.md) |
 | `kognis.gameplay` | Модуль gameplay: TODO ответственность (одно предложение). | — | 4 | [gameplay](modules/gameplay.md) |
-| `kognis.safety` | Модуль safety: TODO ответственность (одно предложение). | — | 4 | [safety](modules/safety.md) |
+| `kognis.safety` | Модуль safety: кризисные сигналы в тексте (локально, без ИИ) и контакты помощи. | — | 4 | [safety](modules/safety.md) |
 | `kognis.users` | Модуль users: регистрация, вход, сессии. Владеет данными пользователей и сессий. | `db` | 4 | [users](modules/users.md) |
-| `kognis.web` | Модуль web: HTTP-вход приложения — страницы, JSON API, /health. Бизнес-логики не содержит. | `db`, `diary`, `users` | 2 | [web](modules/web.md) |
+| `kognis.web` | Модуль web: HTTP-вход приложения — страницы, JSON API, /health. Бизнес-логики не содержит. | `db`, `diary`, `safety`, `users` | 2 | [web](modules/web.md) |
 
 ## `kognis.access`
 
@@ -66,8 +66,15 @@
 ## `kognis.safety`
 
 - Код: `src/kognis/safety`
-- Публичный интерфейс: —
-- Тесты: **нет**
+- Публичный интерфейс:
+  - `DISCLAIMER` — `src/kognis/safety/_domain.py`
+  - `Assessment` — `src/kognis/safety/_domain.py`
+  - `Contact` — `src/kognis/safety/_domain.py`
+  - `HelpBlock` — `src/kognis/safety/_app.py`
+  - `assess` — `src/kognis/safety/_domain.py`
+  - `check_text` — `src/kognis/safety/_app.py`
+  - `help_block` — `src/kognis/safety/_app.py`
+- Тесты: `tests/safety/test_safety.py`
 
 ## `kognis.users`
 

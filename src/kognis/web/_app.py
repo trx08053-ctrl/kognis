@@ -18,6 +18,7 @@ from sqlalchemy.exc import IntegrityError
 
 from kognis.db import make_engine, transaction
 from kognis.diary import DayReview, DiaryService, Entry
+from kognis.safety import HelpBlock, check_text
 from kognis.users import (
     SESSION_LIFETIME,
     EmailTakenError,
@@ -49,6 +50,17 @@ class EntryIn(BaseModel):
     date: dt.date | None = None
 
 
+class ContactOut(BaseModel):
+    name: str
+    phone: str
+    note: str
+
+
+class HelpOut(BaseModel):
+    message: str
+    contacts: list[ContactOut]
+
+
 class EntryOut(BaseModel):
     id: int
     date: dt.date
@@ -56,6 +68,8 @@ class EntryOut(BaseModel):
     tags: list[str]
     emotions: list[str]
     protection: str
+    crisis: bool = False
+    help: HelpOut | None = None
 
 
 class DayReviewIn(BaseModel):
@@ -86,7 +100,14 @@ def user_out(user: User) -> UserOut:
     return UserOut(id=user.id, email=user.email)
 
 
-def entry_out(entry: Entry) -> EntryOut:
+def help_out(block: HelpBlock | None) -> HelpOut | None:
+    if block is None:
+        return None
+    contacts = [ContactOut(name=c.name, phone=c.phone, note=c.note) for c in block.contacts]
+    return HelpOut(message=block.message, contacts=contacts)
+
+
+def entry_out(entry: Entry, block: HelpBlock | None = None) -> EntryOut:
     return EntryOut(
         id=entry.id,
         date=entry.entry_date,
@@ -94,6 +115,8 @@ def entry_out(entry: Entry) -> EntryOut:
         tags=list(entry.tags),
         emotions=list(entry.emotions),
         protection=entry.protection,
+        crisis=entry.crisis,
+        help=help_out(block),
     )
 
 
@@ -125,13 +148,18 @@ def diary_router(db: Engine) -> APIRouter:
     @router.post("", status_code=201)
     def create_entry(payload: EntryIn, user: Authed) -> EntryOut:
         try:
+            # кризисный сигнал ищем локально (safety); запись сохраняется всегда
+            assessment, block = check_text(payload.text)
             with transaction(db) as session:
-                entry = DiaryService(session).create_entry(
+                diary = DiaryService(session)
+                entry = diary.create_entry(
                     user.id, payload.text, payload.tags, payload.emotions, payload.date
                 )
+                if assessment.crisis:
+                    entry = diary.mark_crisis(user.id, entry.id) or entry
         except ValueError as err:
             raise HTTPException(status_code=422, detail=str(err)) from err
-        return entry_out(entry)
+        return entry_out(entry, block)
 
     @router.get("")
     def list_entries(user: Authed) -> list[EntryOut]:

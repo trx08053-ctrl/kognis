@@ -20,6 +20,7 @@ class Entry:
     tags: tuple[str, ...]
     emotions: tuple[str, ...]
     protection: str = "plain"
+    crisis: bool = False
 
 
 @dataclass(frozen=True)

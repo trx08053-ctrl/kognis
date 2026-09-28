@@ -36,6 +36,10 @@ class DiaryService:
             normalize_labels(emotions, "эмоции"),
         )
 
+    def mark_crisis(self, owner_id: int, entry_id: int) -> Entry | None:
+        """Пометить запись кризисной (сигнал нашёл safety); чужая или несуществующая — `None`."""
+        return self._repo.set_crisis(owner_id, entry_id)
+
     def get_entry(self, owner_id: int, entry_id: int) -> Entry | None:
         """Чужая или несуществующая запись неотличимы: `None`."""
         return self._repo.get(owner_id, entry_id)

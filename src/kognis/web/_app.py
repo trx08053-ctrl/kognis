@@ -32,8 +32,8 @@ COOKIE = "kognis_session"
 
 
 class Credentials(BaseModel):
-    email: str
-    password: str
+    email: str = Field(max_length=254)
+    password: str = Field(max_length=256)
 
 
 class UserOut(BaseModel):
@@ -127,7 +127,8 @@ def diary_router(db: Engine) -> APIRouter:
 def create_app(engine: Engine | None = None, frontend_dist: Path | None = None) -> FastAPI:
     db = engine or make_engine()
     dist = frontend_dist or DIST
-    secure_cookie = os.environ.get("KOGNIS_ENV", "dev") != "dev"
+    # Secure по умолчанию; отключается только явным KOGNIS_ENV=dev (ADR 0003)
+    secure_cookie = os.environ.get("KOGNIS_ENV") != "dev"
     app = FastAPI(title="Kognis", dependencies=[Depends(require_json)])
     app.state.db = db
 

@@ -23,6 +23,12 @@ from kognis.web import create_app
 ROOT = Path(__file__).resolve().parent.parent
 
 
+@pytest.fixture(autouse=True)
+def dev_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Тесты ходят по http: cookie без Secure. По умолчанию (без KOGNIS_ENV=dev) Secure включён."""
+    monkeypatch.setenv("KOGNIS_ENV", "dev")
+
+
 def migrate(url: str, monkeypatch: pytest.MonkeyPatch) -> Engine:
     """Схема — только из миграций Alembic (как в продакшене)."""
     monkeypatch.setenv("DATABASE_URL", url)

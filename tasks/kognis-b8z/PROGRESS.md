@@ -3,12 +3,20 @@
 <!-- Статус задачи — только в bd (`bd show <id>`). Здесь — передача контекста: обновлять после каждого шага. -->
 
 ## Следующий шаг
-После принятия человеком docs/ARCHITECTURE.md и ADR 0002 (статус → Accepted) и разрешения на новые модули и правила import-linter (защищённый конфиг): шаг 3 плана — реализовать U1 (users: пароль/вход; модуль diary; миграция; acceptance-тест AC2 с маркерами acceptance+e2e). R2 и R3 вынести отдельными задачами bd (AC3).
+Задача закрывается `python3 scripts/task.py done kognis-b8z` (ревью пройдено, major устранены).
+R2 (kognis-8f1) и R3 (kognis-1gr) уже вынесены задачами bd (AC3).
 
 ## Сделано
 | Дата | Шаг | Коммит | Evidence / проверка |
 |---|---|---|---|
 | 2026-09-28 | Шаг 1: ARCHITECTURE.md + ADR 0002 (Proposed) | см. git log | docs-only, verify ниже |
+| 2026-09-29 | Шаг 3: U1 — users (argon2id, сессии), diary, миграция 0002, API, интерфейс, ADR 0003/0004, AC2 (HTTP + браузер) | 64fdab8 | `just verify` OK, tree 5c0717e425c7; AC2: tests/web/test_http.py, tests/e2e/test_ui.py |
+
+| 2026-09-29 | Ревью: Secure-cookie по умолчанию, тайминг входа (один argon2), лимит длины пароля, TECH_DEBT TD-1..3 | см. git log | `just verify` OK, tree 57420ef4230e. Не проверено ревьюером: e2e/PostgreSQL-запуск, миграция up/down на PG |
+
+Миграция 0002 удаляет шаблонную таблицу `users(name)` (данных нет) — покрыто поручением «миграция» в шаге U1.
+
+Не закоммичено намеренно: `.quality-baseline.json` (после `just ratchet-up`, файл защищён хуком — решение за человеком).
 
 ## Блокеры и вопросы человеку
 - 2026-09-28 [needs_input] Нужно принять docs/ARCHITECTURE.md и ADR 0002 (AC1) и разрешить новые модули diary/analysis/ai/gameplay/access с правилами import-linter. Затем шаг 3: сквозной U1.

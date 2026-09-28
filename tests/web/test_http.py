@@ -29,6 +29,21 @@ def test_register_sets_httponly_cookie_and_me_works(client: TestClient) -> None:
     assert client.get("/api/me").json()["email"] == "ann@example.com"
 
 
+def test_cookie_is_secure_unless_dev(engine: Engine, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("KOGNIS_ENV")
+    response = TestClient(create_app(engine)).post(
+        "/api/auth/register", json={"email": "ann@example.com", "password": VALID_PW}
+    )
+    assert "secure" in response.headers["set-cookie"].lower()
+
+
+def test_login_rejects_oversized_password(client: TestClient) -> None:
+    response = client.post(
+        "/api/auth/login", json={"email": "ann@example.com", "password": "x" * 100_000}
+    )
+    assert response.status_code == 422
+
+
 def test_me_requires_login(client: TestClient) -> None:
     assert client.get("/api/me").status_code == 401
     assert client.get("/api/entries").status_code == 401

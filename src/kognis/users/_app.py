@@ -21,6 +21,7 @@ from ._infra import (
 )
 
 SESSION_LIFETIME = timedelta(days=30)
+_DUMMY_HASH = hash_password("dummy-password")  # одна проверка argon2, как и для известного email
 
 
 class UserService:
@@ -41,7 +42,7 @@ class UserService:
         found = self._users.find_with_hash(email)
         if found is None:
             # выравниваем время ответа, чтобы не раскрывать существование email
-            verify_password(hash_password("dummy-password"), password)
+            verify_password(_DUMMY_HASH, password)
             raise InvalidCredentialsError("неверный email или пароль")
         user, password_hash = found
         if not verify_password(password_hash, password):

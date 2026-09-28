@@ -1,3 +1,16 @@
-"""Модуль ai: TODO ответственность (одно предложение)."""
+"""Модуль ai: единый интерфейс к языковой модели; провайдер выбирается настройкой."""
 
-__all__: list[str] = []
+from ._app import get_provider
+from ._domain import AiError, AiProvider, AiTimeoutError, Message
+from ._infra import FakeProvider, HttpSettings, OpenAICompatibleProvider
+
+__all__ = [
+    "AiError",
+    "AiProvider",
+    "AiTimeoutError",
+    "FakeProvider",
+    "HttpSettings",
+    "Message",
+    "OpenAICompatibleProvider",
+    "get_provider",
+]

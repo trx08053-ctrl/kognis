@@ -11,7 +11,7 @@
 | Компонент | Назначение | Зависит от | Файлов | Карточка |
 |---|---|---|---|---|
 | `kognis.access` | Модуль access: TODO ответственность (одно предложение). | — | 4 | [access](modules/access.md) |
-| `kognis.ai` | Модуль ai: TODO ответственность (одно предложение). | — | 4 | [ai](modules/ai.md) |
+| `kognis.ai` | Модуль ai: единый интерфейс к языковой модели; провайдер выбирается настройкой. | — | 4 | [ai](modules/ai.md) |
 | `kognis.analysis` | Модуль analysis: TODO ответственность (одно предложение). | — | 4 | [analysis](modules/analysis.md) |
 | `kognis.db` | Платформа данных: подключение, метаданные таблиц, транзакции. | — | 1 | [db](modules/db.md) |
 | `kognis.diary` | Модуль diary: записи дневника и итоги дня; владеет `entries` и `day_reviews`. | `db` | 4 | [diary](modules/diary.md) |
@@ -29,8 +29,16 @@
 ## `kognis.ai`
 
 - Код: `src/kognis/ai`
-- Публичный интерфейс: —
-- Тесты: **нет**
+- Публичный интерфейс:
+  - `AiError` — `src/kognis/ai/_domain.py`
+  - `AiProvider` — `src/kognis/ai/_domain.py`
+  - `AiTimeoutError` — `src/kognis/ai/_domain.py`
+  - `FakeProvider` — `src/kognis/ai/_infra.py`
+  - `HttpSettings` — `src/kognis/ai/_infra.py`
+  - `Message` — `src/kognis/ai/_domain.py`
+  - `OpenAICompatibleProvider` — `src/kognis/ai/_infra.py`
+  - `get_provider` — `src/kognis/ai/_app.py`
+- Тесты: `tests/ai/test_ai.py`
 
 ## `kognis.analysis`
 

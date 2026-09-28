@@ -887,8 +887,12 @@ def auth_router(db: Engine, secure_cookie: bool) -> APIRouter:
     def login(payload: Credentials, request: Request, response: Response) -> UserOut:
         ip = request.client.host if request.client else "unknown"
         try:
+            # попытка учитывается ДО проверки пароля (argon2 долгий): параллельная пачка запросов
+            # не получит лишних попыток; успех ниже сбрасывает счётчик email
             with transaction(db) as session:
-                UserService(session).ensure_login_allowed(payload.email, ip)
+                service = UserService(session)
+                service.ensure_login_allowed(payload.email, ip)
+                service.record_login_failure(payload.email, ip)
         except LoginBlockedError as err:
             raise HTTPException(
                 status_code=429, detail=str(err), headers={"Retry-After": str(err.retry_after)}
@@ -897,9 +901,6 @@ def auth_router(db: Engine, secure_cookie: bool) -> APIRouter:
             with transaction(db) as session:
                 user = UserService(session).authenticate(payload.email, payload.password)
         except InvalidCredentialsError as err:
-            # отдельная транзакция: откат authenticate не должен стереть учёт неудачи
-            with transaction(db) as session:
-                UserService(session).record_login_failure(payload.email, ip)
             raise HTTPException(status_code=401, detail=str(err)) from err
         with transaction(db) as session:
             UserService(session).clear_login_failures(payload.email)

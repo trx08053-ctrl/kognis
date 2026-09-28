@@ -1,6 +1,8 @@
 // Клиент HTTP API бэкенда (/api/*). Типы повторяют схемы FastAPI (UserOut, EntryOut).
 // Сессия — httpOnly cookie, её ставит и читает браузер; изменяющие запросы — только JSON (CSRF, ADR 0003).
 
+import type { Envelope } from "./privateCrypto";
+
 export interface User {
   id: number;
   email: string;
@@ -25,6 +27,7 @@ export interface Entry {
   emotions: string[];
   protection: string;
   crisis: boolean;
+  cipher?: Envelope | null;
   help: HelpBlock | null;
 }
 
@@ -32,8 +35,10 @@ export interface NewEntry {
   text: string;
   tags: string[];
   emotions: string[];
-  protection?: "plain" | "locked";
+  protection?: "plain" | "locked" | "private";
   lock_password?: string;
+  // приватная запись: text пуст, на сервер идёт только шифртекст (privateCrypto.ts)
+  cipher?: Envelope;
 }
 
 export class ApiError extends Error {

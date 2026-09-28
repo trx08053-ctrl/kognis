@@ -18,6 +18,7 @@ import pytest
 import uvicorn
 from fastapi import FastAPI
 from playwright.sync_api import Browser, Page, expect, sync_playwright
+from sqlalchemy import text as sql_text
 from sqlalchemy.engine import Engine
 
 from kognis.ai import Message
@@ -270,6 +271,51 @@ def check_axe(page: Page) -> None:
     violations = cast("list[dict[str, Any]]", Axe().run(page).response["violations"])
     serious = [v for v in violations if v["impact"] in {"serious", "critical"}]
     assert not serious, [f"{v['id']}: {v['help']}" for v in serious]
+
+
+@pytest.mark.acceptance("kognis-8f1", "AC1")
+@pytest.mark.acceptance("kognis-8f1", "AC2")
+@pytest.mark.e2e
+def test_private_entry_encrypted_in_browser(page: Page, engine: Engine) -> None:
+    """Приватная запись: в запросе и в БД нет открытого текста, в браузере открывается паролем,
+    неверный пароль — понятная ошибка; предупреждение о невосстановимости; axe."""
+    text, password = "Очень личная мысль", "пароль-записи-1"
+    sent: list[str] = []
+    page.on(
+        "request",
+        lambda r: sent.append(r.post_data or "") if r.url.endswith("/api/entries") else None,
+    )
+    register(page, "ann@example.com")
+    page.get_by_label("Что произошло и что вы чувствуете").fill(text)
+    page.get_by_label("Приватная запись", exact=False).check()
+    expect(page.get_by_test_id("private-warning")).to_contain_text("восстановить его нельзя")
+    page.get_by_label("Пароль записи (от 8 символов)").fill(password)
+    page.get_by_label("Повторите пароль").fill(password)
+    SCREENS.mkdir(parents=True, exist_ok=True)
+    page.screenshot(path=str(SCREENS / "e2e-private-form.png"), full_page=True)
+    check_axe(page)
+    page.get_by_test_id("save-entry").click()
+    expect(page.get_by_test_id("private-stub")).to_be_visible()
+    expect(page.get_by_test_id("entries")).not_to_contain_text(text)
+
+    posts = [body for body in sent if body]
+    assert posts, "запрос на создание не перехвачен"
+    assert all(text not in body and password not in body for body in posts)
+    with engine.connect() as conn:
+        dump = repr(conn.execute(sql_text("SELECT * FROM entries")).all())
+    assert text not in dump
+    assert password not in dump
+    assert "PBKDF2-SHA256" in dump
+
+    page.reload()
+    page.get_by_label("Пароль записи", exact=True).fill("неверный-пароль")
+    page.get_by_role("button", name="Расшифровать").click()
+    expect(page.get_by_role("alert")).to_contain_text("Неверный пароль")
+    page.get_by_label("Пароль записи", exact=True).fill(password)
+    page.get_by_role("button", name="Расшифровать").click()
+    expect(page.get_by_test_id("private-text")).to_have_text(text)
+    page.screenshot(path=str(SCREENS / "e2e-private-opened.png"), full_page=True)
+    check_axe(page)
 
 
 @pytest.mark.acceptance("kognis-kai", "AC6")

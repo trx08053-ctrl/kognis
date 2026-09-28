@@ -21,11 +21,11 @@ const emptyProgress = {
 };
 
 // ответы по адресу и методу: запросы идут параллельно, порядок между адресами не гарантирован
-function stubApi(routes: Record<string, () => Response>) {
+function stubApi(routes: Record<string, (init?: RequestInit) => Response>) {
   const fetchMock = vi.fn<typeof fetch>((input, init) => {
     const key = `${init?.method ?? "GET"} ${String(input)}`;
     const handler = routes[key];
-    return Promise.resolve(handler ? handler() : reply(404, { detail: `нет маршрута ${key}` }));
+    return Promise.resolve(handler ? handler(init) : reply(404, { detail: `нет маршрута ${key}` }));
   });
   vi.stubGlobal("fetch", fetchMock);
   return fetchMock;
@@ -184,6 +184,65 @@ test("запись под замком: заглушка, ошибка неве�
   fireEvent.click(screen.getByRole("button", { name: "Открыть" }));
   expect((await screen.findByTestId("opened-text")).textContent).toBe("Тайная мысль");
   expect(opens).toHaveLength(2);
+});
+
+test("приватная запись: предупреждение, на сервер уходит только шифртекст, открывается паролем", async () => {
+  const stored: Record<string, unknown>[] = [];
+  const bodies: string[] = [];
+  stubApi({
+    "GET /api/me": () => reply(200, { id: 1, email: "ann@example.com" }),
+    "GET /api/progress": () => reply(200, emptyProgress),
+    "GET /api/entries": () => reply(200, stored),
+    // «сервер» сохраняет присланное как есть — так же, как настоящий, ничего не расшифровывая
+    "POST /api/entries": (init) => {
+      const sent = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      bodies.push(String(init?.body));
+      stored.push({
+        id: 9,
+        date: "2026-09-29",
+        text: "",
+        tags: [],
+        emotions: [],
+        protection: "private",
+        crisis: false,
+        cipher: sent.cipher,
+        help: null,
+      });
+      return reply(201, stored[0]);
+    },
+  });
+  renderApp();
+
+  fireEvent.change(await screen.findByLabelText("Что произошло и что вы чувствуете"), {
+    target: { value: "Тайная мысль" },
+  });
+  fireEvent.click(screen.getByLabelText(/Приватная запись/));
+  expect(screen.getByTestId("private-warning").textContent).toContain("восстановить его нельзя");
+  fireEvent.change(screen.getByLabelText(/Пароль записи/), {
+    target: { value: "правильный-пароль" },
+  });
+  fireEvent.change(screen.getByLabelText("Повторите пароль"), {
+    target: { value: "правильный-пароль" },
+  });
+  fireEvent.click(screen.getByTestId("save-entry"));
+
+  await vi.waitFor(() => expect(screen.queryByTestId("private-stub")).toBeTruthy());
+  const sent = JSON.parse(bodies[0] ?? "{}") as Record<string, unknown>;
+  expect(sent.protection).toBe("private");
+  expect(sent.text).toBe("");
+  expect(bodies[0]).not.toContain("Тайная");
+  expect(bodies[0]).not.toContain("правильный-пароль");
+
+  fireEvent.change(screen.getByLabelText("Пароль записи"), {
+    target: { value: "неверный-пароль" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Расшифровать" }));
+  expect((await screen.findByRole("alert")).textContent).toContain("Неверный пароль");
+  fireEvent.change(screen.getByLabelText("Пароль записи"), {
+    target: { value: "правильный-пароль" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Расшифровать" }));
+  expect((await screen.findByTestId("private-text")).textContent).toBe("Тайная мысль");
 });
 
 test("виджет показывает уровень, серию и опыт", async () => {

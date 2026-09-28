@@ -25,6 +25,7 @@ import {
   saveDayReview,
   type User,
 } from "./api";
+import { decryptText, encryptText, MIN_PRIVATE_PASSWORD } from "./privateCrypto";
 import { QuestsPage } from "./Quests";
 
 const inputClass =
@@ -149,20 +150,33 @@ function EntryForm() {
   const [emotions, setEmotions] = useState("");
   const [locked, setLocked] = useState(false);
   const [lockPassword, setLockPassword] = useState("");
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [privatePassword, setPrivatePassword] = useState("");
+  const [privateRepeat, setPrivateRepeat] = useState("");
   const add = useMutation({
-    mutationFn: () =>
-      createEntry({
-        text,
-        tags: splitList(tags),
-        emotions: splitList(emotions),
-        ...(locked ? { protection: "locked", lock_password: lockPassword } : {}),
-      }),
+    mutationFn: async () => {
+      const labels = { tags: splitList(tags), emotions: splitList(emotions) };
+      if (!isPrivate) {
+        return createEntry({
+          text,
+          ...labels,
+          ...(locked ? { protection: "locked", lock_password: lockPassword } : {}),
+        });
+      }
+      if (privatePassword !== privateRepeat) throw new Error("Пароли не совпадают");
+      // шифруем здесь: открытый текст и пароль не покидают устройство
+      const cipher = await encryptText(privatePassword, text.trim());
+      return createEntry({ text: "", ...labels, protection: "private", cipher });
+    },
     onSuccess: () => {
       setText("");
       setTags("");
       setEmotions("");
       setLocked(false);
       setLockPassword("");
+      setIsPrivate(false);
+      setPrivatePassword("");
+      setPrivateRepeat("");
       void client.invalidateQueries({ queryKey: ["progress"] });
       return client.invalidateQueries({ queryKey: ["entries"] });
     },
@@ -215,7 +229,57 @@ function EntryForm() {
         <label className="flex items-center gap-2 font-semibold">
           <input
             type="checkbox"
+            checked={isPrivate}
+            onChange={(event) => {
+              setIsPrivate(event.target.checked);
+              if (event.target.checked) setLocked(false);
+            }}
+          />
+          Приватная запись (шифруется на этом устройстве)
+        </label>
+        {isPrivate && (
+          <div className="mt-2 space-y-2">
+            <p
+              className="rounded border border-amber-700 bg-amber-50 p-2 text-amber-900"
+              data-testid="private-warning"
+            >
+              Текст зашифруется в браузере, сервер и ИИ его не прочитают. Пароль нигде не хранится и
+              восстановить его нельзя: забудете пароль — запись будет потеряна навсегда.
+            </p>
+            <label htmlFor="private-password" className="mb-1 block">
+              Пароль записи (от {MIN_PRIVATE_PASSWORD} символов)
+            </label>
+            <input
+              id="private-password"
+              type="password"
+              required
+              minLength={MIN_PRIVATE_PASSWORD}
+              autoComplete="new-password"
+              className={inputClass}
+              value={privatePassword}
+              onChange={(event) => setPrivatePassword(event.target.value)}
+            />
+            <label htmlFor="private-repeat" className="mb-1 block">
+              Повторите пароль
+            </label>
+            <input
+              id="private-repeat"
+              type="password"
+              required
+              autoComplete="new-password"
+              className={inputClass}
+              value={privateRepeat}
+              onChange={(event) => setPrivateRepeat(event.target.value)}
+            />
+          </div>
+        )}
+      </div>
+      <div>
+        <label className="flex items-center gap-2 font-semibold">
+          <input
+            type="checkbox"
             checked={locked}
+            disabled={isPrivate}
             onChange={(event) => setLocked(event.target.checked)}
           />
           Закрыть запись замком
@@ -304,6 +368,66 @@ function LockedEntryBody({ entry }: { entry: Entry }) {
   );
 }
 
+function PrivateEntryBody({ entry }: { entry: Entry }) {
+  // расшифровка целиком в браузере; открытый текст — только в состоянии компонента
+  const [password, setPassword] = useState("");
+  const [opened, setOpened] = useState<string | null>(null);
+  const open = useMutation({
+    mutationFn: () => {
+      if (!entry.cipher) throw new Error("В записи нет шифртекста");
+      return decryptText(password, entry.cipher);
+    },
+    onSuccess: (text) => {
+      setOpened(text);
+      setPassword("");
+    },
+  });
+
+  if (opened !== null) {
+    return (
+      <>
+        <p className="whitespace-pre-wrap" data-testid="private-text">
+          {opened}
+        </p>
+        <button
+          type="button"
+          className="mt-2 text-indigo-800 underline"
+          onClick={() => setOpened(null)}
+        >
+          Скрыть
+        </button>
+      </>
+    );
+  }
+  return (
+    <form
+      className="space-y-2"
+      onSubmit={(event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        open.mutate();
+      }}
+    >
+      <p data-testid="private-stub">🔐 Приватная запись — расшифровывается на этом устройстве</p>
+      <label htmlFor={`private-open-${entry.id}`} className="block text-sm">
+        Пароль записи
+      </label>
+      <input
+        id={`private-open-${entry.id}`}
+        type="password"
+        required
+        autoComplete="off"
+        className={inputClass}
+        value={password}
+        onChange={(event) => setPassword(event.target.value)}
+      />
+      <button type="submit" className={buttonClass}>
+        Расшифровать
+      </button>
+      <ErrorMessage error={open.error} />
+    </form>
+  );
+}
+
 function EntryList() {
   const entries = useQuery({ queryKey: ["entries"], queryFn: listEntries });
   if (entries.isError) return <ErrorMessage error={entries.error} />;
@@ -314,9 +438,9 @@ function EntryList() {
       {items.map((entry) => (
         <li key={entry.id} className="rounded-lg border border-slate-300 bg-white p-4">
           <p className="text-sm text-slate-700">{entry.date}</p>
-          {entry.protection === "locked" ? (
-            <LockedEntryBody entry={entry} />
-          ) : (
+          {entry.protection === "locked" && <LockedEntryBody entry={entry} />}
+          {entry.protection === "private" && <PrivateEntryBody entry={entry} />}
+          {entry.protection !== "locked" && entry.protection !== "private" && (
             <p className="whitespace-pre-wrap">{entry.text}</p>
           )}
           {(entry.tags.length > 0 || entry.emotions.length > 0) && (

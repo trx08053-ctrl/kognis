@@ -40,9 +40,12 @@ def main() -> int:
         (comp / "_app.py").write_text(
             '"""Сценарии модуля; публичное — реэкспорт в __init__.py."""\n'
         )
-        # все три слоя: import-linter требует каждый слой в каждом контейнере
-        (comp / "_infra.py").write_text('"""Хранение и внешние системы (адаптеры)."""\n')
-        print(f"создано: {comp.relative_to(ROOT)}/ (__init__.py, _domain.py, _app.py, _infra.py)")
+        # import-linter требует каждый объявленный слой в каждом контейнере
+        linter = ROOT / ".importlinter"
+        if linter.exists() and "_infra" in linter.read_text():
+            (comp / "_infra.py").write_text('"""Хранение и внешние системы (адаптеры)."""\n')
+        files = ", ".join(sorted(p.name for p in comp.iterdir()))
+        print(f"создано: {comp.relative_to(ROOT)}/ ({files})")
     card = ROOT / "docs" / "modules" / f"{args.name}.md"
     if card.exists():
         print(f"карточка уже есть: {card.relative_to(ROOT)}")

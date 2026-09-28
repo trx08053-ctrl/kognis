@@ -141,6 +141,24 @@ def cmd_done(args: argparse.Namespace) -> None:
     bd("close", args.id, "--reason", proof)
     metrics.record_task(args.id, "accepted", args.human_min)
     print(f"{args.id}: closed ({proof})")
+    commit_state(args.id)
+
+
+def git_out(*args: str) -> str:
+    proc = subprocess.run(
+        ["git", "-C", str(ROOT), *args], capture_output=True, text=True, check=False
+    )
+    return proc.stdout
+
+
+def commit_state(task_id: str) -> None:
+    """Экспорт bd после закрытия — отдельным коммитом: следующий шаг начинается с чистого дерева."""
+    export = ".beads/issues.jsonl"
+    if git_out("status", "--porcelain", "--", export).strip():
+        git_out("commit", "-q", "-m", f"chore(bd): close {task_id}", "--", export)
+    rest = [ln[3:] for ln in git_out("status", "--porcelain", "--untracked-files=no").splitlines()]
+    if rest:
+        print(f"ВНИМАНИЕ: незакоммиченные изменения после закрытия: {rest} — закоммить их.")
 
 
 def cmd_list(_: argparse.Namespace) -> None:

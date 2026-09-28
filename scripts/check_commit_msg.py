@@ -21,7 +21,8 @@ def main() -> int:
     print(
         f"Сообщение коммита не по Conventional Commits: {subject!r}\n"
         "Формат: <type>(<scope>)?: <описание>, type ∈ feat|fix|docs|style|refactor|perf|"
-        "test|build|ci|chore|revert. Пример: feat(api): add order export [demo-1xd]"
+        "test|build|ci|chore|revert; описание — до 100 символов (подробности — в теле коммита). "
+        "Пример: feat(api): add order export [demo-1xd]"
     )
     return 1
 

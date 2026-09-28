@@ -6,8 +6,10 @@
 
 import datetime as dt
 import os
+from collections.abc import Callable
 from pathlib import Path
 from typing import Annotated
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Cookie, Depends, FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse, PlainTextResponse
@@ -18,6 +20,7 @@ from sqlalchemy.exc import IntegrityError
 
 from kognis.db import make_engine, transaction
 from kognis.diary import DayReview, DiaryService, Entry
+from kognis.gameplay import GameplayService, Progress
 from kognis.safety import HelpBlock, check_text
 from kognis.users import (
     SESSION_LIFETIME,
@@ -31,6 +34,13 @@ HERE = Path(__file__).resolve().parent
 # сборка фронтенда: <корень проекта>/frontend/dist (в образе — /app/frontend/dist)
 DIST = Path(os.environ.get("FRONTEND_DIST", HERE.parents[2] / "frontend" / "dist"))
 COOKIE = "kognis_session"
+# часовой пояс профиля по умолчанию (D11); хранение своего пояса в профиле — отдельной задачей
+DEFAULT_TZ = ZoneInfo("Europe/Moscow")
+
+
+def local_today() -> dt.date:
+    """Сегодняшняя дата пользователя — по ней считается серия дней."""
+    return dt.datetime.now(DEFAULT_TZ).date()
 
 
 class Credentials(BaseModel):
@@ -96,6 +106,38 @@ def review_out(review: DayReview) -> DayReviewOut:
     )
 
 
+class AchievementOut(BaseModel):
+    code: str
+    title: str
+    description: str
+    earned_on: dt.date
+
+
+class ProgressOut(BaseModel):
+    xp: int
+    level: int
+    level_start_xp: int
+    next_level_xp: int
+    streak: int
+    achievements: list[AchievementOut]
+
+
+def progress_out(progress: Progress) -> ProgressOut:
+    return ProgressOut(
+        xp=progress.xp,
+        level=progress.level,
+        level_start_xp=progress.level_start_xp,
+        next_level_xp=progress.next_level_xp,
+        streak=progress.streak,
+        achievements=[
+            AchievementOut(
+                code=a.code, title=a.title, description=a.description, earned_on=a.earned_on
+            )
+            for a in progress.achievements
+        ],
+    )
+
+
 def user_out(user: User) -> UserOut:
     return UserOut(id=user.id, email=user.email)
 
@@ -142,7 +184,7 @@ def current_user(
 Authed = Annotated[User, Depends(current_user)]
 
 
-def diary_router(db: Engine) -> APIRouter:
+def diary_router(db: Engine, today: Callable[[], dt.date]) -> APIRouter:
     router = APIRouter(prefix="/api/entries")
 
     @router.post("", status_code=201)
@@ -155,10 +197,15 @@ def diary_router(db: Engine) -> APIRouter:
             with transaction(db) as session:
                 diary = DiaryService(session)
                 entry = diary.create_entry(
-                    user.id, payload.text, payload.tags, payload.emotions, payload.date
+                    user.id, payload.text, payload.tags, payload.emotions, payload.date or today()
                 )
                 if assessment.crisis:
+                    # кризисная запись опыта не даёт (D5)
                     entry = diary.mark_crisis(user.id, entry.id) or entry
+                else:
+                    GameplayService(session).award_entry(
+                        user.id, entry.id, entry.entry_date, today()
+                    )
         except ValueError as err:
             raise HTTPException(status_code=422, detail=str(err)) from err
         return entry_out(entry, block)
@@ -179,16 +226,18 @@ def diary_router(db: Engine) -> APIRouter:
     return router
 
 
-def day_review_router(db: Engine) -> APIRouter:
+def day_review_router(db: Engine, today: Callable[[], dt.date]) -> APIRouter:
     router = APIRouter(prefix="/api/day-reviews")
 
     @router.put("/{review_date}")
     def save_review(review_date: dt.date, payload: DayReviewIn, user: Authed) -> DayReviewOut:
         def save() -> DayReview:
             with transaction(db) as session:
-                return DiaryService(session).save_day_review(
+                review = DiaryService(session).save_day_review(
                     user.id, review_date, payload.wellbeing, payload.mood, payload.reflection
                 )
+                GameplayService(session).award_day_review(user.id, review_date, today())
+                return review
 
         try:
             try:
@@ -209,7 +258,22 @@ def day_review_router(db: Engine) -> APIRouter:
     return router
 
 
-def create_app(engine: Engine | None = None, frontend_dist: Path | None = None) -> FastAPI:
+def progress_router(db: Engine, today: Callable[[], dt.date]) -> APIRouter:
+    router = APIRouter(prefix="/api/progress")
+
+    @router.get("")
+    def get_progress(user: Authed) -> ProgressOut:
+        with transaction(db) as session:
+            return progress_out(GameplayService(session).progress(user.id, today()))
+
+    return router
+
+
+def create_app(
+    engine: Engine | None = None,
+    frontend_dist: Path | None = None,
+    today: Callable[[], dt.date] = local_today,
+) -> FastAPI:
     db = engine or make_engine()
     dist = frontend_dist or DIST
     # Secure по умолчанию; отключается только явным KOGNIS_ENV=dev (ADR 0003)
@@ -268,8 +332,9 @@ def create_app(engine: Engine | None = None, frontend_dist: Path | None = None) 
     def me(user: Authed) -> UserOut:
         return user_out(user)
 
-    app.include_router(diary_router(db))
-    app.include_router(day_review_router(db))
+    app.include_router(diary_router(db, today))
+    app.include_router(day_review_router(db, today))
+    app.include_router(progress_router(db, today))
     app.mount("/assets", StaticFiles(directory=dist / "assets", check_dir=False), name="assets")
 
     @app.get("/{path:path}")

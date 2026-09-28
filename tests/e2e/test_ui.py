@@ -157,6 +157,30 @@ def test_crisis_entry_shows_accessible_help_block(page: Page) -> None:
     assert not serious, [f"{v['id']}: {v['help']}" for v in serious]
 
 
+@pytest.mark.acceptance("kognis-50k", "AC3")
+@pytest.mark.e2e
+def test_progress_widget_and_achievements_page(page: Page) -> None:
+    """Запись даёт опыт в виджете и достижение «Первая запись» с датой; axe без серьёзных."""
+    register(page, "ann@example.com")
+    expect(page.get_by_test_id("level")).to_have_text("Уровень 1")
+    page.get_by_label("Что произошло и что вы чувствуете").fill("Первый шаг")
+    page.get_by_test_id("save-entry").click()
+    expect(page.get_by_test_id("xp")).to_have_text("Опыт: 10 из 50")
+    expect(page.get_by_test_id("streak")).to_have_text("Серия: 1 дн.")
+    SCREENS.mkdir(parents=True, exist_ok=True)
+    page.screenshot(path=str(SCREENS / "e2e-progress.png"), full_page=True)
+
+    page.get_by_role("link", name="Достижения").click()
+    item = page.get_by_test_id("achievements").get_by_role("listitem")
+    expect(item).to_have_count(1)
+    expect(item).to_contain_text("Первая запись")
+    expect(item).to_contain_text("Получено: 20")
+    page.screenshot(path=str(SCREENS / "e2e-achievements.png"), full_page=True)
+    violations = cast("list[dict[str, Any]]", Axe().run(page).response["violations"])
+    serious = [v for v in violations if v["impact"] in {"serious", "critical"}]
+    assert not serious, [f"{v['id']}: {v['help']}" for v in serious]
+
+
 @pytest.mark.e2e
 def test_no_serious_accessibility_violations(page: Page) -> None:
     expect(page.get_by_role("heading", level=1)).to_be_visible()

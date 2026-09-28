@@ -15,10 +15,10 @@
 | `kognis.analysis` | Модуль analysis: TODO ответственность (одно предложение). | — | 4 | [analysis](modules/analysis.md) |
 | `kognis.db` | Платформа данных: подключение, метаданные таблиц, транзакции. | — | 1 | [db](modules/db.md) |
 | `kognis.diary` | Модуль diary: записи дневника и итоги дня; владеет `entries` и `day_reviews`. | `db` | 4 | [diary](modules/diary.md) |
-| `kognis.gameplay` | Модуль gameplay: TODO ответственность (одно предложение). | — | 4 | [gameplay](modules/gameplay.md) |
+| `kognis.gameplay` | Модуль gameplay: опыт, уровни, серия дней, достижения (D8); владеет `xp_events` и др. | `db` | 4 | [gameplay](modules/gameplay.md) |
 | `kognis.safety` | Модуль safety: кризисные сигналы в тексте (локально, без ИИ) и контакты помощи. | — | 4 | [safety](modules/safety.md) |
 | `kognis.users` | Модуль users: регистрация, вход, сессии. Владеет данными пользователей и сессий. | `db` | 4 | [users](modules/users.md) |
-| `kognis.web` | Модуль web: HTTP-вход приложения — страницы, JSON API, /health. Бизнес-логики не содержит. | `db`, `diary`, `safety`, `users` | 2 | [web](modules/web.md) |
+| `kognis.web` | Модуль web: HTTP-вход приложения — страницы, JSON API, /health. Бизнес-логики не содержит. | `db`, `diary`, `gameplay`, `safety`, `users` | 2 | [web](modules/web.md) |
 
 ## `kognis.access`
 
@@ -68,8 +68,13 @@
 ## `kognis.gameplay`
 
 - Код: `src/kognis/gameplay`
-- Публичный интерфейс: —
-- Тесты: **нет**
+- Публичный интерфейс:
+  - `ACHIEVEMENTS` — `src/kognis/gameplay/_domain.py`
+  - `AchievementDef` — `src/kognis/gameplay/_domain.py`
+  - `EarnedAchievement` — `src/kognis/gameplay/_domain.py`
+  - `GameplayService` — `src/kognis/gameplay/_app.py`
+  - `Progress` — `src/kognis/gameplay/_domain.py`
+- Тесты: `tests/gameplay/test_domain.py`
 
 ## `kognis.safety`
 
@@ -101,7 +106,7 @@
 - Публичный интерфейс:
   - `create_app` — `src/kognis/web/_app.py`
   - `main` — `src/kognis/web/__init__.py`
-- Тесты: `tests/web/test_day_reviews.py`, `tests/web/test_http.py`
+- Тесты: `tests/web/test_day_reviews.py`, `tests/web/test_gameplay.py`, `tests/web/test_http.py`
 
 ## Точки входа
 

@@ -88,6 +88,25 @@ export interface DayReviewInput {
   reflection: string;
 }
 
+export interface Achievement {
+  code: string;
+  title: string;
+  description: string;
+  earned_on: string;
+}
+
+export interface Progress {
+  xp: number;
+  level: number;
+  level_start_xp: number;
+  next_level_xp: number;
+  streak: number;
+  achievements: Achievement[];
+}
+
+export const getProgress = (): Promise<Progress> =>
+  fetch("/api/progress").then((r) => parse<Progress>(r));
+
 export const listDayReviews = (): Promise<DayReview[]> =>
   fetch("/api/day-reviews").then((r) => parse<DayReview[]>(r));
 export const saveDayReview = (date: string, review: DayReviewInput): Promise<DayReview> =>

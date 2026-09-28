@@ -7,6 +7,7 @@ import {
   type DayReview,
   type Entry,
   getMe,
+  getProgress,
   type HelpBlock,
   listDayReviews,
   listEntries,
@@ -143,6 +144,7 @@ function EntryForm() {
       setText("");
       setTags("");
       setEmotions("");
+      void client.invalidateQueries({ queryKey: ["progress"] });
       return client.invalidateQueries({ queryKey: ["entries"] });
     },
   });
@@ -237,7 +239,10 @@ function DayReviewForm() {
   const save = useMutation({
     mutationFn: () =>
       saveDayReview(date, { wellbeing: Number(wellbeing), mood: Number(mood), reflection }),
-    onSuccess: () => client.invalidateQueries({ queryKey: ["day-reviews"] }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ["progress"] });
+      return client.invalidateQueries({ queryKey: ["day-reviews"] });
+    },
   });
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -355,6 +360,65 @@ function DayReviewPage() {
   );
 }
 
+function useProgress() {
+  return useQuery({ queryKey: ["progress"], queryFn: getProgress });
+}
+
+function ProgressWidget() {
+  const progress = useProgress();
+  if (progress.isError) return <ErrorMessage error={progress.error} />;
+  const data = progress.data;
+  if (!data) return null;
+  const span = data.next_level_xp - data.level_start_xp;
+  const done = Math.min(span, data.xp - data.level_start_xp);
+  return (
+    <section
+      aria-label="Прогресс"
+      data-testid="progress"
+      className="space-y-2 rounded-lg border border-slate-300 bg-white p-4"
+    >
+      <p className="font-semibold">
+        <span data-testid="level">Уровень {data.level}</span> ·{" "}
+        <span data-testid="streak">Серия: {data.streak} дн.</span>
+      </p>
+      <progress
+        className="w-full"
+        max={span}
+        value={done}
+        aria-label={`Опыт до следующего уровня: ${done} из ${span}`}
+      />
+      <p className="text-sm text-slate-700" data-testid="xp">
+        Опыт: {data.xp} из {data.next_level_xp}
+      </p>
+    </section>
+  );
+}
+
+function AchievementsPage() {
+  const progress = useProgress();
+  const earned = progress.data?.achievements ?? [];
+  return (
+    <section aria-labelledby="achievements-title" className="space-y-3">
+      <h2 id="achievements-title" className="text-xl font-semibold">
+        Достижения
+      </h2>
+      <ErrorMessage error={progress.error} />
+      {progress.data && earned.length === 0 && <p>Пока нет достижений.</p>}
+      <ul className="space-y-2" data-testid="achievements">
+        {earned.map((a) => (
+          <li key={a.code} className="rounded border border-slate-300 bg-white p-3">
+            <p className="font-semibold">{a.title}</p>
+            <p className="text-sm text-slate-700">{a.description}</p>
+            <p className="text-sm text-slate-700">
+              Получено: <time dateTime={a.earned_on}>{a.earned_on}</time>
+            </p>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function Shell({ user, children }: { user: User; children: ReactNode }) {
   const client = useQueryClient();
   const out = useMutation({
@@ -379,7 +443,11 @@ function Shell({ user, children }: { user: User; children: ReactNode }) {
         <Link to="/day" className="text-indigo-800 underline">
           Итог дня
         </Link>
+        <Link to="/achievements" className="text-indigo-800 underline">
+          Достижения
+        </Link>
       </nav>
+      <ProgressWidget />
       {children}
       <p className="border-t border-slate-300 pt-3 text-sm text-slate-700" data-testid="disclaimer">
         Kognis — не медицинская помощь и не заменяет специалиста. В кризисной ситуации звоните 112.
@@ -428,6 +496,14 @@ export function App() {
           element={
             <Shell user={user}>
               <DayReviewPage />
+            </Shell>
+          }
+        />
+        <Route
+          path="/achievements"
+          element={
+            <Shell user={user}>
+              <AchievementsPage />
             </Shell>
           }
         />

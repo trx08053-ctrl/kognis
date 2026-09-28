@@ -24,6 +24,16 @@ class Entry:
 
 
 @dataclass(frozen=True)
+class EntryDraft:
+    """Ввод новой записи до нормализации."""
+
+    text: str
+    tags: list[str]
+    emotions: list[str]
+    entry_date: date | None = None
+
+
+@dataclass(frozen=True)
 class DayReview:
     id: int
     owner_id: int

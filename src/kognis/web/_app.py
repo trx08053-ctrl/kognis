@@ -6,9 +6,10 @@
 
 import datetime as dt
 import os
-from collections.abc import Callable
+from collections.abc import Callable, Generator
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Cookie, Depends, FastAPI, HTTPException, Request, Response
@@ -31,7 +32,15 @@ from kognis.analysis import (
     NoDataError,
 )
 from kognis.db import make_engine, transaction
-from kognis.diary import DayReview, DiaryService, Entry
+from kognis.diary import (
+    DataKeyError,
+    DayReview,
+    DiaryService,
+    Entry,
+    EntryDraft,
+    EntryUnreadableError,
+    WrongLockPasswordError,
+)
 from kognis.gameplay import (
     AlreadyAcceptedError,
     GameplayService,
@@ -78,6 +87,12 @@ class EntryIn(BaseModel):
     tags: list[str] = Field(default_factory=list)
     emotions: list[str] = Field(default_factory=list)
     date: dt.date | None = None
+    protection: Literal["plain", "locked"] = "plain"
+    lock_password: str | None = Field(default=None, max_length=256)
+
+
+class LockPassword(BaseModel):
+    password: str = Field(max_length=256)
 
 
 class ContactOut(BaseModel):
@@ -206,21 +221,66 @@ def current_user(
 Authed = Annotated[User, Depends(current_user)]
 
 
-def diary_router(db: Engine, today: Callable[[], dt.date]) -> APIRouter:
+@contextmanager
+def lock_errors() -> Generator[None]:
+    """Ошибки записей «под замком» → понятные ответы без раскрытия текста."""
+    try:
+        yield
+    except WrongLockPasswordError as err:
+        raise HTTPException(status_code=403, detail=str(err)) from err
+    except EntryUnreadableError as err:
+        raise HTTPException(status_code=409, detail=str(err)) from err
+    except DataKeyError as err:
+        raise HTTPException(status_code=503, detail=str(err)) from err
+
+
+def diary_router(db: Engine, today: Callable[[], dt.date], data_key: str | None) -> APIRouter:
     router = APIRouter(prefix="/api/entries")
+
+    def entry_action(user: User, entry_id: int, password: str, action: str) -> EntryOut:
+        with lock_errors(), transaction(db) as session:
+            entry = getattr(DiaryService(session, data_key), action)(user.id, entry_id, password)
+        if entry is None:  # чужая запись неотличима от несуществующей
+            raise HTTPException(status_code=404, detail="запись не найдена")
+        return entry_out(entry)
+
+    @router.post("/{entry_id}/open")
+    def open_entry(entry_id: int, payload: LockPassword, user: Authed) -> EntryOut:
+        """Текст записи «под замком» — только в этом ответе, в БД он остаётся зашифрованным."""
+        return entry_action(user, entry_id, payload.password, "open_entry")
+
+    @router.post("/{entry_id}/lock")
+    def lock_entry(entry_id: int, payload: LockPassword, user: Authed) -> EntryOut:
+        try:
+            return entry_action(user, entry_id, payload.password, "lock_entry")
+        except ValueError as err:
+            raise HTTPException(status_code=422, detail=str(err)) from err
+
+    @router.post("/{entry_id}/unlock")
+    def unlock_entry(entry_id: int, payload: LockPassword, user: Authed) -> EntryOut:
+        return entry_action(user, entry_id, payload.password, "unlock_entry")
 
     @router.post("", status_code=201)
     def create_entry(payload: EntryIn, user: Authed) -> EntryOut:
+        if payload.protection == "locked" and not payload.lock_password:
+            raise HTTPException(
+                status_code=422, detail="для записи «под замком» нужен пароль замка"
+            )
         try:
             # кризисный сигнал ищем локально (safety); запись сохраняется всегда
             assessment, block = check_text(
                 " | ".join([payload.text, *payload.tags, *payload.emotions])
             )
-            with transaction(db) as session:
-                diary = DiaryService(session)
-                entry = diary.create_entry(
-                    user.id, payload.text, payload.tags, payload.emotions, payload.date or today()
-                )
+            with lock_errors(), transaction(db) as session:
+                diary = DiaryService(session, data_key)
+                day = payload.date or today()
+                if payload.protection == "locked" and payload.lock_password:
+                    draft = EntryDraft(payload.text, payload.tags, payload.emotions, day)
+                    entry = diary.create_locked_entry(user.id, draft, payload.lock_password)
+                else:
+                    entry = diary.create_entry(
+                        user.id, payload.text, payload.tags, payload.emotions, day
+                    )
                 if not assessment.allows_rewards:
                     # кризисная запись опыта не даёт (D5)
                     entry = diary.mark_crisis(user.id, entry.id) or entry
@@ -646,8 +706,11 @@ def create_app(
     frontend_dist: Path | None = None,
     today: Callable[[], dt.date] = local_today,
     ai_provider: AiProvider | None = None,
+    data_key: str | None = None,
 ) -> FastAPI:
     db = engine or make_engine()
+    # ключ данных для записей «под замком» (D4): base64, 32 байта; без него замок недоступен
+    data_key = data_key or os.environ.get("KOGNIS_DATA_KEY")
     dist = frontend_dist or DIST
     # Secure по умолчанию; отключается только явным KOGNIS_ENV=dev (ADR 0003)
     secure_cookie = os.environ.get("KOGNIS_ENV") != "dev"
@@ -705,7 +768,7 @@ def create_app(
     def me(user: Authed) -> UserOut:
         return user_out(user)
 
-    app.include_router(diary_router(db, today))
+    app.include_router(diary_router(db, today, data_key))
     app.include_router(day_review_router(db, today))
     app.include_router(progress_router(db, today))
     provider = ai_provider or get_provider()

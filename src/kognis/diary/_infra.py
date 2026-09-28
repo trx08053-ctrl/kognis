@@ -1,5 +1,6 @@
 """Хранение записей (таблица `entries` принадлежит модулю diary)."""
 
+from dataclasses import replace
 from datetime import UTC, date, datetime
 
 from sqlalchemy import (
@@ -9,6 +10,7 @@ from sqlalchemy import (
     Date,
     DateTime,
     Integer,
+    LargeBinary,
     String,
     Table,
     Text,
@@ -23,6 +25,7 @@ from sqlalchemy.orm import Session
 
 from kognis.db import metadata
 
+from ._crypto import Sealed
 from ._domain import DayReview, Entry
 
 entries_table = Table(
@@ -37,6 +40,11 @@ entries_table = Table(
     Column("emotions", JSON, nullable=False),
     Column("protection", String(16), nullable=False, server_default="plain"),
     Column("crisis", Boolean, nullable=False, server_default=false()),
+    # «под замком» (D4): text пуст, содержимое — шифртекст; пароль замка — argon2id
+    Column("lock_cipher", LargeBinary, nullable=True),
+    Column("lock_nonce", LargeBinary, nullable=True),
+    Column("lock_hash", String(255), nullable=True),
+    Column("lock_version", Integer, nullable=True),
     Column("created_at", DateTime, nullable=False),
 )
 
@@ -68,33 +76,67 @@ def _to_entry(row: Row[tuple[object, ...]]) -> Entry:
     )
 
 
+def _seal_values(sealed: Sealed | None) -> dict[str, object]:
+    return {
+        "lock_cipher": sealed.cipher if sealed else None,
+        "lock_nonce": sealed.nonce if sealed else None,
+        "lock_hash": sealed.lock_hash if sealed else None,
+        "lock_version": sealed.version if sealed else None,
+    }
+
+
 class EntryRepository:
     def __init__(self, session: Session) -> None:
         self._session = session
 
-    def add(
-        self,
-        owner_id: int,
-        entry_date: date,
-        text: str,
-        tags: tuple[str, ...],
-        emotions: tuple[str, ...],
-    ) -> Entry:
+    def add(self, entry: Entry, sealed: Sealed | None = None) -> Entry:
+        """Сохранить новую запись (`entry.id` игнорируется); с `sealed` текст в БД не пишется."""
+        protection = "locked" if sealed else "plain"
+        stored = "" if sealed else entry.text
         stmt = (
             insert(entries_table)
             .values(
-                owner_id=owner_id,
-                entry_date=entry_date,
-                text=text,
-                tags=list(tags),
-                emotions=list(emotions),
-                protection="plain",
+                owner_id=entry.owner_id,
+                entry_date=entry.entry_date,
+                text=stored,
+                tags=list(entry.tags),
+                emotions=list(entry.emotions),
+                protection=protection,
                 created_at=datetime.now(UTC).replace(tzinfo=None),
+                **_seal_values(sealed),
             )
             .returning(entries_table.c.id)
         )
         entry_id = self._session.execute(stmt).scalar_one()
-        return Entry(int(entry_id), owner_id, entry_date, text, tags, emotions)
+        return replace(entry, id=int(entry_id), text=stored, protection=protection)
+
+    def sealed_for(self, owner_id: int, entry_id: int) -> Sealed | None:
+        """Шифрованное содержимое записи владельца (только у `locked`)."""
+        table = entries_table
+        row = self._session.execute(
+            select(
+                table.c.lock_cipher, table.c.lock_nonce, table.c.lock_hash, table.c.lock_version
+            ).where(table.c.id == entry_id, table.c.owner_id == owner_id)
+        ).first()
+        if row is None or row.lock_cipher is None:
+            return None
+        return Sealed(
+            bytes(row.lock_cipher), bytes(row.lock_nonce), row.lock_hash, row.lock_version
+        )
+
+    def set_protection(
+        self, owner_id: int, entry_id: int, text: str, sealed: Sealed | None
+    ) -> None:
+        """Сменить режим: `sealed` — закрыть замком (text очищается), `None` — вернуть `text`."""
+        self._session.execute(
+            update(entries_table)
+            .where(entries_table.c.id == entry_id, entries_table.c.owner_id == owner_id)
+            .values(
+                text="" if sealed else text,
+                protection="locked" if sealed else "plain",
+                **_seal_values(sealed),
+            )
+        )
 
     def set_crisis(self, owner_id: int, entry_id: int) -> Entry | None:
         self._session.execute(

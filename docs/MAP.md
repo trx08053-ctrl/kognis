@@ -14,7 +14,7 @@
 | `kognis.ai` | Модуль ai: единый интерфейс к языковой модели; провайдер выбирается настройкой. | — | 4 | [ai](modules/ai.md) |
 | `kognis.analysis` | Модуль analysis: ИИ-анализ периода по направлениям и динамика настроения; владеет `analyses`. | `ai`, `db`, `diary`, `safety` | 4 | [analysis](modules/analysis.md) |
 | `kognis.db` | Платформа данных: подключение, метаданные таблиц, транзакции. | — | 1 | [db](modules/db.md) |
-| `kognis.diary` | Модуль diary: записи дневника и итоги дня; владеет `entries` и `day_reviews`. | `db` | 4 | [diary](modules/diary.md) |
+| `kognis.diary` | Модуль diary: записи дневника и итоги дня; владеет `entries` и `day_reviews`. | `db` | 5 | [diary](modules/diary.md) |
 | `kognis.gameplay` | Модуль gameplay: опыт, уровни, серия, достижения, квесты, квизы (D8). | `db` | 7 | [gameplay](modules/gameplay.md) |
 | `kognis.safety` | Модуль safety: кризисные сигналы в тексте (локально, без ИИ) и контакты помощи. | — | 4 | [safety](modules/safety.md) |
 | `kognis.users` | Модуль users: регистрация, вход, сессии. Владеет данными пользователей и сессий. | `db` | 4 | [users](modules/users.md) |
@@ -74,9 +74,14 @@
 
 - Код: `src/kognis/diary`
 - Публичный интерфейс:
+  - `MIN_LOCK_PASSWORD` — `src/kognis/diary/_crypto.py`
+  - `DataKeyError` — `src/kognis/diary/_crypto.py`
   - `DayReview` — `src/kognis/diary/_domain.py`
   - `DiaryService` — `src/kognis/diary/_app.py`
   - `Entry` — `src/kognis/diary/_domain.py`
+  - `EntryDraft` — `src/kognis/diary/_domain.py`
+  - `EntryUnreadableError` — `src/kognis/diary/_crypto.py`
+  - `WrongLockPasswordError` — `src/kognis/diary/_crypto.py`
 - Тесты: `tests/diary/test_diary.py`, `tests/integration/test_postgres.py`, `tests/web/test_day_reviews.py`
 
 ## `kognis.gameplay`
@@ -132,7 +137,7 @@
 - Публичный интерфейс:
   - `create_app` — `src/kognis/web/_app.py`
   - `main` — `src/kognis/web/__init__.py`
-- Тесты: `tests/analysis/test_analysis.py`, `tests/e2e/test_ui.py`, `tests/web/test_crisis_review.py`, `tests/web/test_day_reviews.py`, `tests/web/test_gameplay.py`, `tests/web/test_http.py`, `tests/web/test_quests.py`
+- Тесты: `tests/analysis/test_analysis.py`, `tests/e2e/test_ui.py`, `tests/web/test_crisis_review.py`, `tests/web/test_day_reviews.py`, `tests/web/test_gameplay.py`, `tests/web/test_http.py`, `tests/web/test_locked.py`, `tests/web/test_quests.py`
 
 ## Точки входа
 

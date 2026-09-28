@@ -177,3 +177,33 @@ test("страница достижений показывает дату пол
   expect(list.textContent).toContain("Первая запись");
   expect(list.textContent).toContain("Получено: 2026-09-01");
 });
+
+test("итог дня с кризисным сигналом в рефлексии показывает блок помощи", async () => {
+  stubApi({
+    "GET /api/me": () => reply(200, { id: 1, email: "ann@example.com" }),
+    "GET /api/entries": () => reply(200, []),
+    "GET /api/progress": () => reply(200, emptyProgress),
+    "GET /api/day-reviews": () => reply(200, []),
+    "PUT /api/day-reviews/2026-09-29": () =>
+      reply(200, {
+        id: 1,
+        date: "2026-09-29",
+        wellbeing: 3,
+        mood: 3,
+        reflection: "хочу умереть",
+        help: {
+          message: "Вы не одни",
+          contacts: [{ name: "Экстренные службы", phone: "112", note: "круглосуточно" }],
+        },
+      }),
+  });
+  renderApp();
+  fireEvent.click(await screen.findByRole("link", { name: "Итог дня" }));
+  fireEvent.change(await screen.findByLabelText("Дата"), { target: { value: "2026-09-29" } });
+  fireEvent.change(screen.getByLabelText("Рефлексия: что запомнилось сегодня"), {
+    target: { value: "хочу умереть" },
+  });
+  fireEvent.click(screen.getByTestId("save-review"));
+  const block = await screen.findByTestId("help-block");
+  expect(block.textContent).toContain("Вы не одни");
+});

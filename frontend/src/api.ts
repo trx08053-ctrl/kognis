@@ -80,6 +80,7 @@ export interface DayReview {
   wellbeing: number;
   mood: number;
   reflection: string;
+  help: HelpBlock | null;
 }
 
 export interface DayReviewInput {

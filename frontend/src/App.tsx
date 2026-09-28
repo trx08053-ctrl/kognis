@@ -321,6 +321,7 @@ function DayReviewForm() {
           Итог за {save.data.date} сохранён.
         </p>
       )}
+      {save.data?.help && <HelpPanel help={save.data.help} />}
       <ErrorMessage error={save.error} />
     </form>
   );

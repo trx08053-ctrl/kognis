@@ -105,6 +105,40 @@ def test_wrong_password_shows_error(page: Page) -> None:
 
 
 @pytest.mark.e2e
+def test_day_review_saved_error_shown_and_history_private(
+    browser: Browser, live_server: str, page: Page
+) -> None:
+    """Итог дня в браузере: значение вне 1–10 → понятная ошибка; исправление → итог в истории;
+    повторное сохранение за ту же дату не плодит записи; другой пользователь истории не видит."""
+    register(page, "ann@example.com")
+    page.get_by_role("link", name="Итог дня").click()
+    page.get_by_label("Самочувствие (1–10)").fill("11")
+    page.get_by_test_id("save-review").click()
+    expect(page.get_by_role("alert")).to_contain_text("от 1 до 10")
+
+    page.get_by_label("Самочувствие (1–10)").fill("4")
+    page.get_by_label("Настроение (1–10)").fill("7")
+    page.get_by_label("Рефлексия: что запомнилось сегодня").fill("Прогулка помогла")
+    page.get_by_test_id("save-review").click()
+    expect(page.get_by_test_id("reviews")).to_contain_text("Самочувствие: 4 · Настроение: 7")
+    page.get_by_label("Настроение (1–10)").fill("8")
+    page.get_by_test_id("save-review").click()
+    expect(page.get_by_test_id("reviews")).to_contain_text("Настроение: 8")
+    expect(page.get_by_test_id("reviews").get_by_role("listitem")).to_have_count(1)
+    SCREENS.mkdir(parents=True, exist_ok=True)
+    page.screenshot(path=str(SCREENS / "e2e-day-review.png"), full_page=True)
+    violations = cast("list[dict[str, Any]]", Axe().run(page).response["violations"])
+    serious = [v for v in violations if v["impact"] in {"serious", "critical"}]
+    assert not serious, [f"{v['id']}: {v['help']}" for v in serious]
+
+    other = fresh_page(browser, live_server)
+    register(other, "bob@example.com")
+    other.get_by_role("link", name="Итог дня").click()
+    expect(other.get_by_text("Пока нет итогов дня.")).to_be_visible()
+    other.context.close()
+
+
+@pytest.mark.e2e
 def test_no_serious_accessibility_violations(page: Page) -> None:
     expect(page.get_by_role("heading", level=1)).to_be_visible()
     violations = cast("list[dict[str, Any]]", Axe().run(page).response["violations"])

@@ -57,3 +57,26 @@ export const logout = (): Promise<void> => post<void>("/api/auth/logout");
 export const listEntries = (): Promise<Entry[]> =>
   fetch("/api/entries").then((r) => parse<Entry[]>(r));
 export const createEntry = (entry: NewEntry): Promise<Entry> => post<Entry>("/api/entries", entry);
+
+export interface DayReview {
+  id: number;
+  date: string;
+  wellbeing: number;
+  mood: number;
+  reflection: string;
+}
+
+export interface DayReviewInput {
+  wellbeing: number;
+  mood: number;
+  reflection: string;
+}
+
+export const listDayReviews = (): Promise<DayReview[]> =>
+  fetch("/api/day-reviews").then((r) => parse<DayReview[]>(r));
+export const saveDayReview = (date: string, review: DayReviewInput): Promise<DayReview> =>
+  fetch(`/api/day-reviews/${date}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(review),
+  }).then((r) => parse<DayReview>(r));

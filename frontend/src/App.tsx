@@ -1,15 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type FormEvent, useState } from "react";
-import { Navigate, Route, Routes } from "react-router";
+import { type FormEvent, type ReactNode, useState } from "react";
+import { Link, Navigate, Route, Routes } from "react-router";
 import {
   ApiError,
   createEntry,
+  type DayReview,
   type Entry,
   getMe,
+  listDayReviews,
   listEntries,
   login,
   logout,
   register,
+  saveDayReview,
   type User,
 } from "./api";
 
@@ -189,7 +192,141 @@ function EntryList() {
   );
 }
 
-function DiaryPage({ user }: { user: User }) {
+function localToday(): string {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
+}
+
+function DayReviewForm() {
+  const client = useQueryClient();
+  const [date, setDate] = useState(localToday);
+  const [wellbeing, setWellbeing] = useState("5");
+  const [mood, setMood] = useState("5");
+  const [reflection, setReflection] = useState("");
+  const save = useMutation({
+    mutationFn: () =>
+      saveDayReview(date, { wellbeing: Number(wellbeing), mood: Number(mood), reflection }),
+    onSuccess: () => client.invalidateQueries({ queryKey: ["day-reviews"] }),
+  });
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    save.mutate();
+  }
+
+  return (
+    // noValidate: границы 1–10 проверяет сервер, ошибка показывается в интерфейсе
+    <form
+      className="space-y-4 rounded-lg border border-slate-300 bg-white p-4"
+      onSubmit={submit}
+      noValidate
+    >
+      <h2 className="text-xl font-semibold">Итог дня</h2>
+      <div>
+        <label htmlFor="review-date" className="mb-1 block font-semibold">
+          Дата
+        </label>
+        <input
+          id="review-date"
+          type="date"
+          required
+          className={inputClass}
+          value={date}
+          onChange={(event) => setDate(event.target.value)}
+        />
+      </div>
+      <div>
+        <label htmlFor="wellbeing" className="mb-1 block font-semibold">
+          Самочувствие (1–10)
+        </label>
+        <input
+          id="wellbeing"
+          type="number"
+          min={1}
+          max={10}
+          step={1}
+          className={inputClass}
+          value={wellbeing}
+          onChange={(event) => setWellbeing(event.target.value)}
+        />
+      </div>
+      <div>
+        <label htmlFor="mood" className="mb-1 block font-semibold">
+          Настроение (1–10)
+        </label>
+        <input
+          id="mood"
+          type="number"
+          min={1}
+          max={10}
+          step={1}
+          className={inputClass}
+          value={mood}
+          onChange={(event) => setMood(event.target.value)}
+        />
+      </div>
+      <div>
+        <label htmlFor="reflection" className="mb-1 block font-semibold">
+          Рефлексия: что запомнилось сегодня
+        </label>
+        <textarea
+          id="reflection"
+          rows={3}
+          className={inputClass}
+          value={reflection}
+          onChange={(event) => setReflection(event.target.value)}
+        />
+      </div>
+      <button type="submit" className={buttonClass} data-testid="save-review">
+        Сохранить итог
+      </button>
+      {save.isSuccess && (
+        <p className="mt-2 text-green-900" role="status">
+          Итог за {save.data.date} сохранён.
+        </p>
+      )}
+      <ErrorMessage error={save.error} />
+    </form>
+  );
+}
+
+function DayReviewHistory() {
+  const reviews = useQuery({ queryKey: ["day-reviews"], queryFn: listDayReviews });
+  if (reviews.isError) return <ErrorMessage error={reviews.error} />;
+  const items: DayReview[] = reviews.data ?? [];
+  if (items.length === 0) return <p className="text-slate-700">Пока нет итогов дня.</p>;
+  return (
+    <ul className="space-y-3" data-testid="reviews">
+      {items.map((review) => (
+        <li key={review.id} className="rounded-lg border border-slate-300 bg-white p-4">
+          <p className="text-sm text-slate-700">{review.date}</p>
+          <p>
+            Самочувствие: {review.wellbeing} · Настроение: {review.mood}
+          </p>
+          {review.reflection && <p className="whitespace-pre-wrap">{review.reflection}</p>}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function DayReviewPage() {
+  return (
+    <div className="space-y-6">
+      <DayReviewForm />
+      <section aria-labelledby="reviews-title" className="space-y-3">
+        <h2 id="reviews-title" className="text-xl font-semibold">
+          История итогов
+        </h2>
+        <DayReviewHistory />
+      </section>
+    </div>
+  );
+}
+
+function Shell({ user, children }: { user: User; children: ReactNode }) {
   const client = useQueryClient();
   const out = useMutation({
     mutationFn: logout,
@@ -206,6 +343,22 @@ function DiaryPage({ user }: { user: User }) {
           Выйти
         </button>
       </div>
+      <nav aria-label="Разделы" className="flex gap-4">
+        <Link to="/" className="text-indigo-800 underline">
+          Дневник
+        </Link>
+        <Link to="/day" className="text-indigo-800 underline">
+          Итог дня
+        </Link>
+      </nav>
+      {children}
+    </div>
+  );
+}
+
+function DiaryPage() {
+  return (
+    <div className="space-y-6">
       <EntryForm />
       <section aria-labelledby="entries-title" className="space-y-3">
         <h2 id="entries-title" className="text-xl font-semibold">
@@ -230,7 +383,22 @@ export function App() {
   if (user) {
     body = (
       <Routes>
-        <Route path="/" element={<DiaryPage user={user} />} />
+        <Route
+          path="/"
+          element={
+            <Shell user={user}>
+              <DiaryPage />
+            </Shell>
+          }
+        />
+        <Route
+          path="/day"
+          element={
+            <Shell user={user}>
+              <DayReviewPage />
+            </Shell>
+          }
+        />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     );

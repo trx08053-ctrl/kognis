@@ -617,10 +617,11 @@ function ScaleField({ id, label, low, high, value, onChange }: ScaleFieldProps) 
         max={10}
         step={1}
         className="w-full accent-indigo-700"
+        aria-describedby={`${id}-hint`}
         value={value}
         onChange={(event) => onChange(event.target.value)}
       />
-      <div aria-hidden="true" className="flex justify-between text-sm text-slate-700">
+      <div id={`${id}-hint`} className="flex justify-between text-sm text-slate-700">
         <span>1 · {low}</span>
         <span>{high} · 10</span>
       </div>

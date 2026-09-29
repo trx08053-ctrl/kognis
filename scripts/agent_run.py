@@ -84,9 +84,10 @@ def bd_items(*args: str) -> list[dict[str, Any]]:
 
 
 def task_info(task_id: str) -> dict[str, str]:
-    items = bd_items("show", task_id)
+    # для неизвестного id bd отдаёт JSON с ошибкой, а не пустой ответ — нужен настоящий id задачи
+    items = [x for x in bd_items("show", task_id) if x.get("id") == task_id]
     if not items:
-        sys.exit(f"задача {task_id} не найдена")
+        sys.exit(f"задача {task_id} не найдена (bd show) — сессия не запускается")
     item = items[0]
     return {"id": task_id, "title": str(item.get("title")), "status": str(item.get("status"))}
 

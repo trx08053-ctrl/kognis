@@ -4,9 +4,9 @@ import { ApiError, getMe } from "./api";
 import { ErrorMessage } from "./components/ErrorMessage";
 import { Shell } from "./components/Shell";
 import { AnalysisPage } from "./pages/AnalysisPage";
-import { AuthPage } from "./pages/AuthPage";
 import { DayReviewPage } from "./pages/DayReviewPage";
 import { HomePage } from "./pages/HomePage";
+import { LandingPage } from "./pages/LandingPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { QuestsPage } from "./pages/QuestsPage";
 
@@ -68,10 +68,11 @@ export function App() {
       </Routes>
     );
   } else if (anonymous) {
-    body = (
+    // гость: лендинг с формой входа на главной, остальные адреса ведут на неё
+    return (
       <Routes>
-        <Route path="/login" element={<AuthPage />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="/" element={<LandingPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     );
   } else if (me.isError) {

@@ -7,9 +7,20 @@ import { browserTimeZone } from "../dates";
 const inputClass = "input";
 const buttonClass = "btn";
 
-export function AuthPage() {
+export type AuthMode = "login" | "register";
+
+// Режим можно вести снаружи (лендинг переключает форму на регистрацию кнопкой «Начать»)
+export function AuthPage({
+  mode: outerMode,
+  onModeChange,
+}: {
+  mode?: AuthMode;
+  onModeChange?: (mode: AuthMode) => void;
+} = {}) {
   const client = useQueryClient();
-  const [mode, setMode] = useState<"login" | "register">("login");
+  const [innerMode, setInnerMode] = useState<AuthMode>("login");
+  const mode = outerMode ?? innerMode;
+  const setMode = onModeChange ?? setInnerMode;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const auth = useMutation({
@@ -36,7 +47,7 @@ export function AuthPage() {
   }
 
   return (
-    <form className="space-y-4 card" onSubmit={submit}>
+    <form id="auth" className="space-y-4 card" onSubmit={submit}>
       <h2 className="text-xl font-semibold">{mode === "login" ? "Вход" : "Регистрация"}</h2>
       <div>
         <label htmlFor="email" className="mb-1 block font-semibold">

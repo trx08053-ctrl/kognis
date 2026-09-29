@@ -75,3 +75,34 @@ export const LogoutIcon = () => (
     <path d="M10 4H5v16h5M15 8l4 4-4 4M19 12H9" />
   </Icon>
 );
+export const ShieldIcon = () => (
+  <Icon>
+    <path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z" />
+    <path d="M9 12l2 2 4-4" />
+  </Icon>
+);
+export const HeartIcon = () => (
+  <Icon>
+    <path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" />
+  </Icon>
+);
+export const ArrowIcon = () => (
+  <Icon size={18}>
+    <path d="M5 12h14M13 6l6 6-6 6" />
+  </Icon>
+);
+export const ChevronLeftIcon = () => (
+  <Icon size={20}>
+    <path d="M15 5l-7 7 7 7" />
+  </Icon>
+);
+export const ChevronRightIcon = () => (
+  <Icon size={20}>
+    <path d="M9 5l7 7-7 7" />
+  </Icon>
+);
+export const CloseIcon = () => (
+  <Icon size={20}>
+    <path d="M6 6l12 12M18 6L6 18" />
+  </Icon>
+);

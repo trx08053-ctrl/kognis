@@ -807,6 +807,8 @@ def settings_router(db: Engine, today: Callable[[User], dt.date]) -> APIRouter:
 
     @router.put("")
     def save_settings(payload: SettingsIn, user: Authed) -> UserOut:
+        if payload.advanced is None and payload.timezone is None:
+            raise HTTPException(status_code=422, detail="нечего сохранять")
         try:
             with transaction(db) as session:
                 service = UserService(session)

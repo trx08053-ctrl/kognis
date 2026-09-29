@@ -27,7 +27,7 @@ import {
   type User,
 } from "./api";
 import { MoodChart } from "./Charts";
-import { browserTimeZone, shiftDay, useToday } from "./dates";
+import { browserTimeZone, shiftDay, timeZoneNames, useToday } from "./dates";
 import { decryptText, encryptText, MIN_PRIVATE_PASSWORD } from "./privateCrypto";
 import { QuestsPage } from "./Quests";
 import { useTheme } from "./theme";
@@ -59,8 +59,20 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const auth = useMutation({
-    mutationFn: () =>
-      mode === "login" ? login(email, password) : register(email, password, browserTimeZone()),
+    mutationFn: async () => {
+      if (mode === "login") return login(email, password);
+      const zone = browserTimeZone();
+      try {
+        return await register(email, password, zone);
+      } catch (error) {
+        // браузерное имя пояса, которого нет в tzdata сервера, не должно ломать регистрацию:
+        // повторяем без него (сервер возьмёт пояс по умолчанию), пояс можно сменить в профиле
+        if (zone !== null && error instanceof ApiError && error.status === 422) {
+          return register(email, password, null);
+        }
+        throw error;
+      }
+    },
     onSuccess: (user) => client.setQueryData(["me"], user),
   });
 
@@ -1060,6 +1072,40 @@ function AnalysisPage() {
   );
 }
 
+// смена часового пояса профиля: по нему сервер и интерфейс считают «сегодня»
+function TimezoneField({ user }: { user: User }) {
+  const client = useQueryClient();
+  const save = useMutation({
+    mutationFn: (timezone: string) => saveSettings({ timezone }),
+    onSuccess: (saved) => {
+      client.setQueryData(["me"], saved);
+      return client.invalidateQueries({ queryKey: ["progress"] });
+    },
+  });
+  const zones = timeZoneNames(user.timezone);
+  return (
+    <div className="space-y-1">
+      <label htmlFor="timezone" className="mr-2 font-semibold">
+        Часовой пояс
+      </label>
+      <select
+        id="timezone"
+        data-testid="timezone-select"
+        className={inputClass}
+        value={user.timezone}
+        onChange={(event) => save.mutate(event.target.value)}
+      >
+        {zones.map((zone) => (
+          <option key={zone} value={zone}>
+            {zone}
+          </option>
+        ))}
+      </select>
+      <ErrorMessage error={save.error} />
+    </div>
+  );
+}
+
 function Shell({ user, children }: { user: User; children: ReactNode }) {
   const client = useQueryClient();
   const out = useMutation({
@@ -1113,6 +1159,7 @@ function Shell({ user, children }: { user: User; children: ReactNode }) {
         </div>
       </div>
       <ErrorMessage error={mode.error} />
+      <TimezoneField user={user} />
       <nav aria-label="Разделы" className="flex flex-wrap gap-4">
         <Link to="/" className="text-indigo-800 underline">
           Дневник

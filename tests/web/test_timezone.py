@@ -100,3 +100,4 @@ def test_unknown_timezone_is_rejected(engine: Engine, bad: str) -> None:
     r = client.put("/api/me/settings", json={"timezone": bad})
     assert r.status_code == 422
     assert client.get("/api/me").json()["timezone"] == "Europe/Moscow"
+    assert client.put("/api/me/settings", json={}).status_code == 422

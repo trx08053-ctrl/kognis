@@ -11,11 +11,18 @@ export function shiftDay(iso: string, days: number): string {
   return date.toISOString().slice(0, 10);
 }
 
-// «сегодня» пользователя; вызывается только внутри авторизованного интерфейса, где /api/me уже загружен
+// «сегодня» пользователя; в авторизованном интерфейсе /api/me уже загружен, пустая строка
+// возможна только на миг при выходе (кэш очищен, компонент вот-вот размонтируется)
 export function useToday(): string {
   const me = useQuery({ queryKey: ["me"], queryFn: getMe, retry: false });
-  if (!me.data) throw new Error("useToday вне авторизованного интерфейса");
-  return me.data.today;
+  return me.data?.today ?? "";
+}
+
+// имена поясов для выбора в профиле; текущий пояс пользователя всегда в списке
+export function timeZoneNames(current: string): string[] {
+  const names = new Set<string>(Intl.supportedValuesOf("timeZone"));
+  names.add(current);
+  return [...names].sort();
 }
 
 // IANA-пояс браузера для регистрации; null — сервер возьмёт пояс по умолчанию

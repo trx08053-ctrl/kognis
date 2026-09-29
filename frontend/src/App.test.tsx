@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, expect, test, vi } from "vitest";
 import { App } from "./App";
@@ -419,4 +419,59 @@ test("экран квестов: принять из библиотеки и о�
   fireEvent.click(await screen.findByRole("button", { name: "Принять: Поймай мысль" }));
   const card = await screen.findByTestId("quest");
   expect(card.textContent).toContain("Выполнено шагов: 0 из 1");
+});
+
+test("пояс профиля меняется в интерфейсе и отправляется на сервер", async () => {
+  let saved: unknown = null;
+  stubApi({
+    "GET /api/me": () => reply(200, saved ? { ...ME, timezone: "Asia/Vladivostok" } : ME),
+    "GET /api/entries": () => reply(200, []),
+    "GET /api/progress": () => reply(200, emptyProgress),
+    "GET /api/day-reviews": () => reply(200, []),
+    "PUT /api/me/settings": (init) => {
+      saved = JSON.parse(String(init?.body));
+      return reply(200, { ...ME, timezone: "Asia/Vladivostok" });
+    },
+  });
+  renderApp();
+  const select = await screen.findByTestId("timezone-select");
+  fireEvent.change(select, { target: { value: "Asia/Vladivostok" } });
+  await waitFor(() => expect(saved).toEqual({ timezone: "Asia/Vladivostok" }));
+  await waitFor(() =>
+    expect((screen.getByTestId("timezone-select") as HTMLSelectElement).value).toBe(
+      "Asia/Vladivostok",
+    ),
+  );
+});
+
+test("регистрация повторяется без пояса, если сервер не знает имя пояса браузера", async () => {
+  vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockReturnValue({
+    timeZone: "Europe/Nowhere",
+  } as Intl.ResolvedDateTimeFormatOptions);
+  const bodies: unknown[] = [];
+  let loggedIn = false;
+  stubApi({
+    "GET /api/me": () => (loggedIn ? reply(200, ME) : reply(401, { detail: "нужен вход" })),
+    "GET /api/entries": () => reply(200, []),
+    "GET /api/progress": () => reply(200, emptyProgress),
+    "GET /api/day-reviews": () => reply(200, []),
+    "POST /api/auth/register": (init) => {
+      const body = JSON.parse(String(init?.body));
+      bodies.push(body);
+      if (body.timezone) return reply(422, { detail: "неизвестный часовой пояс" });
+      loggedIn = true;
+      return reply(201, ME);
+    },
+  });
+  renderApp();
+  fireEvent.click(await screen.findByRole("button", { name: "Нет аккаунта? Зарегистрироваться" }));
+  fireEvent.change(screen.getByLabelText("Email"), { target: { value: "ann@example.com" } });
+  fireEvent.change(screen.getByLabelText("Пароль"), { target: { value: "correct horse" } });
+  fireEvent.click(screen.getByTestId("auth-submit"));
+  expect(await screen.findByTestId("whoami")).toBeTruthy();
+  expect(bodies).toEqual([
+    { email: "ann@example.com", password: "correct horse", timezone: "Europe/Nowhere" },
+    { email: "ann@example.com", password: "correct horse", timezone: null },
+  ]);
+  vi.restoreAllMocks();
 });

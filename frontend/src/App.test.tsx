@@ -223,7 +223,7 @@ test("приватная запись: предупреждение, на сер
   fireEvent.change(await screen.findByLabelText("Что произошло и что вы чувствуете"), {
     target: { value: "Тайная мысль" },
   });
-  fireEvent.click(screen.getByLabelText(/Приватная запись/));
+  fireEvent.click(screen.getByRole("radio", { name: "Приватная" }));
   expect(screen.getByTestId("private-warning").textContent).toContain("восстановить его нельзя");
   fireEvent.change(screen.getByLabelText(/Пароль записи/), {
     target: { value: "правильный-пароль" },

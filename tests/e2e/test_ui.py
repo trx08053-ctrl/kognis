@@ -18,7 +18,7 @@ from typing import Any, cast
 import pytest
 import uvicorn
 from fastapi import FastAPI
-from playwright.sync_api import Browser, Page, expect, sync_playwright
+from playwright.sync_api import Browser, Page, ViewportSize, expect, sync_playwright
 from sqlalchemy import text as sql_text
 from sqlalchemy.engine import Engine
 
@@ -86,8 +86,8 @@ def test_u1_entry_survives_new_session_and_is_private(
     второй пользователь не видит чужую запись ни в интерфейсе, ни через API (R1)."""
     register(page, "ann@example.com")
     page.get_by_label("Что произошло и что вы чувствуете").fill("Сегодня было тревожно")
-    page.get_by_label("Теги (через запятую)").fill("Работа, сон")
-    page.get_by_label("Эмоции (через запятую)").fill("тревога")
+    page.get_by_label("Теги", exact=True).fill("Работа, сон")
+    page.get_by_role("button", name="тревога", exact=True).click()
     page.get_by_test_id("save-entry").click()
     expect(page.get_by_test_id("entries")).to_contain_text("Сегодня было тревожно")
     expect(page.get_by_test_id("entries")).to_contain_text("#работа")
@@ -185,7 +185,7 @@ def test_locked_entry_flow_and_accessibility(page: Page) -> None:
     """Запись под замком: заглушка без текста, неверный пароль — ошибка, верный — текст; axe."""
     register(page, "ann@example.com")
     page.get_by_label("Что произошло и что вы чувствуете").fill("Личное под замком")
-    page.get_by_label("Закрыть запись замком").check()
+    page.get_by_role("radio", name="Под замком").check()
     page.get_by_label("Пароль замка (от 8 символов). Забытый пароль восстановить нельзя.").fill(
         "замок-12345"
     )
@@ -272,7 +272,9 @@ def serve(app: FastAPI) -> Generator[str]:
 def check_axe(page: Page) -> None:
     violations = cast("list[dict[str, Any]]", Axe().run(page).response["violations"])
     serious = [v for v in violations if v["impact"] in {"serious", "critical"}]
-    assert not serious, [f"{v['id']}: {v['help']}" for v in serious]
+    assert not serious, [
+        f"{v['id']}: {v['help']} {[n['target'] for n in v.get('nodes', [])][:5]}" for v in serious
+    ]
 
 
 @pytest.mark.acceptance("kognis-8f1", "AC1")
@@ -289,7 +291,7 @@ def test_private_entry_encrypted_in_browser(page: Page, engine: Engine) -> None:
     )
     register(page, "ann@example.com")
     page.get_by_label("Что произошло и что вы чувствуете").fill(text)
-    page.get_by_label("Приватная запись", exact=False).check()
+    page.get_by_role("radio", name="Приватная").check()
     expect(page.get_by_test_id("private-warning")).to_contain_text("восстановить его нельзя")
     page.get_by_label("Пароль записи (от 8 символов)").fill(password)
     page.get_by_label("Повторите пароль").fill(password)
@@ -443,8 +445,8 @@ def test_no_serious_accessibility_violations(page: Page) -> None:
 
 def add_entry(page: Page, text: str, tags: str = "", emotions: str = "") -> None:
     page.get_by_label("Что произошло и что вы чувствуете").fill(text)
-    page.get_by_label("Теги (через запятую)").fill(tags)
-    page.get_by_label("Эмоции (через запятую)").fill(emotions)
+    page.get_by_label("Теги", exact=True).fill(tags)
+    page.get_by_label("Своя эмоция").fill(emotions)
     page.get_by_test_id("save-entry").click()
     expect(page.get_by_test_id("entries")).to_contain_text(text)
 
@@ -584,3 +586,108 @@ def test_interface_works_under_security_headers(browser: Browser, live_server: s
     check_axe(page)
     context.close()
     assert not [p for p in problems if "Content Security Policy" in p], problems
+
+
+ROUTES = [
+    ("home", "Дневник"),
+    ("day", "Итог дня"),
+    ("analysis", "Разбор"),
+    ("quests", "Квесты"),
+    ("achievements", "Достижения"),
+]
+MOBILE = ViewportSize(width=375, height=812)
+DESKTOP = ViewportSize(width=1280, height=800)
+
+
+def no_horizontal_scroll(page: Page) -> bool:
+    return bool(
+        page.evaluate(
+            "document.documentElement.scrollWidth <= document.documentElement.clientWidth"
+        )
+    )
+
+
+@pytest.mark.acceptance("kognis-tm0", "AC1")
+@pytest.mark.acceptance("kognis-tm0", "AC3")
+@pytest.mark.acceptance("kognis-tm0", "AC4")
+@pytest.mark.e2e
+def test_responsive_navigation_screens_and_a11y(browser: Browser, live_server: str) -> None:
+    """375 px: нет горизонтальной прокрутки, навигация — нижняя панель; 1280 px — боковая.
+    Скриншоты экранов в обеих темах и axe (обе темы, оба размера) — в .evidence/screens/tm0-*."""
+    SCREENS.mkdir(parents=True, exist_ok=True)
+    for size_name, size in (("mobile", MOBILE), ("desktop", DESKTOP)):
+        context = browser.new_context(viewport=size, locale="ru-RU", color_scheme="light")
+        page = context.new_page()
+        page.goto(live_server)
+        register(page, f"{size_name}@example.com")
+        nav = page.get_by_role("navigation", name="Разделы")
+        box = nav.bounding_box()
+        assert box is not None
+        if size_name == "mobile":
+            assert box["y"] + box["height"] >= size["height"] - 1, "панель не внизу экрана"
+            assert box["width"] >= size["width"] - 1, "панель не на всю ширину"
+        else:
+            assert box["x"] == 0
+            assert box["width"] < 300, "боковая панель слишком широкая"
+            assert box["height"] >= size["height"] - 1, "панель не на всю высоту"
+        for theme in ("light", "dark"):
+            if theme == "dark":
+                page.get_by_test_id("theme-toggle").click()
+                assert is_dark(page)
+            for name, link in ROUTES:
+                page.get_by_role("link", name=link, exact=True).click()
+                page.get_by_role("heading", level=2).first.wait_for()
+                assert no_horizontal_scroll(page), f"{name}/{size_name}/{theme}: прокрутка"
+                expect(nav).to_be_visible()
+                shot = SCREENS / f"tm0-{name}-{size_name}-{theme}.png"
+                page.screenshot(path=str(shot), full_page=True)
+                check_axe(page)
+            # форма записи с раскрытым режимом «Под замком»
+            page.get_by_role("link", name="Дневник", exact=True).click()
+            page.get_by_role("radio", name="Под замком").check()
+            assert no_horizontal_scroll(page)
+            page.screenshot(
+                path=str(SCREENS / f"tm0-entry-{size_name}-{theme}.png"), full_page=True
+            )
+            check_axe(page)
+            page.get_by_role("radio", name="Обычная").check()
+        context.close()
+
+
+@pytest.mark.acceptance("kognis-tm0", "AC2")
+@pytest.mark.e2e
+def test_entry_form_chips_and_segmented_protection(page: Page) -> None:
+    """Эмоции — чипы (словарь + своя), теги — чипы, режим защиты — три переключателя;
+    запись с выбранными чипами сохраняется; подсказка меняется вместе с режимом."""
+    register(page, "ann@example.com")
+    group = page.get_by_role("radiogroup", name="Режим защиты")
+    expect(group.get_by_role("radio")).to_have_count(3)
+    for label in ("Обычная", "Под замком", "Приватная"):
+        expect(group.get_by_role("radio", name=label)).to_be_attached()
+    expect(group.get_by_role("radio", name="Обычная")).to_be_checked()
+
+    joy = page.get_by_role("button", name="радость", exact=True)
+    expect(joy).to_have_attribute("aria-pressed", "false")
+    joy.click()
+    expect(joy).to_have_attribute("aria-pressed", "true")
+    page.get_by_label("Своя эмоция").fill("предвкушение,")
+    expect(page.get_by_role("button", name="предвкушение", exact=True)).to_have_attribute(
+        "aria-pressed", "true"
+    )
+    page.get_by_label("Теги", exact=True).fill("дом, семья,")
+    expect(page.get_by_role("button", name="Убрать тег: дом")).to_be_visible()
+    page.get_by_role("button", name="Убрать тег: семья").click()
+
+    page.get_by_role("radio", name="Под замком").check()
+    expect(page.get_by_text("Текст закрыт паролем")).to_be_visible()
+    page.get_by_role("radio", name="Обычная").check()
+    expect(page.get_by_text("Текст хранится на сервере")).to_be_visible()
+
+    page.get_by_label("Что произошло и что вы чувствуете").fill("Хороший вечер")
+    page.get_by_test_id("save-entry").click()
+    entries = page.get_by_test_id("entries")
+    expect(entries).to_contain_text("Хороший вечер")
+    expect(entries).to_contain_text("радость")
+    expect(entries).to_contain_text("предвкушение")
+    expect(entries).to_contain_text("#дом")
+    expect(entries).not_to_contain_text("#семья")

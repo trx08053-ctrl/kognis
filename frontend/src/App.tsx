@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, type ReactNode, useState } from "react";
-import { Link, Navigate, Route, Routes } from "react-router";
+import { Link, Navigate, NavLink, Route, Routes } from "react-router";
 import {
   type Analysis,
   ApiError,
@@ -28,14 +28,23 @@ import {
 } from "./api";
 import { MoodChart } from "./Charts";
 import { browserTimeZone, shiftDay, timeZoneNames, useToday } from "./dates";
+import {
+  BookIcon,
+  FlagIcon,
+  FlameIcon,
+  LogoutIcon,
+  MoonIcon,
+  PencilIcon,
+  SparkIcon,
+  SunIcon,
+  TrophyIcon,
+} from "./Icons";
 import { decryptText, encryptText, MIN_PRIVATE_PASSWORD } from "./privateCrypto";
 import { QuestsPage } from "./Quests";
 import { useTheme } from "./theme";
 
-const inputClass =
-  "w-full rounded border border-slate-400 bg-white px-3 py-2 text-base text-slate-900";
-const buttonClass =
-  "rounded bg-indigo-700 px-4 py-2 text-base font-semibold text-white hover:bg-indigo-800";
+const inputClass = "input";
+const buttonClass = "btn";
 
 function splitList(raw: string): string[] {
   return raw
@@ -47,7 +56,7 @@ function splitList(raw: string): string[] {
 function ErrorMessage({ error }: { error: Error | null }) {
   if (!error) return null;
   return (
-    <p className="mt-2 text-red-800" role="alert">
+    <p className="mt-2 font-semibold text-[var(--danger-text)]" role="alert">
       {error.message}
     </p>
   );
@@ -82,7 +91,7 @@ function AuthPage() {
   }
 
   return (
-    <form className="space-y-4 rounded-lg border border-slate-300 bg-white p-4" onSubmit={submit}>
+    <form className="space-y-4 card" onSubmit={submit}>
       <h2 className="text-xl font-semibold">{mode === "login" ? "Вход" : "Регистрация"}</h2>
       <div>
         <label htmlFor="email" className="mb-1 block font-semibold">
@@ -119,7 +128,7 @@ function AuthPage() {
         </button>
         <button
           type="button"
-          className="text-indigo-800 underline"
+          className="link"
           onClick={() => {
             auth.reset();
             setMode(mode === "login" ? "register" : "login");
@@ -139,7 +148,7 @@ function HelpPanel({ help }: { help: HelpBlock }) {
       role="alert"
       aria-labelledby="help-title"
       data-testid="help-block"
-      className="rounded-lg border-2 border-red-800 bg-red-50 p-4 text-red-950"
+      className="rounded-2xl border-2 border-[var(--danger-border)] bg-[var(--danger-bg)] p-4 text-[var(--danger-text)]"
     >
       <h3 id="help-title" className="text-lg font-bold">
         Вам может понадобиться помощь
@@ -160,19 +169,157 @@ function HelpPanel({ help }: { help: HelpBlock }) {
   );
 }
 
+const EMOTION_DICTIONARY = [
+  "радость",
+  "спокойствие",
+  "благодарность",
+  "интерес",
+  "надежда",
+  "усталость",
+  "тревога",
+  "грусть",
+  "злость",
+  "стыд",
+  "одиночество",
+  "растерянность",
+];
+
+type Protection = "plain" | "locked" | "private";
+
+const PROTECTION_HINT: Record<Protection, string> = {
+  plain: "Текст хранится на сервере и доступен ИИ-разбору, если вы дали согласие.",
+  locked: "Текст закрыт паролем: без пароля его не увидит никто, ИИ его не читает.",
+  private: "Текст шифруется на этом устройстве: сервер и ИИ его не прочитают.",
+};
+
+const PROTECTION_LABEL: Record<Protection, string> = {
+  plain: "Обычная",
+  locked: "Под замком",
+  private: "Приватная",
+};
+
+// список чипов: выбор из словаря/своих значений, кнопка-чип переключает выбор
+function ChipToggleGroup({
+  legend,
+  options,
+  selected,
+  onToggle,
+}: {
+  legend: string;
+  options: string[];
+  selected: string[];
+  onToggle: (value: string) => void;
+}) {
+  return (
+    <fieldset className="space-y-2">
+      <legend className="mb-1 font-semibold">{legend}</legend>
+      <div className="flex flex-wrap gap-2">
+        {options.map((option) => (
+          <button
+            key={option}
+            type="button"
+            className="chip"
+            aria-pressed={selected.includes(option)}
+            onClick={() => onToggle(option)}
+          >
+            {option}
+          </button>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
+// поле «добавить своё»: значения через запятую или Enter становятся чипами; недописанное
+// значение попадает в запись при сохранении
+function CustomChipInput({
+  id,
+  label,
+  chips,
+  pending,
+  onPending,
+  onCommit,
+  onRemove,
+  removeLabel,
+}: {
+  id: string;
+  label: string;
+  chips: string[];
+  pending: string;
+  onPending: (value: string) => void;
+  onCommit: (values: string[]) => void;
+  onRemove: (value: string) => void;
+  removeLabel: string;
+}) {
+  const commit = (raw: string) => {
+    onCommit(splitList(raw));
+    onPending("");
+  };
+  return (
+    <div>
+      <label htmlFor={id} className="mb-1 block font-semibold">
+        {label}
+      </label>
+      {chips.length > 0 && (
+        <ul className="mb-2 flex flex-wrap gap-2">
+          {chips.map((chip) => (
+            <li key={chip}>
+              <button
+                type="button"
+                className="chip chip-on"
+                aria-label={`${removeLabel}: ${chip}`}
+                onClick={() => onRemove(chip)}
+              >
+                {chip} <span aria-hidden="true">×</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <input
+        id={id}
+        className={inputClass}
+        value={pending}
+        onChange={(event) => {
+          const value = event.target.value;
+          if (value.includes(",")) commit(value);
+          else onPending(value);
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" && pending.trim() !== "") {
+            event.preventDefault();
+            commit(pending);
+          }
+        }}
+        onBlur={() => pending.trim() !== "" && commit(pending)}
+      />
+    </div>
+  );
+}
+
+function addUnique(list: string[], values: string[]): string[] {
+  return [...list, ...values.filter((value) => !list.includes(value))];
+}
+
 function EntryForm() {
   const client = useQueryClient();
   const [text, setText] = useState("");
-  const [tags, setTags] = useState("");
-  const [emotions, setEmotions] = useState("");
-  const [locked, setLocked] = useState(false);
+  const [tags, setTags] = useState<string[]>([]);
+  const [pendingTag, setPendingTag] = useState("");
+  const [emotions, setEmotions] = useState<string[]>([]);
+  const [pendingEmotion, setPendingEmotion] = useState("");
+  const [protection, setProtection] = useState<Protection>("plain");
   const [lockPassword, setLockPassword] = useState("");
-  const [isPrivate, setIsPrivate] = useState(false);
   const [privatePassword, setPrivatePassword] = useState("");
   const [privateRepeat, setPrivateRepeat] = useState("");
+  const locked = protection === "locked";
+  const isPrivate = protection === "private";
   const add = useMutation({
     mutationFn: async () => {
-      const labels = { tags: splitList(tags), emotions: splitList(emotions) };
+      const labels = {
+        tags: addUnique(tags, splitList(pendingTag)),
+        emotions: addUnique(emotions, splitList(pendingEmotion)),
+      };
       if (!isPrivate) {
         return createEntry({
           text,
@@ -187,11 +334,12 @@ function EntryForm() {
     },
     onSuccess: () => {
       setText("");
-      setTags("");
-      setEmotions("");
-      setLocked(false);
+      setTags([]);
+      setPendingTag("");
+      setEmotions([]);
+      setPendingEmotion("");
+      setProtection("plain");
       setLockPassword("");
-      setIsPrivate(false);
       setPrivatePassword("");
       setPrivateRepeat("");
       void client.invalidateQueries({ queryKey: ["progress"] });
@@ -205,7 +353,7 @@ function EntryForm() {
   }
 
   return (
-    <form className="space-y-4 rounded-lg border border-slate-300 bg-white p-4" onSubmit={submit}>
+    <form className="space-y-4 card" onSubmit={submit}>
       <h2 className="text-xl font-semibold">Новая запись</h2>
       <div>
         <label htmlFor="text" className="mb-1 block font-semibold">
@@ -220,46 +368,56 @@ function EntryForm() {
           onChange={(event) => setText(event.target.value)}
         />
       </div>
-      <div>
-        <label htmlFor="tags" className="mb-1 block font-semibold">
-          Теги (через запятую)
-        </label>
-        <input
-          id="tags"
-          className={inputClass}
-          value={tags}
-          onChange={(event) => setTags(event.target.value)}
-        />
-      </div>
-      <div>
-        <label htmlFor="emotions" className="mb-1 block font-semibold">
-          Эмоции (через запятую)
-        </label>
-        <input
-          id="emotions"
-          className={inputClass}
-          value={emotions}
-          onChange={(event) => setEmotions(event.target.value)}
-        />
-      </div>
-      <div>
-        <label className="flex items-center gap-2 font-semibold">
-          <input
-            type="checkbox"
-            checked={isPrivate}
-            onChange={(event) => {
-              setIsPrivate(event.target.checked);
-              if (event.target.checked) setLocked(false);
-            }}
-          />
-          Приватная запись (шифруется на этом устройстве)
-        </label>
+      <ChipToggleGroup
+        legend="Как вы себя чувствуете"
+        options={addUnique(EMOTION_DICTIONARY, emotions)}
+        selected={emotions}
+        onToggle={(value) =>
+          setEmotions(
+            emotions.includes(value) ? emotions.filter((e) => e !== value) : [...emotions, value],
+          )
+        }
+      />
+      <CustomChipInput
+        id="emotions"
+        label="Своя эмоция"
+        chips={[]}
+        pending={pendingEmotion}
+        onPending={setPendingEmotion}
+        onCommit={(values) => setEmotions(addUnique(emotions, values))}
+        onRemove={() => undefined}
+        removeLabel="Убрать эмоцию"
+      />
+      <CustomChipInput
+        id="tags"
+        label="Теги"
+        chips={tags}
+        pending={pendingTag}
+        onPending={setPendingTag}
+        onCommit={(values) => setTags(addUnique(tags, values))}
+        onRemove={(value) => setTags(tags.filter((t) => t !== value))}
+        removeLabel="Убрать тег"
+      />
+      <fieldset className="space-y-2">
+        <legend className="mb-1 font-semibold">Защита записи</legend>
+        <div className="segmented" role="radiogroup" aria-label="Режим защиты">
+          {(Object.keys(PROTECTION_LABEL) as Protection[]).map((value) => (
+            <label key={value}>
+              <input
+                type="radio"
+                name="protection"
+                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                checked={protection === value}
+                onChange={() => setProtection(value)}
+              />
+              {PROTECTION_LABEL[value]}
+            </label>
+          ))}
+        </div>
+        <p className="text-sm muted">{PROTECTION_HINT[protection]}</p>
         {isPrivate && (
           <div className="mt-2 space-y-2">
-            <p
-              className="rounded border border-amber-700 bg-amber-50 p-2 text-amber-900"
-              data-testid="private-warning"
-            >
+            <p className="notice" data-testid="private-warning">
               Текст зашифруется в браузере, сервер и ИИ его не прочитают. Пароль нигде не хранится и
               восстановить его нельзя: забудете пароль — запись будет потеряна навсегда. Теги,
               эмоции и дата не шифруются — не пишите в них ничего личного.
@@ -291,17 +449,6 @@ function EntryForm() {
             />
           </div>
         )}
-      </div>
-      <div>
-        <label className="flex items-center gap-2 font-semibold">
-          <input
-            type="checkbox"
-            checked={locked}
-            disabled={isPrivate}
-            onChange={(event) => setLocked(event.target.checked)}
-          />
-          Закрыть запись замком
-        </label>
         {locked && (
           <div className="mt-2">
             <label htmlFor="lock-password" className="mb-1 block">
@@ -319,7 +466,7 @@ function EntryForm() {
             />
           </div>
         )}
-      </div>
+      </fieldset>
       <button type="submit" className={buttonClass} data-testid="save-entry">
         Сохранить
       </button>
@@ -347,11 +494,7 @@ function LockedEntryBody({ entry }: { entry: Entry }) {
         <p className="whitespace-pre-wrap" data-testid="opened-text">
           {opened}
         </p>
-        <button
-          type="button"
-          className="mt-2 text-indigo-800 underline"
-          onClick={() => setOpened(null)}
-        >
+        <button type="button" className="mt-2 link" onClick={() => setOpened(null)}>
           Скрыть
         </button>
       </>
@@ -407,11 +550,7 @@ function PrivateEntryBody({ entry }: { entry: Entry }) {
         <p className="whitespace-pre-wrap" data-testid="private-text">
           {opened}
         </p>
-        <button
-          type="button"
-          className="mt-2 text-indigo-800 underline"
-          onClick={() => setOpened(null)}
-        >
+        <button type="button" className="mt-2 link" onClick={() => setOpened(null)}>
           Скрыть
         </button>
       </>
@@ -483,7 +622,7 @@ function EntryFilterBar({
     <form
       aria-label="Фильтры записей"
       data-testid="entry-filters"
-      className="grid gap-3 rounded-lg border border-slate-300 bg-white p-4 sm:grid-cols-2"
+      className="grid gap-3 card sm:grid-cols-2"
       onSubmit={(event) => event.preventDefault()}
     >
       <div>
@@ -560,7 +699,7 @@ function EntryList({ advanced }: { advanced: boolean }) {
   const entries = useQuery({ queryKey: ["entries"], queryFn: listEntries });
   if (entries.isError) return <ErrorMessage error={entries.error} />;
   const all: Entry[] = entries.data ?? [];
-  if (all.length === 0) return <p className="text-slate-700">Пока нет записей.</p>;
+  if (all.length === 0) return <p className="muted">Пока нет записей.</p>;
   const items = advanced
     ? all.filter((entry) => matchesFilters(entry, filters))
     : all.slice(0, RECENT_LIMIT);
@@ -568,7 +707,7 @@ function EntryList({ advanced }: { advanced: boolean }) {
     <>
       {advanced && <EntryFilterBar entries={all} filters={filters} onChange={setFilters} />}
       {items.length === 0 ? (
-        <p className="text-slate-700">По фильтрам ничего не найдено.</p>
+        <p className="muted">По фильтрам ничего не найдено.</p>
       ) : (
         <EntryItems items={items} />
       )}
@@ -580,16 +719,25 @@ function EntryItems({ items }: { items: Entry[] }) {
   return (
     <ul className="space-y-3" data-testid="entries">
       {items.map((entry) => (
-        <li key={entry.id} className="rounded-lg border border-slate-300 bg-white p-4">
-          <p className="text-sm text-slate-700">{entry.date}</p>
+        <li key={entry.id} className="card">
+          <p className="text-sm muted">{entry.date}</p>
           {entry.protection === "locked" && <LockedEntryBody entry={entry} />}
           {entry.protection === "private" && <PrivateEntryBody entry={entry} />}
           {entry.protection !== "locked" && entry.protection !== "private" && (
             <p className="whitespace-pre-wrap">{entry.text}</p>
           )}
           {(entry.tags.length > 0 || entry.emotions.length > 0) && (
-            <p className="mt-2 text-sm text-slate-700">
-              {[...entry.emotions, ...entry.tags.map((tag) => `#${tag}`)].join(" · ")}
+            <p className="mt-2 flex flex-wrap gap-2 text-sm">
+              {entry.emotions.map((emotion) => (
+                <span key={`e-${emotion}`} className="badge">
+                  {emotion}
+                </span>
+              ))}
+              {entry.tags.map((tag) => (
+                <span key={`t-${tag}`} className="muted">
+                  #{tag}
+                </span>
+              ))}
             </p>
           )}
         </li>
@@ -613,7 +761,7 @@ function ScaleField({ id, label, low, high, value, onChange }: ScaleFieldProps) 
     <div>
       <label htmlFor={id} className="mb-1 flex items-baseline justify-between font-semibold">
         {label}
-        <output htmlFor={id} className="text-2xl text-indigo-800">
+        <output htmlFor={id} className="text-2xl text-[var(--accent-text)]">
           {value}
         </output>
       </label>
@@ -623,12 +771,12 @@ function ScaleField({ id, label, low, high, value, onChange }: ScaleFieldProps) 
         min={1}
         max={10}
         step={1}
-        className="w-full accent-indigo-700"
+        className="w-full accent-[var(--accent)]"
         aria-describedby={`${id}-hint`}
         value={value}
         onChange={(event) => onChange(event.target.value)}
       />
-      <div id={`${id}-hint`} className="flex justify-between text-sm text-slate-700">
+      <div id={`${id}-hint`} className="flex justify-between text-sm muted">
         <span>1 · {low}</span>
         <span>{high} · 10</span>
       </div>
@@ -659,11 +807,7 @@ function DayReviewForm() {
 
   return (
     // noValidate: границы 1–10 проверяет сервер, ошибка показывается в интерфейсе
-    <form
-      className="space-y-4 rounded-lg border border-slate-300 bg-white p-4"
-      onSubmit={submit}
-      noValidate
-    >
+    <form className="space-y-4 card" onSubmit={submit} noValidate>
       <h2 className="text-xl font-semibold">Итог дня</h2>
       <div>
         <label htmlFor="review-date" className="mb-1 block font-semibold">
@@ -710,7 +854,7 @@ function DayReviewForm() {
         Сохранить итог
       </button>
       {save.isSuccess && (
-        <p className="mt-2 text-green-900" role="status">
+        <p className="mt-2 font-semibold text-[var(--ok-text)]" role="status">
           Итог за {save.data.date} сохранён.
         </p>
       )}
@@ -724,12 +868,12 @@ function DayReviewHistory() {
   const reviews = useQuery({ queryKey: ["day-reviews"], queryFn: listDayReviews });
   if (reviews.isError) return <ErrorMessage error={reviews.error} />;
   const items: DayReview[] = reviews.data ?? [];
-  if (items.length === 0) return <p className="text-slate-700">Пока нет итогов дня.</p>;
+  if (items.length === 0) return <p className="muted">Пока нет итогов дня.</p>;
   return (
     <ul className="space-y-3" data-testid="reviews">
       {items.map((review) => (
-        <li key={review.id} className="rounded-lg border border-slate-300 bg-white p-4">
-          <p className="text-sm text-slate-700">{review.date}</p>
+        <li key={review.id} className="card">
+          <p className="text-sm muted">{review.date}</p>
           <p>
             Самочувствие: {review.wellbeing} · Настроение: {review.mood}
           </p>
@@ -766,22 +910,27 @@ function ProgressWidget() {
   const span = data.next_level_xp - data.level_start_xp;
   const done = Math.min(span, data.xp - data.level_start_xp);
   return (
-    <section
-      aria-label="Прогресс"
-      data-testid="progress"
-      className="space-y-2 rounded-lg border border-slate-300 bg-white p-4"
-    >
-      <p className="font-semibold">
-        <span data-testid="level">Уровень {data.level}</span> ·{" "}
-        <span data-testid="streak">Серия: {data.streak} дн.</span>
+    <section aria-label="Прогресс" data-testid="progress" className="space-y-2 card">
+      <p className="flex flex-wrap items-center gap-2 font-semibold">
+        <span className="badge" data-testid="level">
+          Уровень {data.level}
+        </span>
+        <span className="badge">
+          <FlameIcon />
+          <span data-testid="streak">Серия: {data.streak} дн.</span>
+        </span>
       </p>
-      <progress
-        className="w-full"
-        max={span}
-        value={done}
+      <div
+        className="meter"
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={span}
+        aria-valuenow={done}
         aria-label={`Опыт до следующего уровня: ${done} из ${span}`}
-      />
-      <p className="text-sm text-slate-700" data-testid="xp">
+      >
+        <div style={{ width: `${span > 0 ? (done / span) * 100 : 0}%` }} />
+      </div>
+      <p className="text-sm muted" data-testid="xp">
         Опыт: {data.xp} из {data.next_level_xp}
       </p>
     </section>
@@ -800,12 +949,17 @@ function AchievementsPage() {
       {progress.data && earned.length === 0 && <p>Пока нет достижений.</p>}
       <ul className="space-y-2" data-testid="achievements">
         {earned.map((a) => (
-          <li key={a.code} className="rounded border border-slate-300 bg-white p-3">
-            <p className="font-semibold">{a.title}</p>
-            <p className="text-sm text-slate-700">{a.description}</p>
-            <p className="text-sm text-slate-700">
-              Получено: <time dateTime={a.earned_on}>{a.earned_on}</time>
-            </p>
+          <li key={a.code} className="card-sm flex items-start gap-3">
+            <span className="badge !p-2" aria-hidden="true">
+              <TrophyIcon />
+            </span>
+            <div>
+              <p className="font-semibold">{a.title}</p>
+              <p className="text-sm muted">{a.description}</p>
+              <p className="text-sm muted">
+                Получено: <time dateTime={a.earned_on}>{a.earned_on}</time>
+              </p>
+            </div>
           </li>
         ))}
       </ul>
@@ -839,7 +993,7 @@ function MoodSummary({ start, end }: { start: string; end: string }) {
           </p>
           <ul className="flex flex-wrap gap-2">
             {points.map((point) => (
-              <li key={point.date} className="rounded border border-slate-400 px-2 py-1 text-sm">
+              <li key={point.date} className="badge">
                 {point.date.slice(5)}: {point.mood}
               </li>
             ))}
@@ -869,17 +1023,18 @@ function AnalysisView({ analysis, directions }: { analysis: Analysis; directions
       {analysis.patterns.length > 0 && (
         <ul className="space-y-2" aria-label="Паттерны">
           {analysis.patterns.map((pattern) => (
-            <li key={pattern.title} className="rounded border border-slate-400 p-3">
+            <li key={pattern.title} className="card-sm">
               <p className="font-semibold">{pattern.title}</p>
               <p>{pattern.description}</p>
               {pattern.quotes.map((quote) => (
-                <blockquote key={quote} className="mt-1 border-l-4 border-slate-400 pl-2 text-sm">
+                <blockquote
+                  key={quote}
+                  className="mt-1 border-l-4 border-[var(--accent)] pl-2 text-sm"
+                >
                   {quote}
                 </blockquote>
               ))}
-              <p className="mt-1 text-sm text-slate-700">
-                Записи: №{pattern.entry_ids.join(", №")}
-              </p>
+              <p className="mt-1 text-sm muted">Записи: №{pattern.entry_ids.join(", №")}</p>
             </li>
           ))}
         </ul>
@@ -907,7 +1062,7 @@ function QuestIdeas({ analysis }: { analysis: Analysis }) {
             <span>{idea}</span>
             <button
               type="button"
-              className="text-indigo-800 underline"
+              className="link"
               aria-label={`Принять квест: ${idea}`}
               disabled={take.isPending}
               onClick={() => take.mutate(i)}
@@ -920,7 +1075,7 @@ function QuestIdeas({ analysis }: { analysis: Analysis }) {
       {take.isSuccess && (
         <p role="status">
           Квест принят — он в разделе{" "}
-          <Link to="/quests" className="text-indigo-800 underline">
+          <Link to="/quests" className="link">
             Квесты
           </Link>
           .
@@ -1010,7 +1165,7 @@ function AnalysisPage() {
         />
         <span>Согласен(на) передать записи за период ИИ-провайдеру для этого разбора</span>
       </label>
-      <details className="rounded border border-slate-400 p-3">
+      <details className="card-sm">
         <summary className="cursor-pointer font-semibold">Период и направление</summary>
         <div className="mt-3 grid gap-3 sm:grid-cols-3">
           <div>
@@ -1084,14 +1239,14 @@ function TimezoneField({ user }: { user: User }) {
   });
   const zones = timeZoneNames(user.timezone);
   return (
-    <div className="space-y-1">
-      <label htmlFor="timezone" className="mr-2 font-semibold">
+    <div className="flex flex-wrap items-center gap-2">
+      <label htmlFor="timezone" className="font-semibold">
         Часовой пояс
       </label>
       <select
         id="timezone"
         data-testid="timezone-select"
-        className={inputClass}
+        className={`${inputClass} !w-auto max-w-full`}
         value={user.timezone}
         onChange={(event) => save.mutate(event.target.value)}
       >
@@ -1129,12 +1284,41 @@ function Shell({ user, children }: { user: User; children: ReactNode }) {
   });
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p data-testid="whoami">{user.email}</p>
-        <div className="flex flex-wrap items-center gap-4">
+      <header className="card space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <span
+              aria-hidden="true"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--accent)] text-lg font-bold text-[var(--accent-fg)]"
+            >
+              {user.email.charAt(0).toUpperCase()}
+            </span>
+            <p data-testid="whoami" className="min-w-0 truncate font-semibold">
+              {user.email}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              data-testid="theme-toggle"
+              aria-pressed={theme === "dark"}
+              className="btn-ghost"
+              onClick={toggleTheme}
+            >
+              <MoonIcon />
+              Тёмная тема
+            </button>
+            <button type="button" className="btn-ghost" onClick={() => out.mutate()}>
+              <LogoutIcon />
+              Выйти
+            </button>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
           <label className="flex items-center gap-2">
             <input
               type="checkbox"
+              className="h-5 w-5 accent-[var(--accent)]"
               data-testid="advanced-toggle"
               checked={advanced}
               onChange={(event) => {
@@ -1144,47 +1328,34 @@ function Shell({ user, children }: { user: User; children: ReactNode }) {
             />
             Advanced
           </label>
-          <button
-            type="button"
-            data-testid="theme-toggle"
-            aria-pressed={theme === "dark"}
-            className="rounded border border-slate-400 px-3 py-1"
-            onClick={toggleTheme}
-          >
-            Тёмная тема
-          </button>
-          <button type="button" className="text-indigo-800 underline" onClick={() => out.mutate()}>
-            Выйти
-          </button>
+          <TimezoneField user={user} />
         </div>
-      </div>
-      <ErrorMessage error={mode.error} />
-      <TimezoneField user={user} />
-      <nav aria-label="Разделы" className="flex flex-wrap gap-4">
-        <Link to="/" className="text-indigo-800 underline">
-          Дневник
-        </Link>
-        <Link to="/day" className="text-indigo-800 underline">
-          Итог дня
-        </Link>
-        <Link to="/analysis" className="text-indigo-800 underline">
-          Разбор
-        </Link>
-        <Link to="/quests" className="text-indigo-800 underline">
-          Квесты
-        </Link>
-        <Link to="/achievements" className="text-indigo-800 underline">
-          Достижения
-        </Link>
-      </nav>
+        <ErrorMessage error={mode.error} />
+      </header>
       <ProgressWidget />
+      <nav aria-label="Разделы" className="nav m-0">
+        {NAV.map(({ to, label, Icon }) => (
+          <NavLink key={to} to={to} end className="nav-link">
+            <Icon />
+            {label}
+          </NavLink>
+        ))}
+      </nav>
       {children}
-      <p className="border-t border-slate-300 pt-3 text-sm text-slate-700" data-testid="disclaimer">
+      <p className="border-t border-[var(--border)] pt-3 text-sm muted" data-testid="disclaimer">
         Kognis — не медицинская помощь и не заменяет специалиста. В кризисной ситуации звоните 112.
       </p>
     </div>
   );
 }
+
+const NAV = [
+  { to: "/", label: "Дневник", Icon: BookIcon },
+  { to: "/day", label: "Итог дня", Icon: SunIcon },
+  { to: "/analysis", label: "Разбор", Icon: SparkIcon },
+  { to: "/quests", label: "Квесты", Icon: FlagIcon },
+  { to: "/achievements", label: "Достижения", Icon: TrophyIcon },
+];
 
 const ONBOARDING_KEY = "kognis-onboarded";
 
@@ -1210,7 +1381,7 @@ function Onboarding() {
     <section
       aria-labelledby="onboarding-title"
       data-testid="onboarding"
-      className="space-y-2 rounded-lg border border-amber-700 bg-amber-50 p-4 text-amber-900"
+      className="notice space-y-2"
     >
       <h2 id="onboarding-title" className="text-xl font-semibold">
         Добро пожаловать в Kognis
@@ -1239,7 +1410,7 @@ function DaySummary() {
     <section
       aria-labelledby="day-summary-title"
       data-testid="day-summary"
-      className="space-y-1 rounded-lg border border-slate-300 bg-white p-4"
+      className="space-y-1 card"
     >
       <h2 id="day-summary-title" className="text-xl font-semibold">
         Итог дня
@@ -1251,7 +1422,7 @@ function DaySummary() {
       ) : (
         <p>
           Сегодня итог ещё не подведён.{" "}
-          <Link to="/day" className="text-indigo-800 underline">
+          <Link to="/day" className="link">
             Заполнить за сегодня
           </Link>
         </p>
@@ -1260,21 +1431,32 @@ function DaySummary() {
   );
 }
 
+export function greeting(hour: number): string {
+  if (hour >= 5 && hour < 12) return "Доброе утро";
+  if (hour >= 12 && hour < 18) return "Добрый день";
+  if (hour >= 18 && hour < 23) return "Добрый вечер";
+  return "Доброй ночи";
+}
+
 function HomePage({ advanced }: { advanced: boolean }) {
   return (
     <div className="space-y-6">
       <Onboarding />
+      <h2 className="text-2xl font-bold" data-testid="greeting">
+        {greeting(new Date().getHours())}
+      </h2>
       <DaySummary />
       <button
         type="button"
         data-testid="write-cta"
-        className="w-full rounded-lg bg-indigo-700 px-6 py-4 text-xl font-bold text-white hover:bg-indigo-800"
+        className="btn flex w-full items-center justify-center gap-2 !py-4 text-xl"
         onClick={() => {
           const field = document.getElementById("text");
           field?.scrollIntoView({ block: "center" });
           field?.focus();
         }}
       >
+        <PencilIcon />
         Записать
       </button>
       <EntryForm />
@@ -1357,12 +1539,14 @@ export function App() {
   }
 
   return (
-    <main className="mx-auto my-10 max-w-2xl space-y-6 px-4">
-      <h1 className="text-3xl font-bold">Kognis</h1>
-      <p className="text-sm text-slate-700">
-        Дневник переживаний. Это не медицинская помощь и не замена специалисту.
-      </p>
-      {body}
-    </main>
+    <div className={user ? "layout" : ""}>
+      <main className="mx-auto max-w-2xl space-y-6 px-4 pb-28 pt-6 md:pb-10">
+        <h1 className="text-3xl font-bold">Kognis</h1>
+        <p className="text-sm muted">
+          Дневник переживаний. Это не медицинская помощь и не замена специалисту.
+        </p>
+        {body}
+      </main>
+    </div>
   );
 }

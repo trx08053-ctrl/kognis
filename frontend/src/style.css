@@ -1,58 +1,239 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Палитра на CSS-переменных: светлая по умолчанию, тёмная — класс .dark на <html>.
+   Пары «текст/фон» подобраны под контраст AA; проверяет axe в e2e (обе темы). */
 :root {
+  --bg: #f5f4fb;
+  --surface: #ffffff;
+  --text: #1e1b3a;
+  --muted: #4b5068;
+  --border: #d5d3e8;
+  --accent: #4f46e5;
+  --accent-strong: #4338ca;
+  --accent-fg: #ffffff;
+  --accent-soft: #eceafd;
+  --accent-text: #3730a3;
+  --warn-bg: #fff7e0;
+  --warn-border: #b45309;
+  --warn-text: #78350f;
+  --danger-bg: #fef2f2;
+  --danger-border: #991b1b;
+  --danger-text: #7f1d1d;
+  --ok-text: #14532d;
+  --radius: 1rem;
+  --radius-sm: 0.625rem;
   font-family: system-ui, sans-serif;
-  color: #0f172a;
-  background: #f1f5f9;
+  color: var(--text);
+  background: var(--bg);
 }
 
-/* Тёмная тема: палитра светлой темы переопределяется здесь, а не dark:-классами у каждого элемента.
-   Правила вне @layer, поэтому сильнее утилит Tailwind. Контраст проверяет axe в e2e (обе темы). */
 .dark {
   color-scheme: dark;
-  color: #e2e8f0;
-  background: #0f172a;
+  --bg: #0f1020;
+  --surface: #1a1b2e;
+  --text: #ecebf8;
+  --muted: #b7b9d3;
+  --border: #383b62;
+  --accent-soft: #272a55;
+  --accent-text: #c7d2fe;
+  --warn-bg: #3a2a08;
+  --warn-border: #f59e0b;
+  --warn-text: #fde68a;
+  --danger-bg: #3f0f14;
+  --danger-border: #f87171;
+  --danger-text: #fecaca;
+  --ok-text: #86efac;
 }
-.dark .bg-white {
-  background-color: #1e293b;
+
+body {
+  background: var(--bg);
+  color: var(--text);
 }
-.dark .text-slate-900 {
-  color: #f1f5f9;
-}
-.dark .text-slate-700 {
-  color: #cbd5e1;
-}
-.dark .border-slate-400 {
-  border-color: #64748b;
-}
-.dark .border-slate-300 {
-  border-color: #334155;
-}
-.dark .text-indigo-800 {
-  color: #a5b4fc;
-}
-.dark .text-red-800 {
-  color: #fca5a5;
-}
-.dark .border-red-800 {
-  border-color: #f87171;
-}
-.dark .bg-red-50 {
-  background-color: #450a0a;
-}
-.dark .text-red-950 {
-  color: #fecaca;
-}
-.dark .border-amber-700 {
-  border-color: #f59e0b;
-}
-.dark .bg-amber-50 {
-  background-color: #451a03;
-}
-.dark .text-amber-900 {
-  color: #fde68a;
-}
-.dark .text-green-900 {
-  color: #86efac;
+
+@layer components {
+  .card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    padding: 1rem;
+    box-shadow: 0 1px 2px rgb(30 27 58 / 0.06);
+  }
+  .card-sm {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    padding: 0.75rem;
+  }
+  .input {
+    width: 100%;
+    border: 1px solid var(--muted);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text);
+    padding: 0.5rem 0.75rem;
+    font-size: 1rem;
+  }
+  .input:focus-visible,
+  .btn:focus-visible,
+  .btn-ghost:focus-visible,
+  .chip:focus-visible,
+  .link:focus-visible,
+  .nav-link:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .btn {
+    border-radius: var(--radius-sm);
+    background: var(--accent);
+    color: var(--accent-fg);
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: background-color 0.15s;
+  }
+  .btn:hover:not(:disabled) {
+    background: var(--accent-strong);
+  }
+  .btn:disabled {
+    opacity: 0.55;
+  }
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text);
+    padding: 0.35rem 0.75rem;
+  }
+  .link {
+    color: var(--accent-text);
+    text-decoration: underline;
+  }
+  .muted {
+    color: var(--muted);
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    border: 1px solid var(--muted);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--text);
+    padding: 0.25rem 0.75rem;
+    font-size: 0.9rem;
+    transition: background-color 0.15s;
+  }
+  .chip[aria-pressed="true"],
+  .chip-on {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent-text);
+    font-weight: 600;
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: var(--accent-text);
+    padding: 0.15rem 0.7rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+  .notice {
+    border: 1px solid var(--warn-border);
+    border-radius: var(--radius-sm);
+    background: var(--warn-bg);
+    color: var(--warn-text);
+    padding: 0.75rem;
+  }
+  .segmented {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border: 1px solid var(--muted);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+  }
+  .segmented label {
+    position: relative;
+    cursor: pointer;
+    padding: 0.5rem 0.25rem;
+    text-align: center;
+    font-size: 0.95rem;
+  }
+  .segmented label:has(input:checked) {
+    background: var(--accent);
+    color: var(--accent-fg);
+    font-weight: 600;
+  }
+  .segmented label:has(input:focus-visible) {
+    outline: 3px solid var(--accent);
+    outline-offset: -3px;
+  }
+  .meter {
+    height: 0.75rem;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--accent-soft);
+  }
+  .meter > div {
+    height: 100%;
+    border-radius: 999px;
+    background: var(--accent);
+    transition: width 0.3s;
+  }
+
+  /* Один <nav>: на телефоне — нижняя панель, от 768 px — боковое меню */
+  .nav {
+    position: fixed;
+    inset: auto 0 0 0;
+    z-index: 20;
+    display: flex;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .nav-link {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+    padding: 0.5rem 0.25rem;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  .nav-link[aria-current="page"] {
+    color: var(--accent-text);
+    font-weight: 700;
+    background: var(--accent-soft);
+  }
+  @media (min-width: 768px) {
+    .nav {
+      inset: 0 auto 0 0;
+      width: 13rem;
+      flex-direction: column;
+      gap: 0.25rem;
+      border-top: 0;
+      border-right: 1px solid var(--border);
+      padding: 5rem 0.75rem 1rem;
+    }
+    .nav-link {
+      flex: none;
+      flex-direction: row;
+      gap: 0.75rem;
+      border-radius: var(--radius-sm);
+      padding: 0.6rem 0.75rem;
+      font-size: 1rem;
+    }
+    .layout {
+      padding-left: 13rem;
+    }
+  }
 }

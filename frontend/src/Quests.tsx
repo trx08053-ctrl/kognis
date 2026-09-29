@@ -13,17 +13,15 @@ import {
   submitQuiz,
 } from "./api";
 
-const inputClass =
-  "w-full rounded border border-slate-400 bg-white px-3 py-2 text-base text-slate-900";
-const buttonClass =
-  "rounded bg-indigo-700 px-4 py-2 text-base font-semibold text-white hover:bg-indigo-800";
+const inputClass = "input";
+const buttonClass = "btn";
 
 const KIND_TEXT = { quest: "Квест", challenge: "Челлендж" } as const;
 
 function Problem({ error }: { error: Error | null }) {
   if (!error) return null;
   return (
-    <p className="mt-2 text-red-800" role="alert">
+    <p className="mt-2 font-semibold text-[var(--danger-text)]" role="alert">
       {error.message}
     </p>
   );
@@ -41,26 +39,37 @@ function ActiveQuest({ quest }: { quest: Quest }) {
       ]),
   });
   return (
-    <li className="rounded border border-slate-400 bg-white p-3" data-testid="quest">
+    <li className="card-sm" data-testid="quest">
       <p className="font-semibold">
-        {quest.title}{" "}
-        <span className="text-sm font-normal text-slate-700">({KIND_TEXT[quest.kind]})</span>
+        {quest.title} <span className="text-sm font-normal muted">({KIND_TEXT[quest.kind]})</span>
       </p>
-      <p className="text-sm text-slate-700" data-testid="quest-progress">
+      <p className="text-sm muted" data-testid="quest-progress">
         {quest.completed_on
           ? `Завершён ${quest.completed_on}`
           : `Выполнено шагов: ${done} из ${quest.steps.length}`}
       </p>
+      <div
+        className="meter mt-2"
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={quest.steps.length}
+        aria-valuenow={done}
+        aria-label={`Шагов выполнено: ${done} из ${quest.steps.length}`}
+      >
+        <div
+          style={{ width: `${quest.steps.length > 0 ? (done / quest.steps.length) * 100 : 0}%` }}
+        />
+      </div>
       <ol className="mt-2 space-y-1">
         {quest.steps.map((step) => (
           <li key={step.idx} className="flex items-center justify-between gap-3">
-            <span className={step.done_on ? "text-slate-700 line-through" : ""}>{step.title}</span>
+            <span className={step.done_on ? "muted line-through" : ""}>{step.title}</span>
             {step.done_on ? (
-              <span className="text-sm text-slate-700">выполнено</span>
+              <span className="text-sm muted">выполнено</span>
             ) : (
               <button
                 type="button"
-                className="text-indigo-800 underline"
+                className="link"
                 aria-label={`Отметить шаг: ${step.title}`}
                 disabled={mark.isPending}
                 onClick={() => mark.mutate(step.idx)}
@@ -93,14 +102,14 @@ function Library({ active }: { active: Quest[] }) {
       <Problem error={library.error} />
       <ul className="space-y-2" data-testid="library">
         {items.map((t) => (
-          <li key={t.code} className="rounded border border-slate-300 bg-white p-3">
+          <li key={t.code} className="card-sm">
             <p className="font-semibold">
               {t.title}{" "}
-              <span className="text-sm font-normal text-slate-700">
+              <span className="text-sm font-normal muted">
                 ({KIND_TEXT[t.kind]}, шагов: {t.steps.length})
               </span>
             </p>
-            <p className="text-sm text-slate-700">{t.description}</p>
+            <p className="text-sm muted">{t.description}</p>
             <button
               type="button"
               className={`${buttonClass} mt-2`}
@@ -140,18 +149,18 @@ function QuizCard({ quiz }: { quiz: Quiz }) {
 
   const finished = quiz.done_today || result !== null;
   return (
-    <li className="rounded border border-slate-300 bg-white p-3" data-testid="quiz">
+    <li className="card-sm" data-testid="quiz">
       <p className="font-semibold">{quiz.title}</p>
       {finished ? (
         <div>
-          <p className="text-sm text-slate-700" data-testid="quiz-done">
+          <p className="text-sm muted" data-testid="quiz-done">
             {result ? `Ответы сохранены. Опыт: +${result.xp}.` : "Сегодня уже пройден."}
           </p>
           {result?.help && (
             <p role="note" className="mt-1">
               {result.help.message}{" "}
               {result.help.contacts.map((c) => (
-                <a key={c.phone} href={`tel:${c.phone}`} className="text-indigo-800 underline">
+                <a key={c.phone} href={`tel:${c.phone}`} className="link">
                   {c.phone}
                 </a>
               ))}

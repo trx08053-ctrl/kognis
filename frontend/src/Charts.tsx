@@ -27,16 +27,12 @@ export function MoodChart() {
   // «дд.мм» по-русски; дата ISO остаётся ключом
   const data = points.map((p) => ({ ...p, label: `${p.date.slice(8)}.${p.date.slice(5, 7)}` }));
   return (
-    <section
-      aria-labelledby="mood-chart-title"
-      data-testid="mood-chart"
-      className="space-y-2 rounded-lg border border-slate-300 bg-white p-4"
-    >
+    <section aria-labelledby="mood-chart-title" data-testid="mood-chart" className="space-y-2 card">
       <h2 id="mood-chart-title" className="text-xl font-semibold">
         Настроение и самочувствие за {PERIOD_DAYS} дней
       </h2>
       {data.length === 0 ? (
-        <p className="text-slate-700">Пока нет итогов дня — график появится после первого.</p>
+        <p className="muted">Пока нет итогов дня — график появится после первого.</p>
       ) : (
         <>
           <div role="img" aria-label={`График: ${data.length} итогов дня, шкала от 1 до 10`}>
@@ -72,7 +68,7 @@ export function MoodChart() {
               </LineChart>
             </ResponsiveContainer>
           </div>
-          <p className="text-sm text-slate-700">
+          <p className="text-sm muted">
             Среднее настроение: {mood.data.average_mood?.toFixed(1) ?? "—"} · самочувствие:{" "}
             {mood.data.average_wellbeing?.toFixed(1) ?? "—"} (из 10).
           </p>

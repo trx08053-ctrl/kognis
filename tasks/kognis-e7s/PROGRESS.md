@@ -3,7 +3,7 @@
 <!-- Статус задачи — только в bd (`bd show <id>`). Здесь — передача контекста: обновлять после каждого шага. -->
 
 ## Следующий шаг
-Дождаться повторного ревью (subagent `reviewer`, diff 9518f24..HEAD); дописать его ответ как «Ревью 2» в `tasks/kognis-e7s/REVIEW.md`, устранить blocker/major; при `VERDICT: approve` выполнить `python3 scripts/task.py done kognis-e7s`.
+Ревью 2 = approve (записано в REVIEW.md). Закрыть задачу: `just task-done kognis-e7s` (прямой вызов scripts/task.py блокируется hook'ом). Если и он не проходит — эскалация человеку.
 
 ## Сделано
 | Дата | Шаг | Коммит | Evidence / проверка |

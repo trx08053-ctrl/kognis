@@ -23,3 +23,13 @@ NOT CHECKED: just contract/api-types, just stage на реальном PostgreSQ
 | тест AC3 | добавлены проверки отсутствия pg_dump/pg_restore в RUNBOOK | 9c117ab |
 | таймаут, "docs/", избыточная проверка | не менялось: приемлемо / безвредно (обоснование выше) | — |
 | NOT CHECKED: contract | `just verify` (contract ok, tree 6eb1878fdebf) | evidence 6eb1878f… |
+
+## Ревью 2 · 2026-09-29 · b3e843b
+```
+VERDICT: approve
+EVIDENCE: заявленное evidence tree 6eb1878fdebf; автор проверил сам: just status → verified, just scope → расхождений нет, diff 9518f24..HEAD — только _app.py, web.md, тест, PROGRESS/REVIEW
+BLOCKERS: нет
+MAJOR: предыдущий устранён (docs/modules/web.md)
+MINOR: в лог попадает только имя класса исключения — осознанный компромисс
+NOT CHECKED: just stage на реальном PostgreSQL, работоспособность команд RUNBOOK
+```

@@ -11,6 +11,7 @@
     web.py status | down [--env staging]
     web.py backup [--env E] [--host H]     дамп PostgreSQL → .deploy/backups/<env>-<время>.dump
     web.py restore FILE [--env E] [--host H]  восстановить дамп (app останавливается, затем /health)
+    web.py perf /путь [--budget-ms 300] [--cookie …]  нагрузка (oha): p95 в бюджете, ошибок < 1 %
 
 Разворачивается только закоммиченный код (тег образа = короткий sha). Пароль БД окружения —
 .deploy/<env>.env (создаётся, права 600, не в git). Секреты и настройки самого приложения
@@ -21,6 +22,7 @@ app. Файл защищён.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import secrets
@@ -48,6 +50,7 @@ def answers(key: str, default: str) -> str:
 SLUG = answers("project_slug", ROOT.name)
 PKG = answers("package_name", SLUG.replace("-", "_"))
 PORT = answers("app_port", "8000")
+MAX_ERROR_SHARE = 0.01
 
 
 def sh(*cmd: str, env: dict[str, str] | None = None, check: bool = True) -> str:
@@ -156,7 +159,19 @@ def wait_health(port: str, docker_host: str | None) -> None:
 def release(env: str, tag: str, port: str, docker_host: str | None) -> None:
     compose(env, tag, port, docker_host, "up", "-d", "--wait", "db")
     print("── миграции (alembic upgrade head)", flush=True)
-    compose(env, tag, port, docker_host, "run", "--rm", "app", "alembic", "upgrade", "head")
+    cmd, environ = compose_base(env, tag, port, docker_host)
+    migrate = [*cmd, "run", "--rm", "app", "alembic", "upgrade", "head"]
+    proc = subprocess.run(
+        migrate, cwd=ROOT, env=environ, capture_output=True, text=True, check=False
+    )
+    if "password authentication failed" in proc.stdout + proc.stderr:
+        sys.exit(
+            f"том данных {SLUG}-{env}_pgdata создан с другим паролем БД (другая копия проекта?): "
+            f"скопируйте её .deploy/{env}.env сюда или выберите другое окружение (--env); "
+            "удалить том с данными — решение человека"
+        )
+    if proc.returncode != 0:
+        sys.exit(f"миграции не прошли:\n{(proc.stdout + proc.stderr).strip()[-2000:]}")
     compose(env, tag, port, docker_host, "up", "-d", "app")
     wait_health(port, docker_host)
 
@@ -229,6 +244,9 @@ def cmd_backup(a: argparse.Namespace) -> None:
             dump, cwd=ROOT, env=environ, stdout=fh, stderr=subprocess.PIPE, check=False
         )
     out.chmod(0o600)
+    old = sorted(out.parent.glob(f"{a.env}-*.dump"))[: -a.keep]
+    for stale in old if proc.returncode == 0 else []:
+        stale.unlink()
     if proc.returncode != 0 or out.stat().st_size == 0:
         out.unlink(missing_ok=True)
         sys.exit(f"бэкап не удался: {proc.stderr.decode()[-800:]}")
@@ -255,6 +273,33 @@ def cmd_restore(a: argparse.Namespace) -> None:
     if proc.returncode != 0:
         sys.exit(f"восстановление с ошибками: {proc.stderr.decode()[-800:]}")
     print(f"OK: {a.env} восстановлен из {dump.name}; проверьте вход и данные")
+
+
+def cmd_perf(a: argparse.Namespace) -> None:
+    """Нагрузочный замер эндпоинта (oha): p95 в пределах бюджета, ошибок < 1 %."""
+    oha = shutil.which("oha")
+    if oha is None:
+        sys.exit("нет oha — `mise install`")
+    url = (a.url or f"http://127.0.0.1:{a.port}") + a.path
+    headers = ["-H", f"Cookie: {a.cookie}"] if a.cookie else []
+    cmd = [oha, "-z", a.duration, "-c", str(a.concurrency), "--no-tui", "--output-format", "json",
+           *headers, url]  # fmt: skip
+    proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    if proc.returncode != 0:
+        sys.exit(f"oha: {proc.stderr.strip()[-500:]}")
+    report = json.loads(proc.stdout)
+    pct = report["latencyPercentiles"]
+    p95 = pct["p95"] * 1000
+    codes = {str(k): int(v) for k, v in report.get("statusCodeDistribution", {}).items()}
+    total = sum(codes.values()) or 1
+    bad = sum(v for k, v in codes.items() if not k.startswith("2")) / total
+    rps = report["summary"]["requestsPerSec"]
+    print(f"{a.path}: {rps:.0f} rps, p50 {pct['p50'] * 1000:.0f} мс, p95 {p95:.0f} мс "
+          f"(бюджет {a.budget_ms}), не-2xx {bad:.1%}, коды {codes}")  # fmt: skip
+    if p95 > a.budget_ms or bad > MAX_ERROR_SHARE:
+        sys.exit(
+            "PERF FAIL: p95 выше бюджета или много ошибок (бюджеты — ARCHITECTURE.md, раздел НФТ)"
+        )
 
 
 def cmd_down(a: argparse.Namespace) -> None:
@@ -295,9 +340,20 @@ def main() -> int:
         x.add_argument(
             "--host", required=name == "deploy", help="DOCKER_HOST, например ssh://deploy@srv"
         )
+        if name == "backup":
+            x.add_argument("--keep", type=int, default=14, help="сколько последних дампов хранить")
         if name == "restore":
             x.add_argument("file", help="файл дампа (.deploy/backups/…)")
         x.set_defaults(func=func)
+    f = sub.add_parser("perf", help="нагрузочный замер эндпоинта окружения (oha)")
+    f.add_argument("path", help="путь, например /api/entries")
+    f.add_argument("--url", help="база, по умолчанию http://127.0.0.1:<port>")
+    f.add_argument("--port", default="18000")
+    f.add_argument("--cookie", default="", help="например kognis_session=… для закрытых маршрутов")
+    f.add_argument("--budget-ms", type=int, default=300)
+    f.add_argument("--duration", default="20s")
+    f.add_argument("--concurrency", type=int, default=20)
+    f.set_defaults(func=cmd_perf)
     args = p.parse_args()
     args.func(args)
     return 0

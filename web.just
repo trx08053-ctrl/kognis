@@ -53,3 +53,7 @@ backup *args:
 
 restore file *args:
     python3 scripts/web.py restore {{file}} {{args}}
+
+# Нагрузочный замер эндпоинта окружения: just perf /api/items --budget-ms 300 [--cookie …]
+perf path *args:
+    python3 scripts/web.py perf {{path}} {{args}}

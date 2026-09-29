@@ -1,5 +1,6 @@
 """Структура фронтенда: kognis-dwx — страница в файле, типы API только из схемы бэкенда."""
 
+import json
 import re
 from pathlib import Path
 
@@ -45,6 +46,13 @@ def test_api_types_come_from_generated_schema() -> None:
     assert 'from "./api.gen"' in api
     assert re.findall(r"^\s*(?:export )?interface \w+", api, re.M) == []
     assert re.findall(r"^export type (\w+) = \{", api, re.M) == []  # ручной объект вместо схемы
+
+
+@pytest.mark.source
+@pytest.mark.acceptance("kognis-dwx", "AC3")
+def test_frontend_branch_coverage_ratchet_is_at_least_70_percent() -> None:
+    baseline = json.loads((SRC.parents[1] / ".quality-baseline.json").read_text())
+    assert baseline["frontend_coverage"]["branches"] >= 70
 
 
 @pytest.mark.source

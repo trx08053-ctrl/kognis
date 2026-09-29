@@ -103,9 +103,18 @@ def main() -> int:
     count = sum(len(v) for v in functions.values())
     print(f"── мутации: {count} функций в {len(functions)} модулях", flush=True)
     start = time.monotonic()
-    subprocess.run(["uv", "run", "--locked", "mutmut", "run", *globs], cwd=ROOT,
-                   capture_output=True, check=False)  # fmt: skip
+    run = subprocess.run(["uv", "run", "--locked", "mutmut", "run", *globs], cwd=ROOT,
+                         capture_output=True, text=True, check=False)  # fmt: skip
     found = statuses(globs)
+    if run.returncode != 0 and not any(s not in {"not checked", "skipped"} for s in found.values()):
+        # сбой прогона не должен выглядеть как «100 %»: например, тест падает на копии mutmut
+        failed = [ln for ln in run.stdout.splitlines() if ln.startswith(("FAILED", "ERROR"))]
+        print(
+            "mutmut не смог прогнать тесты:\n  "
+            + "\n  ".join(failed or run.stdout.splitlines()[-8:])
+        )
+        print("Тест, читающий исходники (структура кода), пометь @pytest.mark.source.")
+        return 1
     counted = {n: s for n, s in found.items() if s not in {"skipped", "not checked"}}
     killed = [n for n, s in counted.items() if s in {"killed", "timeout", "segfault"}]
     survived = sorted(n for n in counted if n not in killed)

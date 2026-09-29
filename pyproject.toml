@@ -75,6 +75,7 @@ markers = [
     "e2e: сквозные пользовательские сценарии",
     "acceptance(task, ac): приёмочный сценарий для критерия ACn задачи — docs/TESTING.md",
     "migration: миграция на данных прошлой версии схемы — docs/EVOLUTION.md",
+    "source: тест читает исходники (структура кода) — не запускается при мутационном тестировании",
     "security(kind, target): проверка безопасности, напр. security(\"idor\", \"GET /api/x/{id}\") — docs/SECURITY.md",
 ]
 
@@ -83,4 +84,4 @@ markers = [
 paths_to_mutate = ["src/kognis/"]
 tests_dir = ["tests/"]
 also_copy = ["alembic.ini", "migrations/", "security/", "frontend/dist/"]
-pytest_add_cli_args = ["-m", "not e2e and not integration", "--no-cov", "-q", "-p", "no:cacheprovider"]
+pytest_add_cli_args = ["-m", "not e2e and not integration and not source", "--no-cov", "-q", "-p", "no:cacheprovider"]

@@ -9,6 +9,7 @@ WEB = Path(__file__).resolve().parents[2] / "src" / "kognis" / "web"
 MAX_LINES = 400
 
 
+@pytest.mark.source
 @pytest.mark.acceptance("kognis-pj6", "AC1")
 def test_no_web_file_is_too_long() -> None:
     long = {
@@ -17,6 +18,7 @@ def test_no_web_file_is_too_long() -> None:
     assert long == {}
 
 
+@pytest.mark.source
 @pytest.mark.acceptance("kognis-pj6", "AC1")
 def test_each_router_lives_in_its_own_file() -> None:
     routers = {

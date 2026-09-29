@@ -4,8 +4,8 @@
 
 ## Следующий шаг
 1. Аудит выполнен, 2c заполнен, ревью учтено: исправлены major (проверка bytes-шифртекста в AC2, заголовки на 500, ASGI-тест чанков `test_body_limit.py`); хрупкость усечённого тела и int-границы path-параметров оформлены задачами `bd` (P3). Осталось: сообщить человеку о sast, повторно `just verify`.
-2. `just verify` — сейчас падает ТОЛЬКО `sast` (semgrep не пишет в ~/.local/share/uv/tools: read-only FS в песочнице). Нужен запуск `just check sast` вне песочницы (человек) или с UV_TOOL_DIR в записываемом каталоге; ослаблять проверку нельзя.
-4. subagent `reviewer`, затем `python3 scripts/task.py done kognis-d5p`.
+2. `just verify` зелёный полностью, включая sast (tree 8796439e5bb8, после фикса harness). Ревью уже учтено.
+3. `just task-done kognis-d5p`.
 
 ## Сделано
 | Дата | Шаг | Коммит | Evidence / проверка |

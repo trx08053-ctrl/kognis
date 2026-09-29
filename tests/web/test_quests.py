@@ -22,8 +22,8 @@ class Clock:
     def __init__(self, day: dt.date) -> None:
         self.day = day
 
-    def __call__(self) -> dt.date:
-        return self.day
+    def __call__(self) -> dt.datetime:
+        return dt.datetime.combine(self.day, dt.time(12), dt.UTC)  # полдень UTC — та же дата в МСК
 
 
 class OneAnalysis:
@@ -52,7 +52,7 @@ def clock() -> Clock:
 
 def make(engine: Engine, clock: Clock, email: str = "ann@example.com") -> TestClient:
     client = TestClient(
-        create_app(engine, today=clock, ai_provider=OneAnalysis(["Позвонить другу"]))
+        create_app(engine, clock=clock, ai_provider=OneAnalysis(["Позвонить другу"]))
     )
     r = client.post("/api/auth/register", json={"email": email, "password": PW})
     assert r.status_code == 201
@@ -90,7 +90,7 @@ def test_accept_from_library_and_progress_persists_between_sessions(
     assert done(first, quest["id"], 1).status_code == 200
 
     # новый сеанс того же пользователя: прогресс на месте
-    second = TestClient(create_app(engine, today=clock))
+    second = TestClient(create_app(engine, clock=clock))
     assert second.post(
         "/api/auth/login", json={"email": "bob@example.com", "password": PW}
     ).is_success
@@ -136,7 +136,7 @@ def test_accept_from_analysis_result(engine: Engine, clock: Clock) -> None:
 
 
 def test_blank_idea_from_analysis_is_rejected(engine: Engine, clock: Clock) -> None:
-    client = TestClient(create_app(engine, today=clock, ai_provider=OneAnalysis(["   "])))
+    client = TestClient(create_app(engine, clock=clock, ai_provider=OneAnalysis(["   "])))
     creds = {"email": "ann@example.com", "password": PW}
     assert client.post("/api/auth/register", json=creds).status_code == 201
     client.post("/api/entries", json={"text": "просто день", "date": "2026-09-01"})
@@ -284,7 +284,7 @@ def test_crisis_quiz_answers_saved_without_xp(engine: Engine, clock: Clock) -> N
 
 
 def test_endpoints_require_login(engine: Engine, clock: Clock) -> None:
-    anon = TestClient(create_app(engine, today=clock))
+    anon = TestClient(create_app(engine, clock=clock))
     assert anon.get("/api/quests").status_code == 401
     assert anon.get("/api/quests/library").status_code == 401
     assert anon.get("/api/quizzes").status_code == 401

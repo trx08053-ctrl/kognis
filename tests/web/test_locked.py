@@ -17,12 +17,13 @@ PRIVATE_TEXT = "Секретная мысль про начальника"
 KEY_A = base64.b64encode(b"A" * 32).decode()
 KEY_B = base64.b64encode(b"B" * 32).decode()
 DAY = dt.date(2026, 9, 1)
+NOON = dt.datetime(2026, 9, 1, 12, tzinfo=dt.UTC)  # 2026-09-01 и в МСК
 
 
 def make_client(
     engine: Engine, key: str | None = KEY_A, email: str = "ann@example.com"
 ) -> TestClient:
-    client = TestClient(create_app(engine, today=lambda: DAY, data_key=key))
+    client = TestClient(create_app(engine, clock=lambda: NOON, data_key=key))
     response = client.post("/api/auth/register", json={"email": email, "password": VALID_PW})
     assert response.status_code in (201, 409)
     if response.status_code == 409:

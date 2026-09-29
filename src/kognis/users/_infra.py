@@ -25,7 +25,7 @@ from sqlalchemy.orm import Session
 
 from kognis.db import metadata
 
-from ._domain import EmailTakenError, User
+from ._domain import DEFAULT_TIMEZONE, EmailTakenError, User
 
 users_table = Table(
     "users",
@@ -35,6 +35,7 @@ users_table = Table(
     Column("password_hash", String(255), nullable=False),
     Column("created_at", DateTime, nullable=False),
     Column("advanced", Boolean, nullable=False, server_default=false()),
+    Column("timezone", String(64), nullable=False, server_default=DEFAULT_TIMEZONE),
 )
 
 sessions_table = Table(
@@ -74,17 +75,19 @@ def verify_password(password_hash: str, password: str) -> bool:
 
 
 def _user(row: Row[Any]) -> User:
-    return User(id=row.id, email=row.email, advanced=bool(row.advanced))
+    return User(id=row.id, email=row.email, advanced=bool(row.advanced), timezone=row.timezone)
 
 
 class UserRepository:
     def __init__(self, session: Session) -> None:
         self._session = session
 
-    def add(self, email: str, password_hash: str) -> User:
+    def add(self, email: str, password_hash: str, timezone: str) -> User:
         stmt = (
             insert(users_table)
-            .values(email=email, password_hash=password_hash, created_at=utcnow())
+            .values(
+                email=email, password_hash=password_hash, created_at=utcnow(), timezone=timezone
+            )
             .returning(users_table.c.id)
         )
         try:
@@ -92,7 +95,7 @@ class UserRepository:
                 user_id = self._session.execute(stmt).scalar_one()
         except IntegrityError as err:
             raise EmailTakenError("email уже зарегистрирован") from err
-        return User(id=int(user_id), email=email)
+        return User(id=int(user_id), email=email, timezone=timezone)
 
     def get(self, user_id: int) -> User | None:
         row = self._session.execute(select(users_table).where(users_table.c.id == user_id)).first()
@@ -101,6 +104,11 @@ class UserRepository:
     def set_advanced(self, user_id: int, advanced: bool) -> None:
         self._session.execute(
             update(users_table).where(users_table.c.id == user_id).values(advanced=advanced)
+        )
+
+    def set_timezone(self, user_id: int, timezone: str) -> None:
+        self._session.execute(
+            update(users_table).where(users_table.c.id == user_id).values(timezone=timezone)
         )
 
     def find_with_hash(self, email: str) -> tuple[User, str] | None:

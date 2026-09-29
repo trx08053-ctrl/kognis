@@ -3,8 +3,11 @@
 import hashlib
 from dataclasses import dataclass
 from datetime import timedelta
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 MAX_EMAIL_LENGTH = 254
+MAX_TIMEZONE_LENGTH = 64
+DEFAULT_TIMEZONE = "Europe/Moscow"  # пояс по умолчанию (D11), пока пользователь не задал свой
 MIN_PASSWORD_LENGTH = 8
 MAX_PASSWORD_LENGTH = 256
 LOGIN_WINDOW = timedelta(minutes=15)  # окно подсчёта неудачных попыток входа
@@ -17,6 +20,7 @@ class User:
     id: int
     email: str
     advanced: bool = False  # режим интерфейса: простой (по умолчанию) или Advanced
+    timezone: str = DEFAULT_TIMEZONE  # IANA; по нему считается «сегодня» пользователя
 
 
 class EmailTakenError(ValueError):
@@ -57,6 +61,17 @@ def validate_password(password: str) -> None:
         raise ValueError(f"пароль должен быть не короче {MIN_PASSWORD_LENGTH} символов")
     if len(password) > MAX_PASSWORD_LENGTH:
         raise ValueError("пароль слишком длинный")
+
+
+def validate_timezone(name: str) -> str:
+    """Имя пояса IANA (например, Asia/Vladivostok); неизвестное отклоняется."""
+    try:
+        if not name or name != name.strip() or len(name) > MAX_TIMEZONE_LENGTH:
+            raise ValueError(name)
+        ZoneInfo(name)
+    except (ValueError, ZoneInfoNotFoundError, OSError) as err:
+        raise ValueError("неизвестный часовой пояс") from err
+    return name
 
 
 def hash_token(token: str) -> str:

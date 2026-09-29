@@ -7,6 +7,8 @@ export interface User {
   id: number;
   email: string;
   advanced: boolean;
+  timezone: string;
+  today: string; // сегодняшняя дата пользователя (ГГГГ-ММ-ДД) в его часовом поясе
 }
 
 export interface HelpContact {
@@ -73,15 +75,18 @@ function post<T>(url: string, body: unknown = {}): Promise<T> {
 }
 
 export const getMe = (): Promise<User> => fetch("/api/me").then((r) => parse<User>(r));
-export const register = (email: string, password: string): Promise<User> =>
-  post<User>("/api/auth/register", { email, password });
+export const register = (
+  email: string,
+  password: string,
+  timezone: string | null = null,
+): Promise<User> => post<User>("/api/auth/register", { email, password, timezone });
 export const login = (email: string, password: string): Promise<User> =>
   post<User>("/api/auth/login", { email, password });
-export const saveSettings = (advanced: boolean): Promise<User> =>
+export const saveSettings = (settings: { advanced?: boolean; timezone?: string }): Promise<User> =>
   fetch("/api/me/settings", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ advanced }),
+    body: JSON.stringify(settings),
   }).then((r) => parse<User>(r));
 export const logout = (): Promise<void> => post<void>("/api/auth/logout");
 export const listEntries = (): Promise<Entry[]> =>

@@ -4,6 +4,7 @@
 """
 
 import base64
+import datetime as dt
 import importlib
 import json
 import socket
@@ -356,6 +357,33 @@ def test_analysis_screen(browser: Browser, engine: Engine) -> None:
         page.screenshot(path=str(SCREENS / "e2e-analysis-crisis.png"), full_page=True)
         check_axe(page)
         page.context.close()
+
+
+@pytest.mark.acceptance("kognis-1yv", "AC2")
+@pytest.mark.e2e
+def test_analysis_uses_user_timezone_not_browser_or_server(
+    browser: Browser, engine: Engine
+) -> None:
+    """Пояс браузера (Auckland, UTC+12) не совпадает с поясом сервера (UTC): «сегодня» берётся
+    из профиля, запись за «сегодня» попадает в период разбора."""
+    utc_evening = dt.datetime(2026, 9, 1, 20, 0, tzinfo=dt.UTC)  # в Окленде уже 2 сентября
+    app = create_app(engine, ai_provider=CannedProvider(), clock=lambda: utc_evening)
+    with serve(app) as url:
+        context = browser.new_context(
+            viewport={"width": 1024, "height": 700}, locale="ru-RU", timezone_id="Pacific/Auckland"
+        )
+        page = context.new_page()
+        page.goto(url)
+        register(page, "ann@example.com")
+        page.get_by_label("Что произошло и что вы чувствуете").fill("Сегодня страшно звонить")
+        page.get_by_test_id("save-entry").click()
+        expect(page.get_by_test_id("entries")).to_contain_text("2026-09-02")
+        page.get_by_role("link", name="Разбор").click()
+        expect(page.get_by_label("По дату")).to_have_value("2026-09-02")
+        page.get_by_label("Согласен(на) передать записи").check()
+        page.get_by_test_id("run-analysis").click()
+        expect(page.get_by_test_id("analysis-result")).to_contain_text("Избегание")
+        context.close()
 
 
 @pytest.mark.acceptance("kognis-99x", "AC4")

@@ -11,6 +11,14 @@ function reply(status: number, body: unknown): Response {
   });
 }
 
+const ME = {
+  id: 1,
+  email: "ann@example.com",
+  advanced: false,
+  timezone: "Europe/Moscow",
+  today: "2026-09-29",
+};
+
 const emptyProgress = {
   xp: 0,
   level: 1,
@@ -50,13 +58,10 @@ afterEach(() => {
 test("аноним видит форму входа и после входа — дневник с записями", async () => {
   let loggedIn = false;
   const fetchMock = stubApi({
-    "GET /api/me": () =>
-      loggedIn
-        ? reply(200, { id: 1, email: "ann@example.com" })
-        : reply(401, { detail: "нужен вход" }),
+    "GET /api/me": () => (loggedIn ? reply(200, ME) : reply(401, { detail: "нужен вход" })),
     "POST /api/auth/login": () => {
       loggedIn = true;
-      return reply(200, { id: 1, email: "ann@example.com" });
+      return reply(200, ME);
     },
     "GET /api/entries": () =>
       reply(200, [
@@ -104,7 +109,7 @@ test("показывает ошибку входа", async () => {
 
 test("запись с кризисным сигналом показывает блок помощи с контактами", async () => {
   stubApi({
-    "GET /api/me": () => reply(200, { id: 1, email: "ann@example.com" }),
+    "GET /api/me": () => reply(200, ME),
     "GET /api/entries": () => reply(200, []),
     "GET /api/progress": () => reply(200, emptyProgress),
     "POST /api/entries": () =>
@@ -137,7 +142,7 @@ test("запись с кризисным сигналом показывает �
 test("запись под замком: заглушка, ошибка неверного пароля, затем текст", async () => {
   const opens: string[] = [];
   stubApi({
-    "GET /api/me": () => reply(200, { id: 1, email: "ann@example.com" }),
+    "GET /api/me": () => reply(200, ME),
     "GET /api/progress": () => reply(200, emptyProgress),
     "GET /api/day-reviews": () => reply(200, []),
     "GET /api/entries": () =>
@@ -191,7 +196,7 @@ test("приватная запись: предупреждение, на сер
   const stored: Record<string, unknown>[] = [];
   const bodies: string[] = [];
   stubApi({
-    "GET /api/me": () => reply(200, { id: 1, email: "ann@example.com" }),
+    "GET /api/me": () => reply(200, ME),
     "GET /api/progress": () => reply(200, emptyProgress),
     "GET /api/day-reviews": () => reply(200, []),
     "GET /api/entries": () => reply(200, stored),
@@ -249,7 +254,7 @@ test("приватная запись: предупреждение, на сер
 
 test("виджет показывает уровень, серию и опыт", async () => {
   stubApi({
-    "GET /api/me": () => reply(200, { id: 1, email: "ann@example.com" }),
+    "GET /api/me": () => reply(200, ME),
     "GET /api/entries": () => reply(200, []),
     "GET /api/progress": () =>
       reply(200, {
@@ -269,7 +274,7 @@ test("виджет показывает уровень, серию и опыт",
 
 test("страница достижений показывает дату получения", async () => {
   stubApi({
-    "GET /api/me": () => reply(200, { id: 1, email: "ann@example.com" }),
+    "GET /api/me": () => reply(200, ME),
     "GET /api/entries": () => reply(200, []),
     "GET /api/progress": () =>
       reply(200, {
@@ -293,7 +298,7 @@ test("страница достижений показывает дату пол
 
 test("итог дня с кризисным сигналом в рефлексии показывает блок помощи", async () => {
   stubApi({
-    "GET /api/me": () => reply(200, { id: 1, email: "ann@example.com" }),
+    "GET /api/me": () => reply(200, ME),
     "GET /api/entries": () => reply(200, []),
     "GET /api/progress": () => reply(200, emptyProgress),
     "GET /api/day-reviews": () => reply(200, []),
@@ -344,7 +349,7 @@ test("разбор: без согласия кнопка выключена, с 
     help: null,
   };
   const fetchMock = stubApi({
-    "GET /api/me": () => reply(200, { id: 1, email: "ann@example.com" }),
+    "GET /api/me": () => reply(200, ME),
     "GET /api/entries": () => reply(200, []),
     "GET /api/progress": () => reply(200, emptyProgress),
     "GET /api/analyses/directions": () => reply(200, [{ code: "cbt", title: "КПТ" }]),
@@ -388,7 +393,7 @@ test("экран квестов: принять из библиотеки и о�
   };
   let taken = false;
   stubApi({
-    "GET /api/me": () => reply(200, { id: 1, email: "ann@example.com" }),
+    "GET /api/me": () => reply(200, ME),
     "GET /api/entries": () => reply(200, []),
     "GET /api/progress": () => reply(200, emptyProgress),
     "GET /api/quests": () => reply(200, taken ? [quest] : []),

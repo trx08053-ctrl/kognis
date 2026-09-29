@@ -22,6 +22,7 @@ from kognis.web import create_app
 VALID_PW = "correct horse"
 OPEN_TEXT = "Секретная мысль про начальника"
 DAY = dt.date(2026, 9, 1)
+NOON = dt.datetime(2026, 9, 1, 12, tzinfo=dt.UTC)  # 2026-09-01 и в МСК
 
 
 def b64(size: int) -> str:
@@ -57,7 +58,7 @@ def provider() -> Recorder:
 
 @pytest.fixture
 def api(engine: Engine, provider: Recorder) -> TestClient:
-    client = TestClient(create_app(engine, today=lambda: DAY, ai_provider=provider))
+    client = TestClient(create_app(engine, clock=lambda: NOON, ai_provider=provider))
     email = "ann@example.com"
     assert (
         client.post("/api/auth/register", json={"email": email, "password": VALID_PW}).status_code

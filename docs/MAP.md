@@ -40,7 +40,7 @@
   - `Message` — `src/kognis/ai/_domain.py`
   - `OpenAICompatibleProvider` — `src/kognis/ai/_infra.py`
   - `get_provider` — `src/kognis/ai/_app.py`
-- Тесты: `tests/ai/test_ai.py`, `tests/analysis/test_analysis.py`, `tests/e2e/test_ui.py`, `tests/web/test_private.py`, `tests/web/test_quests.py`
+- Тесты: `tests/ai/test_ai.py`, `tests/analysis/test_analysis.py`, `tests/e2e/test_ui.py`, `tests/web/test_private.py`, `tests/web/test_quests.py`, `tests/web/test_timezone.py`
 
 ## `kognis.analysis`
 
@@ -124,6 +124,7 @@
 
 - Код: `src/kognis/users`
 - Публичный интерфейс:
+  - `DEFAULT_TIMEZONE` — `src/kognis/users/_domain.py`
   - `SESSION_LIFETIME` — `src/kognis/users/_app.py`
   - `EmailTakenError` — `src/kognis/users/_domain.py`
   - `InvalidCredentialsError` — `src/kognis/users/_domain.py`
@@ -138,7 +139,7 @@
 - Публичный интерфейс:
   - `create_app` — `src/kognis/web/_app.py`
   - `main` — `src/kognis/web/__init__.py`
-- Тесты: `tests/analysis/test_analysis.py`, `tests/e2e/test_ui.py`, `tests/web/test_crisis_review.py`, `tests/web/test_day_reviews.py`, `tests/web/test_gameplay.py`, `tests/web/test_hardening.py`, `tests/web/test_http.py`, `tests/web/test_locked.py`, `tests/web/test_private.py`, `tests/web/test_quests.py`
+- Тесты: `tests/analysis/test_analysis.py`, `tests/e2e/test_ui.py`, `tests/web/test_crisis_review.py`, `tests/web/test_day_reviews.py`, `tests/web/test_gameplay.py`, `tests/web/test_hardening.py`, `tests/web/test_http.py`, `tests/web/test_locked.py`, `tests/web/test_private.py`, `tests/web/test_quests.py`, `tests/web/test_timezone.py`
 
 ## Точки входа
 

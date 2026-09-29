@@ -11,25 +11,15 @@ import {
   YAxis,
 } from "recharts";
 import { getMood } from "./api";
+import { shiftDay, useToday } from "./dates";
 
 const MOOD_COLOR = "#6366f1";
 const WELLBEING_COLOR = "#10b981";
 const PERIOD_DAYS = 30;
 
-function isoDay(date: Date): string {
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  return `${date.getFullYear()}-${month}-${String(date.getDate()).padStart(2, "0")}`;
-}
-
-function period(): { start: string; end: string } {
-  const end = new Date();
-  const start = new Date(end);
-  start.setDate(start.getDate() - (PERIOD_DAYS - 1));
-  return { start: isoDay(start), end: isoDay(end) };
-}
-
 export function MoodChart() {
-  const { start, end } = period();
+  const end = useToday();
+  const start = shiftDay(end, -(PERIOD_DAYS - 1));
   const mood = useQuery({ queryKey: ["mood", start, end], queryFn: () => getMood(start, end) });
   if (mood.isError) return <p role="alert">Не удалось загрузить график: {mood.error.message}</p>;
   if (!mood.data) return null;

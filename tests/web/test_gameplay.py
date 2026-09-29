@@ -18,8 +18,8 @@ class Clock:
     def __init__(self, day: dt.date) -> None:
         self.day = day
 
-    def __call__(self) -> dt.date:
-        return self.day
+    def __call__(self) -> dt.datetime:
+        return dt.datetime.combine(self.day, dt.time(12), dt.UTC)  # полдень UTC — та же дата в МСК
 
 
 CLOCKS: list[Clock] = []  # «сегодня» текущего теста: write/review по умолчанию пишут «в этот день»
@@ -34,7 +34,7 @@ def clock() -> Clock:
 
 @pytest.fixture
 def api(engine: Engine, clock: Clock) -> TestClient:
-    return TestClient(create_app(engine, today=clock))
+    return TestClient(create_app(engine, clock=clock))
 
 
 def signup(client: TestClient, email: str = "ann@example.com") -> None:

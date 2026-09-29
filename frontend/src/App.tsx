@@ -27,6 +27,7 @@ import {
   type User,
 } from "./api";
 import { MoodChart } from "./Charts";
+import { browserTimeZone, shiftDay, useToday } from "./dates";
 import { decryptText, encryptText, MIN_PRIVATE_PASSWORD } from "./privateCrypto";
 import { QuestsPage } from "./Quests";
 import { useTheme } from "./theme";
@@ -58,7 +59,8 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const auth = useMutation({
-    mutationFn: () => (mode === "login" ? login(email, password) : register(email, password)),
+    mutationFn: () =>
+      mode === "login" ? login(email, password) : register(email, password, browserTimeZone()),
     onSuccess: (user) => client.setQueryData(["me"], user),
   });
 
@@ -584,13 +586,6 @@ function EntryItems({ items }: { items: Entry[] }) {
   );
 }
 
-function localToday(): string {
-  const now = new Date();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${now.getFullYear()}-${month}-${day}`;
-}
-
 interface ScaleFieldProps {
   id: string;
   label: string;
@@ -631,7 +626,8 @@ function ScaleField({ id, label, low, high, value, onChange }: ScaleFieldProps) 
 
 function DayReviewForm() {
   const client = useQueryClient();
-  const [date, setDate] = useState(localToday);
+  const today = useToday();
+  const [date, setDate] = useState(today);
   const [wellbeing, setWellbeing] = useState("5");
   const [mood, setMood] = useState("5");
   const [reflection, setReflection] = useState("");
@@ -812,13 +808,6 @@ const TREND_TEXT = {
   unknown: "мало данных для тренда",
 } as const;
 
-function shiftDay(iso: string, days: number): string {
-  const date = new Date(`${iso}T12:00:00`);
-  date.setDate(date.getDate() + days);
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  return `${date.getFullYear()}-${month}-${String(date.getDate()).padStart(2, "0")}`;
-}
-
 function MoodSummary({ start, end }: { start: string; end: string }) {
   const mood = useQuery({ queryKey: ["mood", start, end], queryFn: () => getMood(start, end) });
   if (mood.isError) return <ErrorMessage error={mood.error} />;
@@ -981,7 +970,7 @@ function FollowUp({
 }
 
 function AnalysisPage() {
-  const today = localToday();
+  const today = useToday();
   const [start, setStart] = useState(() => shiftDay(today, -6));
   const [end, setEnd] = useState(today);
   const [direction, setDirection] = useState("cbt");
@@ -1084,7 +1073,7 @@ function Shell({ user, children }: { user: User; children: ReactNode }) {
   // переключатель откликается сразу (локальное состояние); при ошибке сервера возвращаем прежнее
   const [advanced, setAdvanced] = useState(user.advanced === true);
   const mode = useMutation({
-    mutationFn: saveSettings,
+    mutationFn: (next: boolean) => saveSettings({ advanced: next }),
     onMutate: (next) => client.setQueryData(["me"], { ...user, advanced: next }),
     onSuccess: (saved) => client.setQueryData(["me"], saved),
     onError: (_error, next) => {
@@ -1194,10 +1183,11 @@ function Onboarding() {
 }
 
 function DaySummary() {
+  const todayDate = useToday();
   const reviews = useQuery({ queryKey: ["day-reviews"], queryFn: listDayReviews });
   if (reviews.isError) return <ErrorMessage error={reviews.error} />;
   if (!reviews.data) return null;
-  const today = reviews.data.find((review) => review.date === localToday());
+  const today = reviews.data.find((review) => review.date === todayDate);
   return (
     <section
       aria-labelledby="day-summary-title"

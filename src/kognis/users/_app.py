@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 
 from ._domain import (
+    DEFAULT_TIMEZONE,
     LOGIN_MAX_FAILURES_PER_EMAIL,
     LOGIN_MAX_FAILURES_PER_IP,
     LOGIN_WINDOW,
@@ -17,6 +18,7 @@ from ._domain import (
     hash_token,
     normalize_email,
     validate_password,
+    validate_timezone,
 )
 from ._infra import (
     LoginAttemptRepository,
@@ -37,10 +39,11 @@ class UserService:
         self._sessions = SessionRepository(session)
         self._attempts = LoginAttemptRepository(session)
 
-    def register(self, raw_email: str, password: str) -> User:
+    def register(self, raw_email: str, password: str, timezone: str | None = None) -> User:
         email = normalize_email(raw_email)
         validate_password(password)
-        return self._users.add(email, hash_password(password))
+        zone = validate_timezone(timezone) if timezone is not None else DEFAULT_TIMEZONE
+        return self._users.add(email, hash_password(password), zone)
 
     def authenticate(self, raw_email: str, password: str) -> User:
         try:
@@ -88,6 +91,10 @@ class UserService:
     def set_advanced(self, user_id: int, advanced: bool) -> None:
         """Сохранить режим интерфейса в профиле."""
         self._users.set_advanced(user_id, advanced)
+
+    def set_timezone(self, user_id: int, timezone: str) -> None:
+        """Сохранить часовой пояс профиля (IANA); неизвестный — ValueError."""
+        self._users.set_timezone(user_id, validate_timezone(timezone))
 
     def start_session(self, user_id: int) -> str:
         """Новая сессия; возвращает токен для cookie (в БД лежит только его хэш)."""

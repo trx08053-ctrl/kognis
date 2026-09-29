@@ -11,12 +11,13 @@ from kognis.web import create_app
 
 VALID_PW = "correct horse"
 DAY = dt.date(2026, 9, 1)
+NOON = dt.datetime(2026, 9, 1, 12, tzinfo=dt.UTC)  # 2026-09-01 и в МСК
 CRISIS_TEXT = "Сегодня я не хочу больше жить"
 
 
 @pytest.fixture
 def api(engine: Engine) -> TestClient:
-    client = TestClient(create_app(engine, today=lambda: DAY))
+    client = TestClient(create_app(engine, clock=lambda: NOON))
     response = client.post(
         "/api/auth/register", json={"email": "ann@example.com", "password": VALID_PW}
     )

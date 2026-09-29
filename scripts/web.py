@@ -11,7 +11,9 @@
     web.py status | down [--env staging]
 
 Разворачивается только закоммиченный код (тег образа = короткий sha). Пароль БД окружения —
-.deploy/<env>.env (создаётся, права 600, не в git). Файл защищён.
+.deploy/<env>.env (создаётся, права 600, не в git). Секреты и настройки самого приложения
+(ключи, режим) — .deploy/<env>.app.env: создаётся пустым, заполняет человек; попадает в контейнер
+app. Файл защищён.
 """
 
 from __future__ import annotations
@@ -96,6 +98,10 @@ def env_file(env: str) -> Path:
         DEPLOY.mkdir(exist_ok=True)
         path.write_text(f"POSTGRES_PASSWORD={secrets.token_urlsafe(24)}\n")
         path.chmod(0o600)
+    app_env = DEPLOY / f"{env}.app.env"
+    if not app_env.exists():
+        app_env.write_text("# секреты и настройки приложения для окружения (KEY=value), не в git\n")
+        app_env.chmod(0o600)
     return path
 
 

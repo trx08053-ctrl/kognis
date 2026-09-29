@@ -5,8 +5,8 @@
 автоматически (JSON по схеме, опора на реальные записи, русский язык, отсутствие диагнозов и
 назначений, вопросы при малых данных, поддержка при кризисе, время ответа).
 
-    python3 scripts/ai_eval.py --provider fake                # без сети, детерминированный ответ
-    python3 scripts/ai_eval.py --provider env --direction all  # реальная модель: KOGNIS_AI_*
+    just ai-eval --provider fake                 # без сети, детерминированный ответ
+    just ai-eval --provider env --direction all  # реальная модель: KOGNIS_AI_*
 
 Код выхода: 0 — все проверки прошли, 1 — есть провалы, 2 — ошибка запуска.
 """

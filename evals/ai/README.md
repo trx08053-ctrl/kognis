@@ -4,15 +4,14 @@
 
 ## Запуск
 ```bash
-python3 scripts/ai_eval.py --provider fake                  # без сети: проверка самого набора и проверок
+just ai-eval --provider fake                                # без сети: проверка самого набора и проверок
 KOGNIS_AI_BASE_URL=… KOGNIS_AI_MODEL=… KOGNIS_AI_API_KEY=… \
-  python3 scripts/ai_eval.py --provider env --direction all   # реальная модель, все 5 направлений
+  just ai-eval --provider env --direction all   # реальная модель, все 5 направлений
 ```
 Опции: `--direction cbt|act|schema|positive|activation|all` (по умолчанию `cbt`), `--case <id>` (повторяемая),
 `--max-latency <с>` (по умолчанию 60), `--results <файл>` (по умолчанию `evals/ai/results.jsonl`).
 Код выхода: 0 — все проверки прошли, 1 — есть провалы, 2 — ошибка запуска.
-Рецепт `just ai-eval …` — обёртка над этой командой (файл `justfile` защищён, добавляет человек:
-`ai-eval *args:` → `uv run --locked python scripts/ai_eval.py {{args}}`).
+Рецепт `just ai-eval …` — обёртка над `uv run --locked python scripts/ai_eval.py …`.
 
 Прогон идёт через `AnalysisService` и промпты приложения на временной БД (миграции Alembic), записи создаются
 через `DiaryService`. Ключ и тексты записей в отчёт не попадают; при сбое провайдера в таблице — причина из

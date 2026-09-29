@@ -9,7 +9,7 @@
     "test": "vitest run",
     "lint": "biome ci --colors=off --error-on-warnings .",
     "types": "tsc --noEmit -p .",
-    "check": "biome ci --colors=off --error-on-warnings . && tsc --noEmit -p . && vitest run && vite build"
+    "check": "biome ci --colors=off --error-on-warnings . && tsc --noEmit -p . && vitest run --coverage && vite build"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.104.0",
@@ -21,6 +21,7 @@
   "devDependencies": {
     "@biomejs/biome": "2.5.14",
     "@tailwindcss/vite": "^4.3.3",
+    "@vitest/coverage-v8": "^5.0.2",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/react": "^16.3.3",
     "@types/react": "^19.3.0",

@@ -126,7 +126,7 @@ def cmd_done(args: argparse.Namespace) -> None:
     open_ui = re.findall(r"^## (UI-\d+) · open ·", ui.read_text(), re.M) if ui.exists() else []
     if open_ui:
         sys.exit(f"Нельзя закрыть: открытые UI-замечания {open_ui} в {ui.relative_to(ROOT)}.")
-    threats = missing_threats(args.id)
+    threats = missing_threats(args.id) or missing_review(args.id)
     if threats:
         sys.exit(threats)
     missing = uncovered_acceptance(args.id)
@@ -171,6 +171,21 @@ def missing_threats(task_id: str) -> str:
     return (
         f"Нельзя закрыть risky-задачу: в tasks/{task_id}/TASK.md не заполнен раздел «2c. Угрозы» "
         "(угроза → мера → тест; docs/SECURITY.md)."
+    )
+
+
+def missing_review(task_id: str) -> str:
+    """standard/risky закрывается с tasks/<id>/REVIEW.md, где последний вердикт — approve."""
+    if metrics.task_meta(task_id)["risk"] not in {"standard", "risky"}:
+        return ""
+    review = TASKS / task_id / "REVIEW.md"
+    text = review.read_text() if review.exists() else ""
+    verdicts = re.findall(r"VERDICT:\s*(approve|request-changes)", text)
+    if verdicts and verdicts[-1] == "approve":
+        return ""
+    return (
+        f"Нельзя закрыть: нет итога ревью с `VERDICT: approve` в tasks/{task_id}/REVIEW.md "
+        "(шаблон docs/templates/REVIEW.md: ответ reviewer + что устранено)."
     )
 
 

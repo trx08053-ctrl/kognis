@@ -8,5 +8,15 @@ import { defineConfig } from "vite";
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: { proxy: { "/api": "http://127.0.0.1:8000" } },
-  test: { environment: "happy-dom" },
+  test: {
+    environment: "happy-dom",
+    // покрытие фронтенда: абсолютный минимум здесь, рост фиксирует храповик (.quality-baseline.json)
+    coverage: {
+      provider: "v8",
+      include: ["src/**"],
+      exclude: ["src/api.gen.ts", "src/main.tsx", "src/**/*.test.*"],
+      reporter: ["text-summary", "json-summary"],
+      thresholds: { lines: 70, branches: 60 },
+    },
+  },
 });

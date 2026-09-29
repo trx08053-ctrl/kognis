@@ -49,10 +49,17 @@ ALL_CHECKS: list[tuple[str, list[str], bool]] = [
     # ARCHITECTURE.md (таблица модулей, владение таблицами, диаграмма) не расходится с кодом
     ("arch-doc", [PY, "scripts/check_arch_doc.py"], (ROOT / ".importlinter").exists()),
     ("migrations", [PY, "scripts/check_migrations.py"], (ROOT / "alembic.ini").exists()),
-    # фронтенд: Biome, tsc strict, vitest, сборка dist (её открывают e2e-тесты)
+    # контракт API: типы фронтенда (api.gen.ts) сгенерированы из текущей схемы OpenAPI бэкенда
+    (
+        "contract",
+        [PY, "scripts/gen_api_types.py", "--check"],
+        (ROOT / "scripts" / "gen_api_types.py").exists(),
+    ),
+    # фронтенд: Biome, tsc strict, vitest + покрытие, сборка dist (её открывают e2e-тесты)
     ("frontend", ["pnpm", "--dir", "frontend", "run", "check"], (ROOT / "frontend").is_dir()),
     ("tests", ["uv", "run", "--locked", "pytest"], True),
     ("ratchet", [PY, "scripts/check_ratchet.py"], True),
+    ("size", [PY, "scripts/check_size.py"], True),
     # безопасность: Semgrep (harness + OWASP) по коду, osv-scanner по lockfile — docs/SECURITY.md
     ("sast", [PY, "scripts/check_security.py", "sast"], True),
     ("deps", [PY, "scripts/check_security.py", "deps"], True),

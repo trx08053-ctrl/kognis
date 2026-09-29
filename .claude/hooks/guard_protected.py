@@ -53,6 +53,7 @@ PROTECTED = [
     "frontend/tsconfig.json",
     "frontend/biome.json",
     "frontend/vite.config.ts",
+    "frontend/src/api.gen.ts",
     ".claude/settings.json",
     ".claude/hooks/*",
     ".github/*",

@@ -21,7 +21,7 @@ import subprocess
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 ROOT = Path(__file__).resolve().parent.parent
 BASELINE = ROOT / ".quality-baseline.json"
@@ -96,12 +96,31 @@ def load() -> tuple[float, list[str] | None]:
     return float(data.get("coverage", 0.0)), allowed
 
 
+FRONT_SUMMARY = ROOT / "frontend" / "coverage" / "coverage-summary.json"
+
+
+def frontend_coverage() -> dict[str, float]:
+    """Покрытие фронтенда (vitest --coverage, json-summary): {lines, branches} или пусто."""
+    if not FRONT_SUMMARY.exists():
+        return {}
+    total = json.loads(FRONT_SUMMARY.read_text()).get("total", {})
+    return {k: float(total[k]["pct"]) for k in ("lines", "branches") if k in total}
+
+
 def main() -> int:
     base_cov, allowed = load()
     cov, supp = coverage(), suppressions()
+    stored = cast("dict[str, Any]", json.loads(BASELINE.read_text()) if BASELINE.exists() else {})
+    front_base = cast("dict[str, float]", stored.get("frontend_coverage") or {})
+    base_front = {k: float(v) for k, v in front_base.items()}
+    front = frontend_coverage()
     if "--update" in sys.argv:
         kept = supp if allowed is None else [s for s in supp if s in allowed]
-        new = {"coverage": max(cov, base_cov), "suppressions": kept}
+        new: dict[str, object] = {"coverage": max(cov, base_cov), "suppressions": kept}
+        if front or base_front:
+            new["frontend_coverage"] = {
+                k: max(front.get(k, 0.0), base_front.get(k, 0.0)) for k in {*front, *base_front}
+            }
         BASELINE.write_text(json.dumps(new, indent=2, ensure_ascii=False) + "\n")
         print(f"планка: покрытие {new['coverage']}%, подавлений {len(kept)}")
         return 0
@@ -115,6 +134,11 @@ def main() -> int:
             "новые подавления (исправьте код или согласуйте с человеком — он добавит их в "
             ".quality-baseline.json):\n    " + "\n    ".join(new_supp)
         )
+    errors += [
+        f"покрытие фронтенда ({k}) упало: {front[k]}% < планки {v}%"
+        for k, v in base_front.items()
+        if k in front and front[k] + 0.01 < v
+    ]
     diff_ok, diff_info = diff_coverage()
     if not diff_ok:
         errors.append(f"покрытие изменённых строк < {DIFF_FLOOR}%: {diff_info}")

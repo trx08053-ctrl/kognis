@@ -45,3 +45,4 @@ frontend/dist/
 .beads-credential-key
 .beads/proxieddb/
 *.gate.lock*
+frontend/coverage/

@@ -639,6 +639,10 @@ def test_responsive_navigation_screens_and_a11y(browser: Browser, live_server: s
                 page.get_by_role("heading", level=2).first.wait_for()
                 assert no_horizontal_scroll(page), f"{name}/{size_name}/{theme}: прокрутка"
                 expect(nav).to_be_visible()
+                clipped = nav.get_by_role("link").evaluate_all(
+                    "els => els.filter(e => e.scrollWidth > e.clientWidth).map(e => e.textContent)"
+                )
+                assert not clipped, f"подписи навигации обрезаны: {clipped}"
                 shot = SCREENS / f"tm0-{name}-{size_name}-{theme}.png"
                 page.screenshot(path=str(shot), full_page=True)
                 check_axe(page)

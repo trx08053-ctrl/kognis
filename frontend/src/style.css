@@ -11,6 +11,7 @@
   --border: #d5d3e8;
   --accent: #4f46e5;
   --accent-strong: #4338ca;
+  --ring: #4f46e5;
   --accent-fg: #ffffff;
   --accent-soft: #eceafd;
   --accent-text: #3730a3;
@@ -37,6 +38,7 @@
   --border: #383b62;
   --accent-soft: #272a55;
   --accent-text: #c7d2fe;
+  --ring: #a5b4fc;
   --warn-bg: #3a2a08;
   --warn-border: #f59e0b;
   --warn-text: #fde68a;
@@ -80,7 +82,7 @@ body {
   .chip:focus-visible,
   .link:focus-visible,
   .nav-link:focus-visible {
-    outline: 3px solid var(--accent);
+    outline: 3px solid var(--ring);
     outline-offset: 2px;
   }
   .btn {
@@ -184,7 +186,7 @@ body {
   .meter > div {
     height: 100%;
     border-radius: 999px;
-    background: var(--accent);
+    background: var(--ring);
     transition: width 0.3s;
   }
 
@@ -205,13 +207,12 @@ body {
     flex-direction: column;
     align-items: center;
     gap: 0.15rem;
-    padding: 0.5rem 0.25rem;
-    font-size: 0.75rem;
+    padding: 0.5rem 0.125rem;
+    font-size: 0.6875rem;
     color: var(--muted);
   }
   .nav-link[aria-current="page"] {
     color: var(--accent-text);
-    font-weight: 700;
     background: var(--accent-soft);
   }
   @media (min-width: 768px) {

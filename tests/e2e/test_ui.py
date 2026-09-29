@@ -705,6 +705,7 @@ def test_entry_form_chips_and_segmented_protection(page: Page) -> None:
 
 
 @pytest.mark.acceptance("kognis-w58", "AC1")
+@pytest.mark.acceptance("kognis-ndp", "AC1")
 @pytest.mark.e2e
 def test_sidebar_stays_visible_and_full_height_on_long_page(
     browser: Browser, live_server: str
@@ -716,7 +717,10 @@ def test_sidebar_stays_visible_and_full_height_on_long_page(
     register(page, "ann@example.com")
     page.evaluate("document.querySelector('main').style.minHeight = '4000px'")
     page.mouse.wheel(0, 2500)
-    page.wait_for_function("window.scrollY > 1000")
+    deadline = time.monotonic() + 5
+    while page.evaluate("window.scrollY") <= 1000:
+        assert time.monotonic() < deadline, "страница не прокрутилась"
+        page.wait_for_timeout(50)
     nav = page.get_by_role("navigation", name="Разделы")
     expect(nav).to_be_visible()
     box = nav.bounding_box()

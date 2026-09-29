@@ -68,7 +68,7 @@
   - `make_engine` — `src/kognis/db/__init__.py`
   - `metadata` — `src/kognis/db/__init__.py`
   - `transaction` — `src/kognis/db/__init__.py`
-- Тесты: `tests/diary/test_diary.py`, `tests/diary/test_period.py`, `tests/gameplay/test_quests.py`, `tests/gameplay/test_service.py`, `tests/integration/test_postgres.py`, `tests/users/test_users.py`, `tests/web/test_hardening.py`
+- Тесты: `tests/diary/test_boundaries.py`, `tests/diary/test_diary.py`, `tests/diary/test_period.py`, `tests/gameplay/test_mutants.py`, `tests/gameplay/test_quests.py`, `tests/gameplay/test_service.py`, `tests/integration/test_postgres.py`, `tests/users/test_users.py`, `tests/web/test_hardening.py`
 
 ## `kognis.diary`
 
@@ -82,7 +82,7 @@
   - `EntryDraft` — `src/kognis/diary/_domain.py`
   - `EntryUnreadableError` — `src/kognis/diary/_crypto.py`
   - `WrongLockPasswordError` — `src/kognis/diary/_crypto.py`
-- Тесты: `tests/diary/test_diary.py`, `tests/diary/test_period.py`, `tests/integration/test_postgres.py`, `tests/security/test_domain_limits.py`, `tests/web/test_day_reviews.py`
+- Тесты: `tests/diary/test_boundaries.py`, `tests/diary/test_diary.py`, `tests/diary/test_period.py`, `tests/integration/test_postgres.py`, `tests/security/test_domain_limits.py`, `tests/web/test_day_reviews.py`
 
 ## `kognis.gameplay`
 
@@ -105,7 +105,7 @@
   - `QuizStatus` — `src/kognis/gameplay/_quests.py`
   - `StepOutcome` — `src/kognis/gameplay/_quests.py`
   - `StepUnavailableError` — `src/kognis/gameplay/_quests.py`
-- Тесты: `tests/gameplay/test_domain.py`, `tests/gameplay/test_quests.py`, `tests/gameplay/test_service.py`, `tests/security/test_domain_limits.py`
+- Тесты: `tests/gameplay/test_domain.py`, `tests/gameplay/test_mutants.py`, `tests/gameplay/test_quests.py`, `tests/gameplay/test_service.py`, `tests/security/test_domain_limits.py`
 
 ## `kognis.safety`
 

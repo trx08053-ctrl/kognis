@@ -54,17 +54,15 @@ def entry_xp(entries_already_today: int) -> int:
 
 
 def level_for(xp: int) -> int:
-    extra = xp - LEVEL_THRESHOLDS[-1]
-    if extra >= 0:
-        return len(LEVEL_THRESHOLDS) + extra // EXTRA_LEVEL_STEP
-    return sum(1 for threshold in LEVEL_THRESHOLDS if xp >= threshold)
+    reached = sum(1 for threshold in LEVEL_THRESHOLDS if xp >= threshold)
+    last = LEVEL_THRESHOLDS[-1]
+    return reached + (max(xp, last) - last) // EXTRA_LEVEL_STEP
 
 
 def level_start(level: int) -> int:
     """Суммарный XP, с которого начинается уровень."""
-    if level <= len(LEVEL_THRESHOLDS):
-        return LEVEL_THRESHOLDS[level - 1]
-    return LEVEL_THRESHOLDS[-1] + (level - len(LEVEL_THRESHOLDS)) * EXTRA_LEVEL_STEP
+    listed = min(level, len(LEVEL_THRESHOLDS))
+    return LEVEL_THRESHOLDS[listed - 1] + (level - listed) * EXTRA_LEVEL_STEP
 
 
 def _week(day: date) -> tuple[int, int]:

@@ -16,7 +16,7 @@ from typing import Annotated, Any, Literal
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Cookie, Depends, FastAPI, HTTPException, Request, Response
-from fastapi.responses import FileResponse, PlainTextResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, StrictInt
 from sqlalchemy.engine import Engine
@@ -853,6 +853,11 @@ def create_app(
     app = FastAPI(title="Kognis", dependencies=[Depends(require_json)])
     app.state.db = db
     app.add_middleware(BodyLimitMiddleware)
+
+    @app.exception_handler(Exception)
+    async def internal_error(request: Request, exc: Exception) -> JSONResponse:
+        # ASVS V7: наружу — только общий текст, без трассировки и деталей исключения
+        return JSONResponse({"detail": "внутренняя ошибка"}, status_code=500)
 
     @app.middleware("http")
     async def security_headers(request: Request, call_next: Callable[..., Any]) -> Response:

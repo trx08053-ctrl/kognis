@@ -3,7 +3,7 @@
 <!-- Статус задачи — только в bd (`bd show <id>`). Здесь — передача контекста: обновлять после каждого шага. -->
 
 ## Следующий шаг
-Разобрать замечания reviewer (blocker/major), затем `python3 scripts/task.py done kognis-8jq`.
+Ревью (reviewer): approve, blocker/major нет. Выполнить `python3 scripts/task.py done kognis-8jq`.
 
 ## Сделано
 | Дата | Шаг | Коммит | Evidence / проверка |

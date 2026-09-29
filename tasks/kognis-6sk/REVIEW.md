@@ -30,3 +30,14 @@ NOT CHECKED: e2e/vitest/axe не запускал; скриншоты не см�
 | MINOR подложка, tabIndex панели | Не сделано: Biome (useKeyWithClickEvents, noNoninteractiveTabindex) запрещает; Escape и «Закрыть» есть | — |
 | MINOR ссылки на исследования | Оставлено текстом (авторы, год, журнал) | — |
 | MINOR PROGRESS | Заполнен (04a77d2) | 04a77d2 |
+
+## Ревью 2 · 2026-09-29 · e17c1da
+```
+VERDICT: approve
+EVIDENCE: verified 8a4e49db8ccb
+BLOCKERS: нет
+MAJOR: нет (все три прошлых закрыты)
+MINOR: «Тревога по воскресеньям» — приложение тревогу не меряет; PROGRESS «Следующий шаг» устарел
+NOT CHECKED: e2e/vitest/axe сам не запускал; контраст и скринридер не проверял
+```
+Устранено: результат истории → «Настроение по воскресеньям: 4 → 7»; PROGRESS обновлён.

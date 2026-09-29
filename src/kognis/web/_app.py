@@ -857,7 +857,9 @@ def create_app(
     @app.exception_handler(Exception)
     async def internal_error(request: Request, exc: Exception) -> JSONResponse:
         # ASVS V7: наружу — только общий текст, без трассировки и деталей исключения
-        return JSONResponse({"detail": "внутренняя ошибка"}, status_code=500)
+        return JSONResponse(
+            {"detail": "внутренняя ошибка"}, status_code=500, headers=SECURITY_HEADERS
+        )
 
     @app.middleware("http")
     async def security_headers(request: Request, call_next: Callable[..., Any]) -> Response:

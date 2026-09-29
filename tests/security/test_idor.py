@@ -264,6 +264,10 @@ def test_responses_have_no_hashes_ciphertext_or_foreign_data(
         sessions = conn.execute(sql("SELECT * FROM sessions")).all()
     assert user
     forbidden = {token, *(str(v) for v in entry), *(str(v) for row in sessions for v in row)}
+    for value in entry:  # шифртекст — bytes: str(bytes) в JSON не встретится, ищем реальные формы
+        if isinstance(value, bytes):
+            raw = value
+            forbidden |= {base64.b64encode(raw).decode(), raw.hex(), raw.decode("latin-1")}
     public_columns = {"id", "email", "advanced", "timezone"}
     forbidden |= {str(v) for k, v in user.items() if k not in public_columns}
 

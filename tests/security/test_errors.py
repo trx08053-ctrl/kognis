@@ -20,3 +20,4 @@ def test_unhandled_error_hides_details(engine: Engine) -> None:
     assert response.status_code == 500
     assert "XYZ" not in response.text
     assert "Traceback" not in response.text
+    assert "default-src" in response.headers["content-security-policy"]

@@ -112,24 +112,29 @@ export const DEMO_LENSES: readonly {
   },
 ];
 
-export type Metric = "mood" | "anxiety" | "sleep";
+export type Metric = "mood" | "wellbeing";
 
+// Те же шкалы, что в «Итоге дня» (настроение и самочувствие, 1–10)
 export const METRICS: readonly { key: Metric; label: string; hint: string; better: string }[] = [
   { key: "mood", label: "Настроение", hint: "среднее за неделю, шкала 1–10", better: "+2,3 балла" },
-  { key: "anxiety", label: "Тревога", hint: "среднее за неделю, шкала 1–10", better: "−2,6 балла" },
-  { key: "sleep", label: "Сон", hint: "качество сна, шкала 1–10", better: "+1,8 балла" },
+  {
+    key: "wellbeing",
+    label: "Самочувствие",
+    hint: "среднее за неделю, шкала 1–10",
+    better: "+1,8 балла",
+  },
 ];
 
 // Иллюстрация: так может выглядеть динамика итогов дня за 8 недель регулярных записей
-export const TREND: readonly { week: string; mood: number; anxiety: number; sleep: number }[] = [
-  { week: "1 нед", mood: 4.6, anxiety: 7.4, sleep: 5.0 },
-  { week: "2 нед", mood: 4.9, anxiety: 7.1, sleep: 5.1 },
-  { week: "3 нед", mood: 5.1, anxiety: 6.9, sleep: 5.5 },
-  { week: "4 нед", mood: 5.6, anxiety: 6.2, sleep: 5.7 },
-  { week: "5 нед", mood: 5.9, anxiety: 5.9, sleep: 6.2 },
-  { week: "6 нед", mood: 6.2, anxiety: 5.4, sleep: 6.3 },
-  { week: "7 нед", mood: 6.6, anxiety: 5.1, sleep: 6.6 },
-  { week: "8 нед", mood: 6.9, anxiety: 4.8, sleep: 6.8 },
+export const TREND: readonly { week: string; mood: number; wellbeing: number }[] = [
+  { week: "1 нед", mood: 4.6, wellbeing: 5.0 },
+  { week: "2 нед", mood: 4.9, wellbeing: 5.1 },
+  { week: "3 нед", mood: 5.1, wellbeing: 5.5 },
+  { week: "4 нед", mood: 5.6, wellbeing: 5.7 },
+  { week: "5 нед", mood: 5.9, wellbeing: 6.2 },
+  { week: "6 нед", mood: 6.2, wellbeing: 6.3 },
+  { week: "7 нед", mood: 6.6, wellbeing: 6.6 },
+  { week: "8 нед", mood: 6.9, wellbeing: 6.8 },
 ];
 
 export const RESEARCH = [

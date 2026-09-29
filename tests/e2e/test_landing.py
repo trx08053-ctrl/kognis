@@ -148,8 +148,8 @@ def test_landing_interactive(browser: Browser, live_server: str) -> None:
     expect(page.get_by_role("tab", name="Схема-терапия")).to_be_focused()
     expect(lens).to_contain_text("схему «покорность»")
 
-    page.get_by_role("button", name="Тревога", exact=True).click()
-    expect(page.get_by_test_id("metric-delta")).to_have_text("−2,6 балла")
+    page.get_by_role("button", name="Самочувствие", exact=True).click()
+    expect(page.get_by_test_id("metric-delta")).to_have_text("+1,8 балла")
 
     page.get_by_role("button", name="Следующая история").click()
     expect(page.get_by_test_id("story")).to_contain_text("Марина")
@@ -158,6 +158,7 @@ def test_landing_interactive(browser: Browser, live_server: str) -> None:
     dialog = page.get_by_role("dialog")
     expect(dialog).to_be_visible()
     expect(dialog).to_contain_text("Пеннебейкер")
+    expect(page.get_by_role("button", name="Закрыть статью")).to_be_focused()
     check_axe(page)
     page.keyboard.press("Escape")
     expect(dialog).to_be_hidden()

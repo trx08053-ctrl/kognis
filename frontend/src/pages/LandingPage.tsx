@@ -122,7 +122,7 @@ export function LandingPage() {
                   fetchPriority="high"
                 />
                 <div className="lp-float lp-float-mood" aria-hidden="true">
-                  <p className="text-xs muted">Настроение за неделю</p>
+                  <p className="text-xs muted">Пример · настроение за неделю</p>
                   <p className="text-lg font-bold">
                     6,8 <span className="lp-up">▲ 1,2</span>
                   </p>
@@ -136,7 +136,7 @@ export function LandingPage() {
                   </svg>
                 </div>
                 <div className="lp-float lp-float-insight" aria-hidden="true">
-                  <p className="text-xs muted">Инсайт разбора · КПТ</p>
+                  <p className="text-xs muted">Пример инсайта · КПТ</p>
                   <p className="text-sm font-semibold">«Прогноз — ещё не факт»</p>
                 </div>
               </div>

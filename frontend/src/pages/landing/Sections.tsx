@@ -237,8 +237,7 @@ export function Demo() {
 
 const METRIC_COLORS: Record<Metric, string> = {
   mood: "#6366f1",
-  anxiety: "#e11d48",
-  sleep: "#0d9488",
+  wellbeing: "#0d9488",
 };
 
 export function Results() {

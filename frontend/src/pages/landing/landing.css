@@ -570,17 +570,21 @@
   line-height: 1.5;
 }
 .lp-dot {
+  /* видимая точка 12 px, цель нажатия — 24 px (WCAG 2.2 target-size) */
   width: 0.75rem;
   height: 0.75rem;
+  box-sizing: content-box;
+  border: 6px solid transparent;
+  background-clip: padding-box;
   border-radius: 999px;
-  background: var(--border);
+  background-color: var(--border);
   transition:
     width 0.25s,
     background-color 0.25s;
 }
 .lp-dot[aria-current="true"] {
   width: 2rem;
-  background: var(--accent);
+  background-color: var(--accent);
 }
 
 /* Статьи */

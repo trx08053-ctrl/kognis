@@ -89,11 +89,12 @@ test("демо: вкладки направлений мышью и с клав�
 test("график: переключение показателя", async () => {
   renderAnonymous();
   expect((await screen.findByTestId("metric-delta")).textContent).toBe("+2,3 балла");
-  fireEvent.click(screen.getByRole("button", { name: "Тревога" }));
-  expect(screen.getByTestId("metric-delta").textContent).toBe("−2,6 балла");
-  expect(screen.getByRole("button", { name: "Тревога" }).getAttribute("aria-pressed")).toBe("true");
-  fireEvent.click(screen.getByRole("button", { name: "Сон" }));
-  expect(screen.getByRole("img", { name: /График «Сон»/ })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Самочувствие" }));
+  expect(screen.getByTestId("metric-delta").textContent).toBe("+1,8 балла");
+  expect(screen.getByRole("button", { name: "Самочувствие" }).getAttribute("aria-pressed")).toBe(
+    "true",
+  );
+  expect(screen.getByRole("img", { name: /График «Самочувствие»/ })).toBeTruthy();
 });
 
 test("истории листаются вперёд, назад и по точкам", async () => {

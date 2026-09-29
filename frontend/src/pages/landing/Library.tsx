@@ -1,5 +1,5 @@
 // Секции лендинга: истории, статьи, частые вопросы.
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowIcon, ChevronLeftIcon, ChevronRightIcon, CloseIcon } from "../../Icons";
 import { ARTICLES, type Article, FAQ, STORIES } from "./content";
 import { Reveal } from "./motion";
@@ -18,17 +18,20 @@ export function Stories() {
         text="Истории-примеры: так Kognis помогает в типичных жизненных ситуациях."
       />
       <Reveal className="lp-story-wrap">
-        <article className="lp-story" aria-live="polite" data-testid="story" key={story.name}>
-          <img src={story.photo} alt="" className="lp-story-photo" loading="lazy" />
-          <div className="lp-story-body">
-            <p className="text-sm muted">Было: {story.before}</p>
-            <blockquote className="lp-story-quote">«{story.quote}»</blockquote>
-            <p className="font-semibold">
-              {story.name} <span className="font-normal muted">· {story.role}</span>
-            </p>
-            <p className="badge mt-3">{story.result}</p>
-          </div>
-        </article>
+        <div aria-live="polite">
+          <article className="lp-story" data-testid="story" key={story.name}>
+            <img src={story.photo} alt="" className="lp-story-photo" loading="lazy" />
+            <div className="lp-story-body">
+              <p className="text-sm muted">Было: {story.before}</p>
+              <blockquote className="lp-story-quote">«{story.quote}»</blockquote>
+              <p className="font-semibold">
+                {story.name} <span className="font-normal muted">· {story.role}</span>
+              </p>
+              <p className="badge mt-3">{story.result}</p>
+              <p className="mt-4 text-xs muted">Вымышленная история-пример, фото — иллюстрация.</p>
+            </div>
+          </article>
+        </div>
         <div className="mt-6 flex items-center justify-center gap-4">
           <button
             type="button"
@@ -67,10 +70,13 @@ export function Stories() {
 export function Articles() {
   const dialog = useRef<HTMLDialogElement>(null);
   const [open, setOpen] = useState<Article | null>(null);
+  // модальное окно открывается после отрисовки статьи — фокус попадает на «Закрыть»
+  useEffect(() => {
+    const node = dialog.current;
+    if (open && node && typeof node.showModal === "function" && !node.open) node.showModal();
+  }, [open]);
   function show(article: Article) {
     setOpen(article);
-    const node = dialog.current;
-    if (node && typeof node.showModal === "function" && !node.open) node.showModal();
   }
   function close() {
     const node = dialog.current;

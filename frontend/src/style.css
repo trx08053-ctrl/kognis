@@ -234,7 +234,15 @@ body {
       font-size: 1rem;
     }
     .layout {
+      min-height: 100vh;
       padding-left: 13rem;
+      /* фон меню продолжается на всю высоту страницы, в том числе на полноэкранных снимках */
+      background: linear-gradient(
+        to right,
+        var(--surface) calc(13rem - 1px),
+        var(--border) calc(13rem - 1px) 13rem,
+        transparent 13rem
+      );
     }
   }
 }

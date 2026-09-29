@@ -221,7 +221,7 @@ def test_progress_widget_and_achievements_page(page: Page) -> None:
     SCREENS.mkdir(parents=True, exist_ok=True)
     page.screenshot(path=str(SCREENS / "e2e-progress.png"), full_page=True)
 
-    page.get_by_role("link", name="Достижения").click()
+    page.get_by_role("link", name="Профиль").click()
     item = page.get_by_test_id("achievements").get_by_role("listitem")
     expect(item).to_have_count(1)
     expect(item).to_contain_text("Первая запись")
@@ -471,10 +471,8 @@ def test_dark_theme_follows_system_and_is_remembered(browser: Browser, live_serv
 
     register(lp, "ann@example.com")
     toggle = lp.get_by_test_id("theme-toggle")
-    expect(toggle).to_have_attribute("aria-pressed", "false")
     toggle.click()
     assert is_dark(lp)
-    expect(toggle).to_have_attribute("aria-pressed", "true")
     lp.reload()  # выбор хранится в браузере
     expect(lp.get_by_test_id("whoami")).to_be_visible()
     assert is_dark(lp)
@@ -497,7 +495,9 @@ def test_advanced_mode_shows_charts_and_filters_and_is_kept_on_server(
     expect(page.get_by_test_id("mood-chart")).to_have_count(0)
     expect(page.get_by_test_id("entry-filters")).to_have_count(0)
 
+    page.get_by_role("link", name="Профиль").click()
     page.get_by_test_id("advanced-toggle").check()
+    page.get_by_role("link", name="Дневник", exact=True).click()
     expect(page.get_by_test_id("mood-chart")).to_be_visible()
     filters = page.get_by_test_id("entry-filters")
     expect(filters).to_be_visible()
@@ -511,11 +511,14 @@ def test_advanced_mode_shows_charts_and_filters_and_is_kept_on_server(
 
     other = fresh_page(browser, live_server)  # другой браузер: режим пришёл с сервера
     login(other, "ann@example.com")
-    expect(other.get_by_test_id("advanced-toggle")).to_be_checked()
     expect(other.get_by_test_id("mood-chart")).to_be_visible()
+    other.get_by_role("link", name="Профиль").click()
+    expect(other.get_by_test_id("advanced-toggle")).to_be_checked()
     other.get_by_test_id("advanced-toggle").uncheck()
+    other.get_by_role("link", name="Дневник", exact=True).click()
     expect(other.get_by_test_id("mood-chart")).to_have_count(0)
     other.context.close()
+    page.get_by_role("link", name="Профиль").click()
     page.reload()
     expect(page.get_by_test_id("advanced-toggle")).not_to_be_checked()
 
@@ -525,7 +528,7 @@ def test_advanced_mode_shows_charts_and_filters_and_is_kept_on_server(
 def test_key_screens_have_no_serious_a11y_violations_in_both_themes(
     browser: Browser, live_server: str
 ) -> None:
-    """axe на главной (простой и Advanced), итоге дня и достижениях — в светлой и тёмной теме."""
+    """axe на главной (простой и Advanced), итоге дня и профиле — в светлой и тёмной теме."""
     SCREENS.mkdir(parents=True, exist_ok=True)
     context = browser.new_context(
         viewport={"width": 1024, "height": 900}, locale="ru-RU", color_scheme="light"
@@ -549,10 +552,12 @@ def test_key_screens_have_no_serious_a11y_violations_in_both_themes(
             ("home", ""),
             ("home-advanced", "advanced"),
             ("day", "Итог дня"),
-            ("achievements", "Достижения"),
+            ("profile", "Профиль"),
         ]:
             if action == "advanced":
+                page.get_by_role("link", name="Профиль").click()
                 page.get_by_test_id("advanced-toggle").check()
+                page.get_by_role("link", name="Дневник", exact=True).click()
                 expect(page.get_by_test_id("mood-chart")).to_be_visible()
             elif action:
                 page.get_by_role("link", name=action).click()
@@ -560,8 +565,9 @@ def test_key_screens_have_no_serious_a11y_violations_in_both_themes(
             page.wait_for_timeout(200)  # отрисовка графика
             page.screenshot(path=str(SCREENS / f"0wr-{name}-{theme}.png"), full_page=True)
             check_axe(page)
-        page.get_by_role("link", name="Дневник").click()
+        page.get_by_role("link", name="Профиль").click()
         page.get_by_test_id("advanced-toggle").uncheck()
+        page.get_by_role("link", name="Дневник", exact=True).click()
     context.close()
 
 
@@ -593,7 +599,7 @@ ROUTES = [
     ("day", "Итог дня"),
     ("analysis", "Разбор"),
     ("quests", "Квесты"),
-    ("achievements", "Достижения"),
+    ("profile", "Профиль"),
 ]
 MOBILE = ViewportSize(width=375, height=812)
 DESKTOP = ViewportSize(width=1280, height=800)
@@ -610,6 +616,7 @@ def no_horizontal_scroll(page: Page) -> bool:
 @pytest.mark.acceptance("kognis-tm0", "AC1")
 @pytest.mark.acceptance("kognis-tm0", "AC3")
 @pytest.mark.acceptance("kognis-tm0", "AC4")
+@pytest.mark.acceptance("kognis-w58", "AC4")
 @pytest.mark.e2e
 def test_responsive_navigation_screens_and_a11y(browser: Browser, live_server: str) -> None:
     """375 px: нет горизонтальной прокрутки, навигация — нижняя панель; 1280 px — боковая.
@@ -695,3 +702,69 @@ def test_entry_form_chips_and_segmented_protection(page: Page) -> None:
     expect(entries).to_contain_text("предвкушение")
     expect(entries).to_contain_text("#дом")
     expect(entries).not_to_contain_text("#семья")
+
+
+@pytest.mark.acceptance("kognis-w58", "AC1")
+@pytest.mark.e2e
+def test_sidebar_stays_visible_and_full_height_on_long_page(
+    browser: Browser, live_server: str
+) -> None:
+    """Длинная страница на десктопе: после прокрутки меню на месте, на всю высоту окна, с фоном."""
+    context = browser.new_context(viewport=DESKTOP, locale="ru-RU", color_scheme="light")
+    page = context.new_page()
+    page.goto(live_server)
+    register(page, "ann@example.com")
+    page.evaluate("document.querySelector('main').style.minHeight = '4000px'")
+    page.mouse.wheel(0, 2500)
+    page.wait_for_function("window.scrollY > 1000")
+    nav = page.get_by_role("navigation", name="Разделы")
+    expect(nav).to_be_visible()
+    box = nav.bounding_box()
+    assert box is not None
+    assert box["y"] == 0
+    assert box["height"] >= DESKTOP["height"] - 1
+    background = nav.evaluate("e => getComputedStyle(e).backgroundColor")
+    assert background not in {"rgba(0, 0, 0, 0)", "transparent"}
+    context.close()
+
+
+@pytest.mark.acceptance("kognis-w58", "AC2")
+@pytest.mark.e2e
+def test_settings_live_on_profile_page_and_are_saved(browser: Browser, live_server: str) -> None:
+    """Advanced и часовой пояс — на «Профиле» и сохраняются на сервере; на «Дневнике» их нет."""
+    page = fresh_page(browser, live_server)
+    register(page, "ann@example.com")
+    expect(page.get_by_test_id("advanced-toggle")).to_have_count(0)
+    expect(page.get_by_test_id("timezone-select")).to_have_count(0)
+
+    page.get_by_role("link", name="Профиль").click()
+    expect(page.get_by_role("heading", name="Профиль", level=2)).to_be_visible()
+    page.get_by_test_id("advanced-toggle").check()
+    page.get_by_test_id("timezone-select").select_option("Asia/Vladivostok")
+    expect(page.get_by_test_id("timezone-select")).to_have_value("Asia/Vladivostok")
+
+    page.reload()
+    expect(page.get_by_test_id("advanced-toggle")).to_be_checked()
+    expect(page.get_by_test_id("timezone-select")).to_have_value("Asia/Vladivostok")
+    page.get_by_role("link", name="Дневник", exact=True).click()
+    expect(page.get_by_test_id("advanced-toggle")).to_have_count(0)
+    expect(page.get_by_test_id("timezone-select")).to_have_count(0)
+    page.context.close()
+
+
+@pytest.mark.acceptance("kognis-w58", "AC3")
+@pytest.mark.e2e
+def test_theme_button_name_describes_action(browser: Browser, live_server: str) -> None:
+    """В светлой теме кнопка «Тёмная тема», в тёмной — «Светлая тема»; клик переключает тему."""
+    context = browser.new_context(viewport=DESKTOP, locale="ru-RU", color_scheme="light")
+    page = context.new_page()
+    page.goto(live_server)
+    register(page, "ann@example.com")
+    assert not is_dark(page)
+    page.get_by_role("button", name="Тёмная тема").click()
+    assert is_dark(page)
+    expect(page.get_by_role("button", name="Тёмная тема")).to_have_count(0)
+    page.get_by_role("button", name="Светлая тема").click()
+    assert not is_dark(page)
+    expect(page.get_by_role("button", name="Тёмная тема")).to_be_visible()
+    context.close()

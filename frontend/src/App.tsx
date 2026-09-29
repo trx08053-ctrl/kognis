@@ -38,6 +38,7 @@ import {
   SparkIcon,
   SunIcon,
   TrophyIcon,
+  UserIcon,
 } from "./Icons";
 import { decryptText, encryptText, MIN_PRIVATE_PASSWORD } from "./privateCrypto";
 import { QuestsPage } from "./Quests";
@@ -911,15 +912,6 @@ function ProgressWidget() {
   const done = Math.min(span, data.xp - data.level_start_xp);
   return (
     <section aria-label="Прогресс" data-testid="progress" className="space-y-2 card">
-      <p className="flex flex-wrap items-center gap-2 font-semibold">
-        <span className="badge" data-testid="level">
-          Уровень {data.level}
-        </span>
-        <span className="badge">
-          <FlameIcon />
-          <span data-testid="streak">Серия: {data.streak} дн.</span>
-        </span>
-      </p>
       <div
         className="meter"
         role="progressbar"
@@ -937,14 +929,14 @@ function ProgressWidget() {
   );
 }
 
-function AchievementsPage() {
+function Achievements() {
   const progress = useProgress();
   const earned = progress.data?.achievements ?? [];
   return (
     <section aria-labelledby="achievements-title" className="space-y-3">
-      <h2 id="achievements-title" className="text-xl font-semibold">
+      <h3 id="achievements-title" className="text-lg font-semibold">
         Достижения
-      </h2>
+      </h3>
       <ErrorMessage error={progress.error} />
       {progress.data && earned.length === 0 && <p>Пока нет достижений.</p>}
       <ul className="space-y-2" data-testid="achievements">
@@ -1261,16 +1253,9 @@ function TimezoneField({ user }: { user: User }) {
   );
 }
 
-function Shell({ user, children }: { user: User; children: ReactNode }) {
+// профиль: настройки (режим Advanced, часовой пояс) и достижения
+function ProfilePage({ user }: { user: User }) {
   const client = useQueryClient();
-  const out = useMutation({
-    mutationFn: logout,
-    onSuccess: () => {
-      client.clear();
-      return client.invalidateQueries({ queryKey: ["me"] });
-    },
-  });
-  const [theme, toggleTheme] = useTheme();
   // переключатель откликается сразу (локальное состояние); при ошибке сервера возвращаем прежнее
   const [advanced, setAdvanced] = useState(user.advanced === true);
   const mode = useMutation({
@@ -1284,53 +1269,86 @@ function Shell({ user, children }: { user: User; children: ReactNode }) {
   });
   return (
     <div className="space-y-6">
-      <header className="card space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <span
-              aria-hidden="true"
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--accent)] text-lg font-bold text-[var(--accent-fg)]"
-            >
-              {user.email.charAt(0).toUpperCase()}
-            </span>
+      <h2 className="text-2xl font-bold">Профиль</h2>
+      <section aria-labelledby="settings-title" className="card space-y-3">
+        <h3 id="settings-title" className="text-lg font-semibold">
+          Настройки
+        </h3>
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            className="h-5 w-5 accent-[var(--accent)]"
+            data-testid="advanced-toggle"
+            checked={advanced}
+            onChange={(event) => {
+              setAdvanced(event.target.checked);
+              mode.mutate(event.target.checked);
+            }}
+          />
+          Advanced
+        </label>
+        <p className="text-sm muted">Графики настроения и фильтры записей на странице «Дневник».</p>
+        <ErrorMessage error={mode.error} />
+        <TimezoneField user={user} />
+      </section>
+      <Achievements />
+    </div>
+  );
+}
+
+function Shell({ user, children }: { user: User; children: ReactNode }) {
+  const client = useQueryClient();
+  const out = useMutation({
+    mutationFn: logout,
+    onSuccess: () => {
+      client.clear();
+      return client.invalidateQueries({ queryKey: ["me"] });
+    },
+  });
+  const [theme, toggleTheme] = useTheme();
+  const progress = useProgress();
+  return (
+    <div className="space-y-6">
+      <header className="card flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <span
+            aria-hidden="true"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--accent)] text-lg font-bold text-[var(--accent-fg)]"
+          >
+            {user.email.charAt(0).toUpperCase()}
+          </span>
+          <div className="min-w-0">
             <p data-testid="whoami" className="min-w-0 truncate font-semibold">
               {user.email}
             </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              data-testid="theme-toggle"
-              aria-pressed={theme === "dark"}
-              className="btn-ghost"
-              onClick={toggleTheme}
-            >
-              <MoonIcon />
-              Тёмная тема
-            </button>
-            <button type="button" className="btn-ghost" onClick={() => out.mutate()}>
-              <LogoutIcon />
-              Выйти
-            </button>
+            {progress.data && (
+              <p className="flex flex-wrap items-center gap-2 text-sm font-semibold">
+                <span className="badge" data-testid="level">
+                  Уровень {progress.data.level}
+                </span>
+                <span className="badge">
+                  <FlameIcon />
+                  <span data-testid="streak">Серия: {progress.data.streak} дн.</span>
+                </span>
+              </p>
+            )}
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              className="h-5 w-5 accent-[var(--accent)]"
-              data-testid="advanced-toggle"
-              checked={advanced}
-              onChange={(event) => {
-                setAdvanced(event.target.checked);
-                mode.mutate(event.target.checked);
-              }}
-            />
-            Advanced
-          </label>
-          <TimezoneField user={user} />
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            data-testid="theme-toggle"
+            className="btn-ghost"
+            onClick={toggleTheme}
+          >
+            {theme === "dark" ? <SunIcon /> : <MoonIcon />}
+            {theme === "dark" ? "Светлая тема" : "Тёмная тема"}
+          </button>
+          <button type="button" className="btn-ghost" onClick={() => out.mutate()}>
+            <LogoutIcon />
+            Выйти
+          </button>
         </div>
-        <ErrorMessage error={mode.error} />
       </header>
       <ProgressWidget />
       <nav aria-label="Разделы" className="nav m-0">
@@ -1354,12 +1372,12 @@ const NAV = [
   { to: "/day", label: "Итог дня", Icon: SunIcon },
   { to: "/analysis", label: "Разбор", Icon: SparkIcon },
   { to: "/quests", label: "Квесты", Icon: FlagIcon },
-  { to: "/achievements", label: "Достижения", Icon: TrophyIcon },
+  { to: "/profile", label: "Профиль", Icon: UserIcon },
 ];
 
 const ONBOARDING_KEY = "kognis-onboarded";
 
-// первый вход: короткое объяснение и дисклеймер; закрытие запоминается в браузере
+// первый вход: короткое объяснение (дисклеймер — в подвале); закрытие запоминается в браузере
 function Onboarding() {
   const [hidden, setHidden] = useState(() => {
     try {
@@ -1388,10 +1406,7 @@ function Onboarding() {
       </h2>
       <p>
         Записывайте мысли и переживания, подводите итог дня, получайте опыт и уровни. Режим Advanced
-        (переключатель вверху) открывает графики и фильтры записей.
-      </p>
-      <p className="font-semibold">
-        Kognis не медицинская помощь и не заменяет специалиста. В кризисной ситуации звоните 112.
+        (в разделе «Профиль») открывает графики и фильтры записей.
       </p>
       <button type="button" className={buttonClass} data-testid="onboarding-close" onClick={close}>
         Понятно
@@ -1509,13 +1524,14 @@ export function App() {
           }
         />
         <Route
-          path="/achievements"
+          path="/profile"
           element={
             <Shell user={user}>
-              <AchievementsPage />
+              <ProfilePage user={user} />
             </Shell>
           }
         />
+        <Route path="/achievements" element={<Navigate to="/profile" replace />} />
         <Route
           path="/quests"
           element={
@@ -1542,9 +1558,7 @@ export function App() {
     <div className={user ? "layout" : ""}>
       <main className="mx-auto max-w-2xl space-y-6 px-4 pb-28 pt-6 md:pb-10">
         <h1 className="text-3xl font-bold">Kognis</h1>
-        <p className="text-sm muted">
-          Дневник переживаний. Это не медицинская помощь и не замена специалисту.
-        </p>
+        <p className="text-sm muted">Дневник переживаний.</p>
         {body}
       </main>
     </div>

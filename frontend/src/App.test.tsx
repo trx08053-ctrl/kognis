@@ -290,7 +290,7 @@ test("страница достижений показывает дату пол
       }),
   });
   renderApp();
-  fireEvent.click(await screen.findByRole("link", { name: "Достижения" }));
+  fireEvent.click(await screen.findByRole("link", { name: "Профиль" }));
   const list = await screen.findByTestId("achievements");
   expect(list.textContent).toContain("Первая запись");
   expect(list.textContent).toContain("Получено: 2026-09-01");
@@ -434,6 +434,7 @@ test("пояс профиля меняется в интерфейсе и отп
     },
   });
   renderApp();
+  fireEvent.click(await screen.findByRole("link", { name: "Профиль" }));
   const select = await screen.findByTestId("timezone-select");
   fireEvent.change(select, { target: { value: "Asia/Vladivostok" } });
   await waitFor(() => expect(saved).toEqual({ timezone: "Asia/Vladivostok" }));

@@ -51,7 +51,7 @@
 ## Definition of Done
 - [ ] каждый критерий ACn из TASK.md подтверждён приёмочным тестом `@pytest.mark.acceptance("<id>", "ACn")` через публичный интерфейс
 - [ ] `just verify` зелёный, в отчёте указаны tree/head из evidence
-- [ ] документация обновлена (карточки компонентов, `just map`); значимое решение → ADR (`Proposed`); компромисс → [TECH_DEBT](docs/TECH_DEBT.md)
+- [ ] документация обновлена (карточки компонентов, `just map`, таблица модулей и диаграмма в ARCHITECTURE.md — проверка `arch-doc`); значимое решение → ADR (`Proposed`); компромисс → [TECH_DEBT](docs/TECH_DEBT.md)
 - [ ] reviewer: нет blocker/major; в отчёте перечислено, что **не** проверено
 
 ## Подробнее

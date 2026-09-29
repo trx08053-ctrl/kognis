@@ -46,6 +46,8 @@ ALL_CHECKS: list[tuple[str, list[str], bool]] = [
     ("types", ["uv", "run", "--locked", "basedpyright"], True),
     ("arch", ["uv", "run", "--locked", "lint-imports"], (ROOT / ".importlinter").exists()),
     ("boundaries", [PY, "scripts/check_boundaries.py"], (ROOT / ".importlinter").exists()),
+    # ARCHITECTURE.md (таблица модулей, владение таблицами, диаграмма) не расходится с кодом
+    ("arch-doc", [PY, "scripts/check_arch_doc.py"], (ROOT / ".importlinter").exists()),
     ("migrations", [PY, "scripts/check_migrations.py"], (ROOT / "alembic.ini").exists()),
     # фронтенд: Biome, tsc strict, vitest, сборка dist (её открывают e2e-тесты)
     ("frontend", ["pnpm", "--dir", "frontend", "run", "check"], (ROOT / "frontend").is_dir()),

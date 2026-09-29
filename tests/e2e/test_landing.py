@@ -167,3 +167,21 @@ def test_landing_interactive(browser: Browser, live_server: str) -> None:
     faq.locator("summary").click()
     expect(faq).to_contain_text("Только вы")
     page.context.close()
+
+
+@pytest.mark.acceptance("kognis-6sk", "AC4")
+@pytest.mark.e2e
+def test_logged_in_user_sees_diary_not_landing(browser: Browser, live_server: str) -> None:
+    """После входа `/` (и перезагрузка) — дневник, лендинга нет; после выхода — снова лендинг."""
+    page = open_landing(browser, live_server)
+    page.get_by_role("button", name="Нет аккаунта? Зарегистрироваться").click()
+    page.get_by_label("Email").fill("ann@example.com")
+    page.get_by_label("Пароль").fill(VALID_PW)
+    page.get_by_test_id("auth-submit").click()
+    expect(page.get_by_test_id("whoami")).to_have_text("ann@example.com")
+    page.goto(live_server)
+    expect(page.get_by_label("Что произошло и что вы чувствуете")).to_be_visible()
+    expect(page.get_by_test_id("cta-hero")).to_have_count(0)
+    page.get_by_role("button", name="Выйти").click()
+    expect(page.get_by_test_id("cta-hero")).to_be_visible()
+    page.context.close()

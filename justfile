@@ -179,3 +179,7 @@ release version:
     git add CHANGELOG.md pyproject.toml uv.lock
     git commit -m "chore(release): v{{version}}"
     git tag -a v{{version}} -m "v{{version}}"
+
+# Оценка качества ИИ-разбора на наборе примеров (evals/ai): --provider fake|env (env — реальная модель из настроек)
+ai-eval *args:
+    uv run --locked python scripts/ai_eval.py {{args}}

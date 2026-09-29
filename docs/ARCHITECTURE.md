@@ -96,8 +96,8 @@ flowchart TB
 | Доступность | допустим простой минуты | `/health` проверяет БД |
 | RPO / RTO | RPO ≤ 24 ч (ежедневный бэкап БД, `just backup`); RTO ≤ 1 ч (`just restore` из последнего дампа) | репетиция `selftest-deploy`; сроки — RUNBOOK |
 
-Как мерить: `just stage`, затем `python3 scripts/seed_perf.py --url … --print-cookie` (засев года через API и cookie
-сеанса) и `just perf <путь> --cookie … --budget-ms 200` — команды и порядок в [RUNBOOK](RUNBOOK.md). Бюджет нарушен
+Как мерить: `just stage`, затем `python3 scripts/seed_perf.py --url …` (засев года через API; печатает cookie сеанса;
+`--print-cookie` — только войти и получить cookie без засева) и `just perf <путь> --cookie … --budget-ms 200` — команды и порядок в [RUNBOOK](RUNBOOK.md). Бюджет нарушен
 (`PERF FAIL`) — это дефект: задача `bd`, а не подгонка бюджета. Замер на staging делает техответственный.
 
 - **Безопасность:** чувствительные персональные данные; пароли — стойкий хэш (argon2/bcrypt); фильтр по владельцу в

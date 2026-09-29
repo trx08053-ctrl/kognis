@@ -12,14 +12,15 @@ const IV_BYTES = 12;
 // версия формата привязана к шифртексту: подмена заголовка конверта расшифровку не пройдёт
 const AAD = new TextEncoder().encode(`kognis-private-v${FORMAT_VERSION}`);
 
-export interface Envelope {
+// type, а не interface: конверт должен быть совместим с Record<string, unknown> из схемы API
+export type Envelope = {
   v: number;
   kdf: string;
   iter: number;
   salt: string;
   iv: string;
   ct: string;
-}
+};
 
 export class WrongPasswordError extends Error {
   constructor() {

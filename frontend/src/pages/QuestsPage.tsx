@@ -11,7 +11,7 @@ import {
   type Quiz,
   type QuizResult,
   submitQuiz,
-} from "./api";
+} from "../api";
 
 const inputClass = "input";
 const buttonClass = "btn";

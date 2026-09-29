@@ -10,8 +10,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { getMood } from "./api";
-import { shiftDay, useToday } from "./dates";
+import { getMood } from "../api";
+import { shiftDay, useToday } from "../dates";
 
 const MOOD_COLOR = "#6366f1";
 const WELLBEING_COLOR = "#10b981";

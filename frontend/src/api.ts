@@ -1,48 +1,22 @@
-// Клиент HTTP API бэкенда (/api/*). Типы повторяют схемы FastAPI (UserOut, EntryOut).
+// Клиент HTTP API бэкенда (/api/*). Типы ответов и запросов — из схемы OpenAPI бэкенда (api.gen.ts,
+// `just api-types`); здесь они только сужаются (Refine): переименование поля в схеме ломает tsc.
 // Сессия — httpOnly cookie, её ставит и читает браузер; изменяющие запросы — только JSON (CSRF, ADR 0003).
 
+import type { components } from "./api.gen";
 import type { Envelope } from "./privateCrypto";
 
-export interface User {
-  id: number;
-  email: string;
-  advanced: boolean;
-  timezone: string;
-  today: string; // сегодняшняя дата пользователя (ГГГГ-ММ-ДД) в его часовом поясе
-}
+type Schemas = components["schemas"];
 
-export interface HelpContact {
-  name: string;
-  phone: string;
-  note: string;
-}
+// сужение типа схемы: ключи и типы R обязаны существовать в T (иначе ошибка компиляции)
+type Refine<T, R extends { [K in keyof R]: K extends keyof T ? T[K] : never }> = Omit<T, keyof R> &
+  R;
 
-export interface HelpBlock {
-  message: string;
-  contacts: HelpContact[];
-}
-
-export interface Entry {
-  id: number;
-  date: string;
-  text: string;
-  tags: string[];
-  emotions: string[];
-  protection: string;
-  crisis: boolean;
-  cipher?: Envelope | null;
-  help: HelpBlock | null;
-}
-
-export interface NewEntry {
-  text: string;
-  tags: string[];
-  emotions: string[];
-  protection?: "plain" | "locked" | "private";
-  lock_password?: string;
-  // приватная запись: text пуст, на сервер идёт только шифртекст (privateCrypto.ts)
-  cipher?: Envelope;
-}
+// поля со значением по умолчанию сервер отдаёт всегда, хотя в схеме они необязательны
+export type User = Refine<Schemas["UserOut"], { advanced: boolean; timezone: string }>;
+export type HelpContact = Schemas["ContactOut"];
+export type HelpBlock = Schemas["HelpOut"];
+export type Entry = Refine<Schemas["EntryOut"], { crisis: boolean; cipher?: Envelope | null }>;
+export type NewEntry = Refine<Schemas["EntryIn"], { cipher?: Envelope }>;
 
 export class ApiError extends Error {
   constructor(
@@ -93,88 +67,26 @@ export const listEntries = (): Promise<Entry[]> =>
   fetch("/api/entries").then((r) => parse<Entry[]>(r));
 export const createEntry = (entry: NewEntry): Promise<Entry> => post<Entry>("/api/entries", entry);
 
-export interface DayReview {
-  id: number;
-  date: string;
-  wellbeing: number;
-  mood: number;
-  reflection: string;
-  help: HelpBlock | null;
-}
-
-export interface DayReviewInput {
-  wellbeing: number;
-  mood: number;
-  reflection: string;
-}
-
-export interface Achievement {
-  code: string;
-  title: string;
-  description: string;
-  earned_on: string;
-}
-
-export interface Progress {
-  xp: number;
-  level: number;
-  level_start_xp: number;
-  next_level_xp: number;
-  streak: number;
-  achievements: Achievement[];
-}
+export type DayReview = Schemas["DayReviewOut"];
+export type DayReviewInput = Schemas["DayReviewIn"];
+export type Achievement = Schemas["AchievementOut"];
+export type Progress = Schemas["ProgressOut"];
 
 export const getProgress = (): Promise<Progress> =>
   fetch("/api/progress").then((r) => parse<Progress>(r));
 
 export const listDayReviews = (): Promise<DayReview[]> =>
   fetch("/api/day-reviews").then((r) => parse<DayReview[]>(r));
-export interface Direction {
-  code: string;
-  title: string;
-}
 
-export interface Pattern {
-  title: string;
-  description: string;
-  entry_ids: number[];
-  quotes: string[];
-}
-
-export interface Analysis {
-  id: number;
-  parent_id: number | null;
-  direction: string;
-  start: string;
-  end: string;
-  status: "done" | "crisis";
-  summary: string | null;
-  patterns: Pattern[];
-  questions: string[];
-  quest_ideas: string[];
-  answers: string[];
-  help: HelpBlock | null;
-}
-
-export interface MoodPoint {
-  date: string;
-  mood: number;
-  wellbeing: number;
-}
-
-export interface MoodDynamics {
-  points: MoodPoint[];
-  average_mood: number | null;
-  average_wellbeing: number | null;
-  trend: "up" | "down" | "flat" | "unknown";
-}
-
-export interface AnalysisRequest {
-  direction: string;
-  start: string;
-  end: string;
-  consent: boolean;
-}
+export type Direction = Schemas["DirectionOut"];
+export type Pattern = Schemas["PatternOut"];
+export type Analysis = Refine<Schemas["AnalysisOut"], { status: "done" | "crisis" }>;
+export type MoodPoint = Schemas["MoodPointOut"];
+export type MoodDynamics = Refine<
+  Schemas["MoodOut"],
+  { trend: "up" | "down" | "flat" | "unknown" }
+>;
+export type AnalysisRequest = Schemas["AnalyzeIn"];
 
 export const listDirections = (): Promise<Direction[]> =>
   fetch("/api/analyses/directions").then((r) => parse<Direction[]>(r));
@@ -197,50 +109,15 @@ export const saveDayReview = (date: string, review: DayReviewInput): Promise<Day
     body: JSON.stringify(review),
   }).then((r) => parse<DayReview>(r));
 
-export interface QuestStep {
-  idx: number;
-  title: string;
-  done_on: string | null;
-}
-
-export interface Quest {
-  id: number;
-  source: "library" | "analysis";
-  template_code: string | null;
-  kind: "quest" | "challenge";
-  title: string;
-  description: string;
-  created_on: string;
-  completed_on: string | null;
-  steps: QuestStep[];
-}
-
-export interface QuestTemplate {
-  code: string;
-  title: string;
-  description: string;
-  direction: string;
-  kind: "quest" | "challenge";
-  steps: string[];
-}
-
-export interface StepDone {
-  quest: Quest;
-  xp: number;
-}
-
-export interface Quiz {
-  code: string;
-  title: string;
-  questions: string[];
-  done_today: boolean;
-}
-
-export interface QuizResult {
-  xp: number;
-  saved: { date: string; answers: string[] };
-  help: HelpBlock | null;
-}
+export type QuestStep = Schemas["QuestStepOut"];
+export type Quest = Refine<
+  Schemas["QuestOut"],
+  { source: "library" | "analysis"; kind: "quest" | "challenge" }
+>;
+export type QuestTemplate = Refine<Schemas["QuestTemplateOut"], { kind: "quest" | "challenge" }>;
+export type StepDone = Refine<Schemas["StepDoneOut"], { quest: Quest }>;
+export type Quiz = Schemas["QuizOut"];
+export type QuizResult = Schemas["QuizResultOut"];
 
 export const listQuestLibrary = (): Promise<QuestTemplate[]> =>
   fetch("/api/quests/library").then((r) => parse<QuestTemplate[]>(r));

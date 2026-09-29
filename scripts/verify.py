@@ -166,9 +166,14 @@ def signature(output: str) -> str:
 
 
 def run_check(cmd: list[str]) -> tuple[int, str]:
-    """Запустить проверку: вывод идёт на экран и сохраняется для отпечатка."""
+    """Запустить проверку: вывод идёт на экран и сохраняется для отпечатка.
+
+    Окружение как в CI (UTC): иначе покрытие и поведение кода с датами зависят от пояса машины,
+    и планка, поднятая локально, падает в CI (kognis: ветвления 81,9 % в МСК и 80,8 % в UTC).
+    """
+    env = {**os.environ, "TZ": "UTC"}
     proc = subprocess.Popen(
-        cmd, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+        cmd, cwd=ROOT, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
     )
     lines: list[str] = []
     if proc.stdout is None:

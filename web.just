@@ -46,3 +46,10 @@ deploy-status *args:
 
 stage-down *args:
     python3 scripts/web.py down {{args}}
+
+# Бэкап PostgreSQL окружения → .deploy/backups/ (хранить как секрет); восстановление — решение человека
+backup *args:
+    python3 scripts/web.py backup {{args}}
+
+restore file *args:
+    python3 scripts/web.py restore {{file}} {{args}}

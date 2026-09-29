@@ -9,6 +9,8 @@
     web.py rollback [--env staging]        вернуть предыдущий образ (схема должна быть совместима!)
     web.py deploy --host ssh://user@server  то же на удалённом Docker (решение человека)
     web.py status | down [--env staging]
+    web.py backup [--env E] [--host H]     дамп PostgreSQL → .deploy/backups/<env>-<время>.dump
+    web.py restore FILE [--env E] [--host H]  восстановить дамп (app останавливается, затем /health)
 
 Разворачивается только закоммиченный код (тег образа = короткий sha). Пароль БД окружения —
 .deploy/<env>.env (создаётся, права 600, не в git). Секреты и настройки самого приложения
@@ -115,12 +117,21 @@ def env_file(env: str) -> Path:
     return path
 
 
-def compose(env: str, tag: str, port: str, docker_host: str | None, *args: str) -> str:
+def compose_base(
+    env: str, tag: str, port: str, docker_host: str | None
+) -> tuple[list[str], dict[str, str]]:
+    """Команда docker compose окружения и её переменные (проект <slug>-<env>, пароль из .deploy)."""
     environ = {**os.environ, "IMAGE_TAG": tag, "APP_PORT": port, "DEPLOY_ENV": env}
     if docker_host:
         environ["DOCKER_HOST"] = docker_host
-    return sh("docker", "compose", "-p", f"{SLUG}-{env}", "-f", str(COMPOSE),
-              "--env-file", str(env_file(env)), *args, env=environ)  # fmt: skip
+    cmd = ["docker", "compose", "-p", f"{SLUG}-{env}", "-f", str(COMPOSE),
+           "--env-file", str(env_file(env))]  # fmt: skip
+    return cmd, environ
+
+
+def compose(env: str, tag: str, port: str, docker_host: str | None, *args: str) -> str:
+    cmd, environ = compose_base(env, tag, port, docker_host)
+    return sh(*cmd, *args, env=environ)
 
 
 def history(env: str) -> list[str]:
@@ -206,6 +217,46 @@ def cmd_status(a: argparse.Namespace) -> None:
     print(compose(a.env, hist[-1] if hist else "none", a.port, a.host, "ps"))
 
 
+def cmd_backup(a: argparse.Namespace) -> None:
+    hist = history(a.env)
+    tag = hist[-1] if hist else "none"
+    out = DEPLOY / "backups" / f"{a.env}-{time.strftime('%Y%m%d-%H%M%S')}.dump"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    cmd, environ = compose_base(a.env, tag, a.port, a.host)
+    dump = [*cmd, "exec", "-T", "db", "pg_dump", "-U", "app", "-Fc", "app"]
+    with out.open("wb") as fh:
+        proc = subprocess.run(
+            dump, cwd=ROOT, env=environ, stdout=fh, stderr=subprocess.PIPE, check=False
+        )
+    out.chmod(0o600)
+    if proc.returncode != 0 or out.stat().st_size == 0:
+        out.unlink(missing_ok=True)
+        sys.exit(f"бэкап не удался: {proc.stderr.decode()[-800:]}")
+    size = out.stat().st_size
+    print(f"OK: бэкап {a.env} → {out.relative_to(ROOT)} ({size} байт; хранить как секрет)")
+
+
+def cmd_restore(a: argparse.Namespace) -> None:
+    dump = Path(a.file)
+    if not dump.is_file():
+        sys.exit(f"нет файла {dump}")
+    hist = history(a.env)
+    tag = hist[-1] if hist else "none"
+    compose(a.env, tag, a.port, a.host, "stop", "app")
+    cmd, environ = compose_base(a.env, tag, a.port, a.host)
+    restore = [*cmd, "exec", "-T", "db", "pg_restore", "-U", "app", "-d", "app", "--clean",
+               "--if-exists"]  # fmt: skip
+    with dump.open("rb") as fh:
+        proc = subprocess.run(
+            restore, cwd=ROOT, env=environ, stdin=fh, capture_output=True, check=False
+        )
+    compose(a.env, tag, a.port, a.host, "up", "-d", "app")
+    wait_health(a.port, a.host)
+    if proc.returncode != 0:
+        sys.exit(f"восстановление с ошибками: {proc.stderr.decode()[-800:]}")
+    print(f"OK: {a.env} восстановлен из {dump.name}; проверьте вход и данные")
+
+
 def cmd_down(a: argparse.Namespace) -> None:
     compose(a.env, "none", a.port, a.host, "down")
     print(f"{a.env}: остановлено (данные БД сохранены в томе)")
@@ -235,7 +286,8 @@ def main() -> int:
     for name, func, env in (
         ("stage", cmd_stage, "staging"), ("deploy", cmd_stage, "production"),
         ("rollback", cmd_rollback, "staging"), ("status", cmd_status, "staging"),
-        ("down", cmd_down, "staging"),
+        ("down", cmd_down, "staging"), ("backup", cmd_backup, "staging"),
+        ("restore", cmd_restore, "staging"),
     ):  # fmt: skip
         x = sub.add_parser(name)
         x.add_argument("--env", default=env)
@@ -243,6 +295,8 @@ def main() -> int:
         x.add_argument(
             "--host", required=name == "deploy", help="DOCKER_HOST, например ssh://deploy@srv"
         )
+        if name == "restore":
+            x.add_argument("file", help="файл дампа (.deploy/backups/…)")
         x.set_defaults(func=func)
     args = p.parse_args()
     args.func(args)

@@ -100,6 +100,10 @@ mutate id:
 security-update:
     python3 scripts/check_security.py update --force
 
+# Перенести ветку задачи в main после зелёного CI на ней (решение человека): just land [ветка]
+land *branch:
+    python3 scripts/land.py {{branch}}
+
 # Задачи: новая / начать / заблокировать / закрыть (только с evidence) / в работе
 task-new title *flags:
     @python3 scripts/task.py new "{{title}}" {{flags}}

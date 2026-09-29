@@ -3,7 +3,7 @@
 ## Запуск
 ```bash
 just setup
-uv run python -c "import kognis; print(kognis.greet('dev'))"
+just dev                  # приложение с автоперезагрузкой; настройки — .deploy/dev.app.env
 ```
 
 ## Секреты
@@ -15,8 +15,22 @@ uv run python -c "import kognis; print(kognis.greet('dev'))"
 3. `git push --follow-tags`.
 
 ## Откат
-- Код: деплой предыдущего тега `vX.Y.Z`.
-- Данные: восстановление из бэкапа (описать, когда появится хранилище); миграции — только expand → migrate → contract.
+- Код: `just rollback [--env production --host ssh://…]` — предыдущий образ из истории окружения.
+- Данные: `just restore .deploy/backups/<env>-<время>.dump [--env …]` — только если релиз повредил данные;
+  миграции — expand → migrate → contract, чтобы откат образа не требовал восстановления.
+
+## Развёртывание, бэкап, восстановление
+```bash
+just stage                                        # staging на этом хосте (образ из HEAD, Trivy, миграции, /health)
+just backup                                       # дамп PostgreSQL → .deploy/backups/staging-<время>.dump (600)
+just restore .deploy/backups/staging-….dump       # остановить app → восстановить → /health
+APP_BIND=127.0.0.1 just deploy --host ssh://deploy@srv --port 8000       # прод — решение человека
+just backup --env production --host ssh://deploy@srv                      # перед каждым деплоем со схемой
+```
+- `/health` проверяет и базу данных: при недоступной БД деплой не пройдёт.
+- Секреты окружения — `.deploy/<env>.env` (пароль БД) и `.deploy/<env>.app.env` (ключи приложения); дамп
+  их не содержит — храните копии отдельно (менеджер паролей).
+- Восстановление репетирует `just selftest-deploy` в шаблоне; в проекте — репетируйте на staging.
 
 ## Инциденты
 | Дата | Что случилось | Причина | Исправление | Предотвращение |

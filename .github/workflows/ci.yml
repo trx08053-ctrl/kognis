@@ -1,8 +1,7 @@
 # CI — источник истины: та же команда, что локально. Файл защищён.
 name: ci
 on:
-  push:
-    branches: [main]
+  push: # все ветки: ветка задачи проверяется до переноса в main (just land)
   pull_request:
 
 jobs:

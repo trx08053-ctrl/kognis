@@ -128,6 +128,8 @@ def main() -> None:
                 "Обход git hooks / force-push запрещён (AGENTS.md). "
                 "Исправь причину падения проверки или эскалируй человеку.",
             )
+        if re.search(r"\bjust\s+land\b|scripts/land\.py", cmd):
+            decide("ask", "Перенос в main (land) — решение человека (AGENTS.md).")
         if DESTRUCTIVE_GIT.search(cmd) or checkout_discards_files(cmd, root):
             decide(
                 "ask",

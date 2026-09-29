@@ -18,12 +18,12 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SEMGREP = ["uvx", "-q", "--from", "semgrep==1.177.0", "semgrep"]
 PACKS = ["owasp-top-ten", "python", "javascript", "react", "jwt"]
 CACHE = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache"))
 PACK_DIR = CACHE / "dev-harness" / "semgrep"
@@ -61,14 +61,29 @@ def sast() -> int:
     if missing:
         print(f"нет наборов правил {missing} в {PACK_DIR} — `just security-update` (нужна сеть)")
         return 1
+    semgrep = shutil.which("semgrep")
+    if semgrep is None:
+        print(
+            "нет semgrep — `mise install` (ставится вне песочницы агента, в ней только запускается)"
+        )
+        return 1
     configs = [ROOT / "security" / "semgrep.yml", ROOT / "security" / "project.yml"]
     configs += [PACK_DIR / f"{p}.yml" for p in PACKS]
     args = [a for c in configs if c.exists() for a in ("--config", str(c))]
     targets = [t for t in TARGETS if (ROOT / t).exists()]
-    proc = subprocess.run(
-        [*SEMGREP, "scan", "--metrics=off", "--disable-version-check", "--json", *args, *targets],
-        cwd=ROOT, capture_output=True, text=True, check=False,
-    )  # fmt: skip
+    with tempfile.TemporaryDirectory() as tmp:
+        # служебные файлы semgrep (~/.semgrep) — во временный каталог: в песочнице $HOME read-only
+        env = {
+            **os.environ,
+            "SEMGREP_SETTINGS_FILE": f"{tmp}/settings.yml",
+            "SEMGREP_LOG_FILE": f"{tmp}/semgrep.log",
+            "SEMGREP_VERSION_CACHE_PATH": f"{tmp}/v",
+        }
+        proc = subprocess.run(
+            [semgrep, "scan", "--metrics=off", "--disable-version-check", "--json", *args,
+             *targets],
+            cwd=ROOT, env=env, capture_output=True, text=True, check=False,
+        )  # fmt: skip
     try:
         report = json.loads(proc.stdout)
     except json.JSONDecodeError:

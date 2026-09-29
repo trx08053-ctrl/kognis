@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Веб-стек: разработка, скриншоты, браузеры для e2e, развёртывание в Docker.
 
-    web.py dev [--port N]                  сервер с автоперезагрузкой (миграции применяются;
-                                           с frontend/ — ещё и пересборка интерфейса при правках)
+    web.py dev [--port N]                  автоперезагрузка, миграции; настройки приложения —
+                                           .deploy/dev.app.env; с frontend/ — пересборка интерфейса
     web.py shot [/путь] [--url U] [--name n]  скриншот → .evidence/screens/<n>.png
     web.py browsers                        установить Chromium для Playwright (e2e, скриншоты)
     web.py stage [--port 18000]            образ из HEAD → PostgreSQL + миграции + приложение
@@ -54,7 +54,16 @@ def sh(*cmd: str, env: dict[str, str] | None = None, check: bool = True) -> str:
     return proc.stdout.strip()
 
 
+def app_env(env: str) -> dict[str, str]:
+    """Настройки приложения окружения из .deploy/<env>.app.env (KEY=value, # — комментарий)."""
+    path = DEPLOY / f"{env}.app.env"
+    pairs = [ln.split("=", 1) for ln in path.read_text().splitlines()] if path.exists() else []
+    return {k.strip(): v.strip() for k, *rest in pairs for v in rest if k.strip() and k[0] != "#"}
+
+
 def cmd_dev(a: argparse.Namespace) -> None:
+    # ключи и режим приложения для разработки (.deploy/dev.app.env)
+    os.environ.update(app_env("dev"))
     sh("uv", "run", "--locked", "alembic", "upgrade", "head")
     print(f"http://{local_ip()}:{a.port}  (Ctrl+C — остановить)", flush=True)
     everywhere = "0.0.0.0"  # noqa: S104  justified: harness-web dev-сервер для браузера в локальной сети

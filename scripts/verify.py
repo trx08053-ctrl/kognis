@@ -73,6 +73,8 @@ ALL_CHECKS: list[tuple[str, list[str], bool]] = [
             "src",
             "--exclude-path",
             "frontend",
+            "--exclude-path",
+            "mutants",
             ".",
         ],
         True,

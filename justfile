@@ -92,6 +92,10 @@ module-card name:
 audit:
     python3 scripts/check_security.py deps
 
+# Мутационное тестирование изменений задачи: ловят ли тесты поломку кода (в task-done — для risky)
+mutate id:
+    python3 scripts/check_mutation.py {{id}}
+
 # Обновить наборы правил Semgrep и базу уязвимостей (нужна сеть; раз в неделю — автоматически при setup)
 security-update:
     python3 scripts/check_security.py update --force

@@ -26,6 +26,7 @@ dev = [
     "pytest-cov>=7.0",
     "hypothesis>=6.140",
     "diff-cover>=10.0",
+    "mutmut>=3.8",
     "import-linter>=2.5",
     "httpx2>=2.13",
     "playwright>=1.63",
@@ -76,3 +77,10 @@ markers = [
     "migration: миграция на данных прошлой версии схемы — docs/EVOLUTION.md",
     "security(kind, target): проверка безопасности, напр. security(\"idor\", \"GET /api/x/{id}\") — docs/SECURITY.md",
 ]
+
+# Мутационное тестирование (scripts/check_mutation.py): копия пакета в mutants/, мутанты — только изменённых функций
+[tool.mutmut]
+paths_to_mutate = ["src/kognis/"]
+tests_dir = ["tests/"]
+also_copy = ["alembic.ini", "migrations/", "security/", "frontend/dist/"]
+pytest_add_cli_args = ["-m", "not e2e and not integration", "--no-cov", "-q", "-p", "no:cacheprovider"]

@@ -13,6 +13,7 @@ build/
 
 # Harness: доказательства проверок и журнал агента (локальные, в CI — артефакты)
 .evidence/
+mutants/
 .agent-log/
 .claude/settings.local.json
 .claude/worktrees/

@@ -24,7 +24,7 @@ SELF = "scripts/check_no_weakening.py"
 SKIP_SUFFIXES = (".md", ".jsonl", ".lock")
 
 SUPPRESSIONS = re.compile(
-    r"#\s*noqa|#\s*type:\s*ignore|#\s*pyright:\s*ignore|pragma:\s*no\s*cover"
+    r"#\s*noqa|#\s*type:\s*ignore|#\s*pyright:\s*ignore|#\s*pragma:\s*no\s*(cover|mutate)"
     r"|pytest\.mark\.(skip|skipif|xfail)|pytest\.(skip|xfail)\("
     r"|eslint-disable|biome-ignore|(#|//)\s*nosemgrep|@ts-ignore|@ts-expect-error|@ts-nocheck"
     r"|\b(it|test|describe)\.(only|skip)\("

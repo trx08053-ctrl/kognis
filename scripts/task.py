@@ -139,6 +139,15 @@ def cmd_done(args: argparse.Namespace) -> None:
     proc = subprocess.run([sys.executable, "scripts/verify.py"], cwd=ROOT, check=False)
     if proc.returncode != 0:
         sys.exit("Нельзя закрыть задачу: verify не прошёл.")
+    # risky: тесты должны замечать поломки изменённой логики (мутационное тестирование)
+    if metrics.task_meta(args.id)["risk"] == "risky":
+        mut = subprocess.run(
+            [sys.executable, "scripts/check_mutation.py", args.id], cwd=ROOT, check=False
+        )
+        if mut.returncode != 0:
+            sys.exit(
+                "Нельзя закрыть risky-задачу: мутационное тестирование ниже порога (см. выше)."
+            )
     evidence = json.loads((ROOT / ".evidence" / "latest.json").read_text())
     proof = f"verify tree {str(evidence['tree'])[:12]} head {str(evidence['head'])[:12]}"
     bd("close", args.id, "--reason", proof)

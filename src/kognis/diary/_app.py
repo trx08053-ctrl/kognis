@@ -8,9 +8,13 @@ from sqlalchemy.orm import Session
 
 from ._crypto import open_sealed, parse_data_key, seal
 from ._domain import (
+    DEFAULT_PAGE_SIZE,
+    MAX_PAGE_SIZE,
     DayReview,
     Entry,
     EntryDraft,
+    EntryFilter,
+    Page,
     normalize_labels,
     normalize_reflection,
     normalize_text,
@@ -115,8 +119,20 @@ class DiaryService:
         """Чужая или несуществующая запись неотличимы: `None`."""
         return self._repo.get(owner_id, entry_id)
 
-    def list_entries(self, owner_id: int) -> list[Entry]:
-        return self._repo.list_for(owner_id)
+    def list_entries(
+        self,
+        owner_id: int,
+        *,
+        limit: int = DEFAULT_PAGE_SIZE,
+        cursor: str | None = None,
+        where: EntryFilter | None = None,
+    ) -> Page[Entry]:
+        """Страница записей (новые первыми), отбор — в SQL; плохой курсор — `InvalidCursorError`."""
+        return self._repo.page(owner_id, _clamp(limit), cursor, where or EntryFilter())
+
+    def entry_labels(self, owner_id: int) -> tuple[list[str], list[str]]:
+        """Теги и эмоции владельца — варианты для фильтров."""
+        return self._repo.labels(owner_id)
 
     def list_entries_between(self, owner_id: int, start: date, end: date) -> list[Entry]:
         """Записи за период, границы включительно; отбор делает БД."""
@@ -134,9 +150,16 @@ class DiaryService:
             normalize_reflection(reflection),
         )
 
-    def list_day_reviews(self, owner_id: int) -> list[DayReview]:
-        return self._reviews.list_for(owner_id)
+    def list_day_reviews(
+        self, owner_id: int, *, limit: int = DEFAULT_PAGE_SIZE, cursor: str | None = None
+    ) -> Page[DayReview]:
+        """Страница итогов дня (новые первыми); плохой курсор — `InvalidCursorError`."""
+        return self._reviews.page(owner_id, _clamp(limit), cursor)
 
     def list_day_reviews_between(self, owner_id: int, start: date, end: date) -> list[DayReview]:
         """Итоги дня за период, границы включительно; отбор делает БД."""
         return self._reviews.list_between(owner_id, start, end)
+
+
+def _clamp(limit: int) -> int:
+    return max(1, min(limit, MAX_PAGE_SIZE))

@@ -53,10 +53,14 @@ function Onboarding() {
 
 function DaySummary() {
   const todayDate = useToday();
-  const reviews = useQuery({ queryKey: ["day-reviews"], queryFn: listDayReviews });
+  // итог за сегодня — самый свежий: хватает первой страницы
+  const reviews = useQuery({
+    queryKey: ["day-reviews", "recent"],
+    queryFn: () => listDayReviews({ limit: 1 }),
+  });
   if (reviews.isError) return <ErrorMessage error={reviews.error} />;
   if (!reviews.data) return null;
-  const today = reviews.data.find((review) => review.date === todayDate);
+  const today = reviews.data.items.find((review) => review.date === todayDate);
   return (
     <section
       aria-labelledby="day-summary-title"

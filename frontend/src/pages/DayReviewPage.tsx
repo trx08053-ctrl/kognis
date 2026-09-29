@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 import { type DayReview, listDayReviews, saveDayReview } from "../api";
 import { ErrorMessage } from "../components/ErrorMessage";
@@ -90,22 +90,40 @@ function DayReviewForm() {
 }
 
 function DayReviewHistory() {
-  const reviews = useQuery({ queryKey: ["day-reviews"], queryFn: listDayReviews });
+  const reviews = useInfiniteQuery({
+    queryKey: ["day-reviews", "history"],
+    queryFn: ({ pageParam }) => listDayReviews({ cursor: pageParam }),
+    initialPageParam: null as string | null,
+    getNextPageParam: (last) => last.next,
+  });
   if (reviews.isError) return <ErrorMessage error={reviews.error} />;
-  const items: DayReview[] = reviews.data ?? [];
+  const items: DayReview[] = reviews.data?.pages.flatMap((page) => page.items) ?? [];
   if (items.length === 0) return <p className="muted">Пока нет итогов дня.</p>;
   return (
-    <ul className="space-y-3" data-testid="reviews">
-      {items.map((review) => (
-        <li key={review.id} className="card">
-          <p className="text-sm muted">{review.date}</p>
-          <p>
-            Самочувствие: {review.wellbeing} · Настроение: {review.mood}
-          </p>
-          {review.reflection && <p className="whitespace-pre-wrap">{review.reflection}</p>}
-        </li>
-      ))}
-    </ul>
+    <>
+      <ul className="space-y-3" data-testid="reviews">
+        {items.map((review) => (
+          <li key={review.id} className="card">
+            <p className="text-sm muted">{review.date}</p>
+            <p>
+              Самочувствие: {review.wellbeing} · Настроение: {review.mood}
+            </p>
+            {review.reflection && <p className="whitespace-pre-wrap">{review.reflection}</p>}
+          </li>
+        ))}
+      </ul>
+      {reviews.hasNextPage && (
+        <button
+          type="button"
+          className={buttonClass}
+          data-testid="more-reviews"
+          disabled={reviews.isFetchingNextPage}
+          onClick={() => void reviews.fetchNextPage()}
+        >
+          Показать ещё
+        </button>
+      )}
+    </>
   );
 }
 

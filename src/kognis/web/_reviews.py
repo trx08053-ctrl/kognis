@@ -2,16 +2,20 @@
 
 import datetime as dt
 from collections.abc import Callable
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query, Response
 from pydantic import BaseModel, Field, StrictInt
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 
 from kognis.db import transaction
 from kognis.diary import (
+    DEFAULT_PAGE_SIZE,
+    MAX_PAGE_SIZE,
     DayReview,
     DiaryService,
+    InvalidCursorError,
 )
 from kognis.gameplay import (
     GameplayService,
@@ -21,7 +25,7 @@ from kognis.users import (
     User,
 )
 
-from ._deps import Authed, HelpOut, help_out
+from ._deps import NEXT_CURSOR_HEADER, Authed, HelpOut, help_out
 
 
 class DayReviewIn(BaseModel):
@@ -79,8 +83,20 @@ def day_review_router(db: Engine, today: Callable[[User], dt.date]) -> APIRouter
         return review_out(review, block)
 
     @router.get("")
-    def list_reviews(user: Authed) -> list[DayReviewOut]:
-        with transaction(db) as session:
-            return [review_out(r) for r in DiaryService(session).list_day_reviews(user.id)]
+    def list_reviews(
+        user: Authed,
+        response: Response,
+        limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = DEFAULT_PAGE_SIZE,
+        cursor: Annotated[str | None, Query(max_length=40)] = None,
+    ) -> list[DayReviewOut]:
+        """Страница итогов, новые первыми; следующая — по курсору из заголовка `X-Next-Cursor`."""
+        try:
+            with transaction(db) as session:
+                page = DiaryService(session).list_day_reviews(user.id, limit=limit, cursor=cursor)
+        except InvalidCursorError as err:
+            raise HTTPException(status_code=422, detail=str(err)) from err
+        if page.next_cursor:
+            response.headers[NEXT_CURSOR_HEADER] = page.next_cursor
+        return [review_out(r) for r in page.items]
 
     return router

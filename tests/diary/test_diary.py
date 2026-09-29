@@ -29,7 +29,7 @@ def test_owner_isolation_in_service(engine: Engine) -> None:
         service.create_entry(2, "чужая", [], [])
     with transaction(engine) as session:
         service = DiaryService(session)
-        assert [e.text for e in service.list_entries(1)] == ["моя"]
+        assert [e.text for e in service.list_entries(1).items] == ["моя"]
         assert service.get_entry(2, mine.id) is None
 
 
@@ -60,7 +60,7 @@ def test_day_review_upsert_is_per_owner_and_date(engine: Engine) -> None:
     assert (again.wellbeing, again.mood, again.reflection) == (6, 7, "ок")
     assert other.id != first.id
     with transaction(engine) as session:
-        assert len(DiaryService(session).list_day_reviews(1)) == 1
+        assert len(DiaryService(session).list_day_reviews(1).items) == 1
 
 
 @pytest.mark.parametrize(("wellbeing", "mood"), [(0, 5), (5, 0), (11, 5), (5, 11)])

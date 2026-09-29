@@ -9,24 +9,31 @@ from sqlalchemy import (
     Column,
     Date,
     DateTime,
+    Index,
     Integer,
     LargeBinary,
     String,
     Table,
     Text,
     UniqueConstraint,
+    and_,
+    cast,
     false,
+    func,
     insert,
+    or_,
     select,
     update,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.engine import Row
 from sqlalchemy.orm import Session
+from sqlalchemy.sql import ColumnElement
 
 from kognis.db import metadata
 
 from ._crypto import Sealed
-from ._domain import DayReview, Entry
+from ._domain import DayReview, Entry, EntryFilter, Page, decode_cursor, encode_cursor
 
 entries_table = Table(
     "entries",
@@ -48,6 +55,8 @@ entries_table = Table(
     # «приватная» (D4): text пуст, конверт (версия, KDF, соль, iv, шифртекст) собран в браузере
     Column("private_envelope", JSON, nullable=True),
     Column("created_at", DateTime, nullable=False),
+    # страница «последние записи» и отбор по периоду идут по этому индексу (kognis-3mh)
+    Index("ix_entries_owner_date_id", "owner_id", "entry_date", "id"),
 )
 
 day_reviews_table = Table(
@@ -167,13 +176,57 @@ class EntryRepository:
         row = self._session.execute(stmt).first()
         return _to_entry(row) if row else None
 
-    def list_for(self, owner_id: int) -> list[Entry]:
+    def has_label(self, column: Column[object], label: str) -> ColumnElement[bool]:
+        """Условие «в JSON-списке `column` есть `label`» на диалекте текущей БД."""
+        if self._session.get_bind().dialect.name == "postgresql":
+            return cast(column, JSONB).contains([label])
+        item = func.json_each(column).table_valued("value")
+        return select(item.c.value).where(item.c.value == label).exists()
+
+    def page(
+        self, owner_id: int, limit: int, cursor: str | None, where: EntryFilter
+    ) -> Page[Entry]:
+        """Страница записей владельца, новые первыми; курсор — (дата, id) последней выданной."""
+        table = entries_table
+        conditions = [table.c.owner_id == owner_id]
+        if where.tag is not None:
+            conditions.append(self.has_label(table.c.tags, where.tag))
+        if where.emotion is not None:
+            conditions.append(self.has_label(table.c.emotions, where.emotion))
+        if where.start is not None:
+            conditions.append(table.c.entry_date >= where.start)
+        if where.end is not None:
+            conditions.append(table.c.entry_date <= where.end)
+        if cursor is not None:
+            day, last_id = decode_cursor(cursor, with_id=True)
+            conditions.append(
+                or_(
+                    table.c.entry_date < day,
+                    and_(table.c.entry_date == day, table.c.id < last_id),
+                )
+            )
         stmt = (
-            select(entries_table)
-            .where(entries_table.c.owner_id == owner_id)
-            .order_by(entries_table.c.entry_date.desc(), entries_table.c.id.desc())
+            select(table)
+            .where(*conditions)
+            .order_by(table.c.entry_date.desc(), table.c.id.desc())
+            .limit(limit + 1)
         )
-        return [_to_entry(r) for r in self._session.execute(stmt).all()]
+        rows = self._session.execute(stmt).all()
+        items = [_to_entry(r) for r in rows[:limit]]
+        more = len(rows) > limit
+        return Page(items, encode_cursor(items[-1].entry_date, items[-1].id) if more else None)
+
+    def labels(self, owner_id: int) -> tuple[list[str], list[str]]:
+        """Все теги и эмоции владельца (варианты фильтров): читаются лишь два узких столбца."""
+        rows = self._session.execute(
+            select(entries_table.c.tags, entries_table.c.emotions).where(
+                entries_table.c.owner_id == owner_id
+            )
+        ).all()
+        return (
+            sorted({t for r in rows for t in r.tags}),
+            sorted({e for r in rows for e in r.emotions}),
+        )
 
     def list_between(self, owner_id: int, start: date, end: date) -> list[Entry]:
         """Записи владельца за период (границы включительно); фильтр — в запросе к БД."""
@@ -234,13 +287,18 @@ class DayReviewRepository:
             )
         return DayReview(int(review_id), owner_id, review_date, wellbeing, mood, reflection)
 
-    def list_for(self, owner_id: int) -> list[DayReview]:
+    def page(self, owner_id: int, limit: int, cursor: str | None) -> Page[DayReview]:
+        """Страница итогов владельца, новые первыми; курсор — дата последнего выданного."""
+        table = day_reviews_table
+        conditions = [table.c.owner_id == owner_id]
+        if cursor is not None:
+            conditions.append(table.c.review_date < decode_cursor(cursor, with_id=False)[0])
         stmt = (
-            select(day_reviews_table)
-            .where(day_reviews_table.c.owner_id == owner_id)
-            .order_by(day_reviews_table.c.review_date.desc())
+            select(table).where(*conditions).order_by(table.c.review_date.desc()).limit(limit + 1)
         )
-        return [_to_review(r) for r in self._session.execute(stmt).all()]
+        rows = self._session.execute(stmt).all()
+        items = [_to_review(r) for r in rows[:limit]]
+        return Page(items, encode_cursor(items[-1].review_date) if len(rows) > limit else None)
 
     def list_between(self, owner_id: int, start: date, end: date) -> list[DayReview]:
         """Итоги дня владельца за период (границы включительно); фильтр — в запросе к БД."""

@@ -1,6 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { type Entry, listEntries } from "../../api";
+import { type Entry, getEntryLabels, listEntries } from "../../api";
 import { ErrorMessage } from "../../components/ErrorMessage";
 import { LockedEntryBody, PrivateEntryBody } from "./EntryBodies";
 
@@ -15,30 +15,19 @@ interface EntryFilters {
 
 const NO_FILTERS: EntryFilters = { tag: "", emotion: "", from: "", to: "" };
 
-function matchesFilters(entry: Entry, f: EntryFilters): boolean {
-  return (
-    (f.tag === "" || entry.tags.includes(f.tag)) &&
-    (f.emotion === "" || entry.emotions.includes(f.emotion)) &&
-    (f.from === "" || entry.date >= f.from) &&
-    (f.to === "" || entry.date <= f.to)
-  );
-}
-
-function uniqueSorted(values: string[]): string[] {
-  return [...new Set(values)].sort((a, b) => a.localeCompare(b, "ru"));
-}
+const PAGE_SIZE = 30;
 
 function EntryFilterBar({
-  entries,
   filters,
   onChange,
 }: {
-  entries: Entry[];
   filters: EntryFilters;
   onChange: (next: EntryFilters) => void;
 }) {
-  const tags = uniqueSorted(entries.flatMap((entry) => entry.tags));
-  const emotions = uniqueSorted(entries.flatMap((entry) => entry.emotions));
+  // варианты фильтров — все теги и эмоции пользователя, а не только загруженные страницы
+  const labels = useQuery({ queryKey: ["entries", "labels"], queryFn: getEntryLabels });
+  const tags = labels.data?.tags ?? [];
+  const emotions = labels.data?.emotions ?? [];
   return (
     <form
       aria-label="Фильтры записей"
@@ -114,23 +103,63 @@ function EntryFilterBar({
 
 const RECENT_LIMIT = 5;
 
-// простой режим — последние записи; Advanced — все записи с фильтрами
+// простой режим — последние записи; Advanced — все записи страницами с фильтрами на сервере
 export function EntryList({ advanced }: { advanced: boolean }) {
-  const [filters, setFilters] = useState<EntryFilters>(NO_FILTERS);
-  const entries = useQuery({ queryKey: ["entries"], queryFn: listEntries });
+  return advanced ? <AllEntries /> : <RecentEntries />;
+}
+
+function RecentEntries() {
+  const entries = useQuery({
+    queryKey: ["entries", "recent"],
+    queryFn: () => listEntries({ limit: RECENT_LIMIT }),
+  });
   if (entries.isError) return <ErrorMessage error={entries.error} />;
-  const all: Entry[] = entries.data ?? [];
-  if (all.length === 0) return <p className="muted">Пока нет записей.</p>;
-  const items = advanced
-    ? all.filter((entry) => matchesFilters(entry, filters))
-    : all.slice(0, RECENT_LIMIT);
+  const items = entries.data?.items ?? [];
+  if (items.length === 0) return <p className="muted">Пока нет записей.</p>;
+  return <EntryItems items={items.slice(0, RECENT_LIMIT)} />;
+}
+
+function AllEntries() {
+  const [filters, setFilters] = useState<EntryFilters>(NO_FILTERS);
+  const filtered = Object.values(filters).some((value) => value !== "");
+  const entries = useInfiniteQuery({
+    queryKey: ["entries", "list", filters],
+    queryFn: ({ pageParam }) =>
+      listEntries({
+        limit: PAGE_SIZE,
+        cursor: pageParam,
+        tag: filters.tag,
+        emotion: filters.emotion,
+        from: filters.from,
+        to: filters.to,
+      }),
+    initialPageParam: null as string | null,
+    getNextPageParam: (last) => last.next,
+    placeholderData: keepPreviousData,
+  });
+  if (entries.isError) return <ErrorMessage error={entries.error} />;
+  const items: Entry[] = entries.data?.pages.flatMap((page) => page.items) ?? [];
+  if (items.length === 0 && !filtered) {
+    return entries.isPending ? null : <p className="muted">Пока нет записей.</p>;
+  }
   return (
     <>
-      {advanced && <EntryFilterBar entries={all} filters={filters} onChange={setFilters} />}
+      <EntryFilterBar filters={filters} onChange={(next) => setFilters(next)} />
       {items.length === 0 ? (
         <p className="muted">По фильтрам ничего не найдено.</p>
       ) : (
         <EntryItems items={items} />
+      )}
+      {entries.hasNextPage && (
+        <button
+          type="button"
+          className="btn"
+          data-testid="more-entries"
+          disabled={entries.isFetchingNextPage}
+          onClick={() => void entries.fetchNextPage()}
+        >
+          Показать ещё
+        </button>
       )}
     </>
   );

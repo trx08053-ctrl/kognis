@@ -3,6 +3,7 @@
 // Сессия — httpOnly cookie, её ставит и читает браузер; изменяющие запросы — только JSON (CSRF, ADR 0003).
 
 import type { components } from "./api.gen";
+import { type EntryQuery, type Page, pageUrl, toPage } from "./pagination";
 import type { Envelope } from "./privateCrypto";
 
 type Schemas = components["schemas"];
@@ -63,8 +64,17 @@ export const saveSettings = (settings: { advanced?: boolean; timezone?: string }
     body: JSON.stringify(settings),
   }).then((r) => parse<User>(r));
 export const logout = (): Promise<void> => post<void>("/api/auth/logout");
-export const listEntries = (): Promise<Entry[]> =>
-  fetch("/api/entries").then((r) => parse<Entry[]>(r));
+
+async function getPage<T>(url: string): Promise<Page<T>> {
+  const response = await fetch(url);
+  return toPage(await parse<T[]>(response), response);
+}
+
+export const listEntries = (query: EntryQuery = {}): Promise<Page<Entry>> =>
+  getPage<Entry>(pageUrl("/api/entries", query));
+export type EntryLabels = Schemas["LabelsOut"];
+export const getEntryLabels = (): Promise<EntryLabels> =>
+  fetch("/api/entries/labels").then((r) => parse<EntryLabels>(r));
 export const createEntry = (entry: NewEntry): Promise<Entry> => post<Entry>("/api/entries", entry);
 
 export type DayReview = Schemas["DayReviewOut"];
@@ -75,8 +85,9 @@ export type Progress = Schemas["ProgressOut"];
 export const getProgress = (): Promise<Progress> =>
   fetch("/api/progress").then((r) => parse<Progress>(r));
 
-export const listDayReviews = (): Promise<DayReview[]> =>
-  fetch("/api/day-reviews").then((r) => parse<DayReview[]>(r));
+export const listDayReviews = (
+  query: { limit?: number; cursor?: string | null } = {},
+): Promise<Page<DayReview>> => getPage<DayReview>(pageUrl("/api/day-reviews", query));
 
 export type Direction = Schemas["DirectionOut"];
 export type Pattern = Schemas["PatternOut"];

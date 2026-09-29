@@ -74,15 +74,20 @@
 
 - Код: `src/kognis/diary`
 - Публичный интерфейс:
+  - `DEFAULT_PAGE_SIZE` — `src/kognis/diary/_domain.py`
+  - `MAX_PAGE_SIZE` — `src/kognis/diary/_domain.py`
   - `MIN_LOCK_PASSWORD` — `src/kognis/diary/_crypto.py`
   - `DataKeyError` — `src/kognis/diary/_crypto.py`
   - `DayReview` — `src/kognis/diary/_domain.py`
   - `DiaryService` — `src/kognis/diary/_app.py`
   - `Entry` — `src/kognis/diary/_domain.py`
   - `EntryDraft` — `src/kognis/diary/_domain.py`
+  - `EntryFilter` — `src/kognis/diary/_domain.py`
   - `EntryUnreadableError` — `src/kognis/diary/_crypto.py`
+  - `InvalidCursorError` — `src/kognis/diary/_domain.py`
+  - `Page` — `src/kognis/diary/_domain.py`
   - `WrongLockPasswordError` — `src/kognis/diary/_crypto.py`
-- Тесты: `tests/diary/test_boundaries.py`, `tests/diary/test_diary.py`, `tests/diary/test_period.py`, `tests/integration/test_postgres.py`, `tests/security/test_domain_limits.py`, `tests/web/test_day_reviews.py`
+- Тесты: `tests/diary/test_boundaries.py`, `tests/diary/test_diary.py`, `tests/diary/test_label_filter_sql.py`, `tests/diary/test_period.py`, `tests/integration/test_postgres.py`, `tests/security/test_domain_limits.py`, `tests/web/test_day_reviews.py`
 
 ## `kognis.gameplay`
 

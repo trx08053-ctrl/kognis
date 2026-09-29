@@ -21,6 +21,8 @@ def today_in(timezone: str, now: dt.datetime) -> dt.date:
 
 # Лимиты ввода (API4): границы совпадают с доменными, но срабатывают до обработки
 Label = Annotated[str, Field(max_length=50)]
+# постраничные списки: тело — обычный массив, курсор следующей страницы — в заголовке
+NEXT_CURSOR_HEADER = "X-Next-Cursor"
 Answer = Annotated[str, Field(max_length=2_000)]
 
 

@@ -4,19 +4,23 @@ import datetime as dt
 from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from http import HTTPStatus
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, HTTPException, Query, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.engine import Engine
 
 from kognis.db import transaction
 from kognis.diary import (
+    DEFAULT_PAGE_SIZE,
+    MAX_PAGE_SIZE,
     DataKeyError,
     DiaryService,
     Entry,
     EntryDraft,
+    EntryFilter,
     EntryUnreadableError,
+    InvalidCursorError,
     WrongLockPasswordError,
 )
 from kognis.gameplay import (
@@ -27,7 +31,7 @@ from kognis.users import (
     User,
 )
 
-from ._deps import Authed, HelpOut, Label, help_out
+from ._deps import NEXT_CURSOR_HEADER, Authed, HelpOut, Label, help_out
 from ._limits import AttemptLimiter
 
 
@@ -44,6 +48,11 @@ class EntryIn(BaseModel):
 
 class LockPassword(BaseModel):
     password: str = Field(max_length=256)
+
+
+class LabelsOut(BaseModel):
+    tags: list[str]
+    emotions: list[str]
 
 
 class EntryOut(BaseModel):
@@ -107,6 +116,47 @@ def store_entry(diary: DiaryService, owner_id: int, payload: EntryIn, day: dt.da
         draft = EntryDraft(payload.text, payload.tags, payload.emotions, day)
         return diary.create_locked_entry(owner_id, draft, payload.lock_password)
     return diary.create_entry(owner_id, payload.text, payload.tags, payload.emotions, day)
+
+
+class EntryPageQuery(BaseModel):
+    """Параметры страницы записей: размер, курсор и отбор на стороне БД."""
+
+    model_config = {"extra": "forbid"}
+
+    limit: int = Field(default=DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE)
+    cursor: str | None = Field(default=None, max_length=40)
+    tag: Label | None = None
+    emotion: Label | None = None
+    date_from: dt.date | None = Field(default=None, alias="from")
+    date_to: dt.date | None = Field(default=None, alias="to")
+
+
+def add_entry_pages(router: APIRouter, db: Engine) -> None:
+    """Список записей страницами и варианты фильтров — на роутер записей."""
+
+    @router.get("")
+    def list_entries(
+        user: Authed, response: Response, q: Annotated[EntryPageQuery, Query()]
+    ) -> list[EntryOut]:
+        """Страница записей, новые первыми; следующая — по курсору из заголовка `X-Next-Cursor`."""
+        where = EntryFilter(tag=q.tag, emotion=q.emotion, start=q.date_from, end=q.date_to)
+        try:
+            with transaction(db) as session:
+                page = DiaryService(session).list_entries(
+                    user.id, limit=q.limit, cursor=q.cursor, where=where
+                )
+        except InvalidCursorError as err:
+            raise HTTPException(status_code=422, detail=str(err)) from err
+        if page.next_cursor:
+            response.headers[NEXT_CURSOR_HEADER] = page.next_cursor
+        return [entry_out(e) for e in page.items]
+
+    @router.get("/labels")
+    def entry_labels(user: Authed) -> LabelsOut:
+        """Все теги и эмоции владельца — варианты фильтров."""
+        with transaction(db) as session:
+            tags, emotions = DiaryService(session).entry_labels(user.id)
+        return LabelsOut(tags=tags, emotions=emotions)
 
 
 def diary_router(db: Engine, today: Callable[[User], dt.date], data_key: str | None) -> APIRouter:
@@ -179,10 +229,7 @@ def diary_router(db: Engine, today: Callable[[User], dt.date], data_key: str | N
             raise HTTPException(status_code=422, detail=str(err)) from err
         return entry_out(entry, block)
 
-    @router.get("")
-    def list_entries(user: Authed) -> list[EntryOut]:
-        with transaction(db) as session:
-            return [entry_out(e) for e in DiaryService(session).list_entries(user.id)]
+    add_entry_pages(router, db)  # до «/{entry_id}»: «/labels» — не id
 
     @router.get("/{entry_id}")
     def get_entry(entry_id: int, user: Authed) -> EntryOut:

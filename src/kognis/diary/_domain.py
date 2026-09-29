@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Any
 
+DEFAULT_PAGE_SIZE = 30
+MAX_PAGE_SIZE = 100
 MAX_TEXT_LENGTH = 20_000
 MAX_LABELS = 20
 MAX_LABEL_LENGTH = 50
@@ -127,3 +129,40 @@ def validate_envelope(raw: dict[str, Any]) -> dict[str, Any]:
     if _b64_len(cipher, "данные") < ENVELOPE_MIN_CIPHER or len(str(cipher)) > MAX_ENVELOPE_CIPHER:
         raise ValueError("шифртекст: некорректный размер данных")
     return {k: raw[k] for k in ("v", "kdf", "iter", "salt", "iv", "ct")}
+
+
+class InvalidCursorError(ValueError):
+    """Курсор страницы повреждён или чужого формата."""
+
+
+def encode_cursor(day: date, entry_id: int | None = None) -> str:
+    return day.isoformat() if entry_id is None else f"{day.isoformat()}.{entry_id}"
+
+
+def decode_cursor(raw: str, *, with_id: bool) -> tuple[date, int]:
+    """Курсор `ГГГГ-ММ-ДД[.id]` → (дата, id); у итогов дня id не нужен (дата уникальна)."""
+    day_part, _, id_part = raw.partition(".")
+    try:
+        day = date.fromisoformat(day_part)
+        entry_id = int(id_part) if with_id else 0
+    except ValueError as err:
+        raise InvalidCursorError("некорректный курсор страницы") from err
+    if with_id != bool(id_part) or not 0 <= entry_id <= 2**62:
+        raise InvalidCursorError("некорректный курсор страницы")
+    return day, entry_id
+
+
+@dataclass(frozen=True)
+class EntryFilter:
+    """Отбор записей на стороне БД; границы дат включительно."""
+
+    tag: str | None = None
+    emotion: str | None = None
+    start: date | None = None
+    end: date | None = None
+
+
+@dataclass(frozen=True)
+class Page[T]:
+    items: list[T]
+    next_cursor: str | None = None

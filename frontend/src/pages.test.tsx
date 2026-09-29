@@ -33,17 +33,6 @@ const PROGRESS = {
 const NO_MOOD = { points: [], average_mood: null, average_wellbeing: null, trend: "unknown" };
 
 const NO_ENTRY = { crisis: false, cipher: null, help: null, protection: "plain" };
-const ENTRIES = [
-  {
-    ...NO_ENTRY,
-    id: 1,
-    date: "2026-09-10",
-    text: "первая",
-    tags: ["работа"],
-    emotions: ["тревога"],
-  },
-  { ...NO_ENTRY, id: 2, date: "2026-09-20", text: "вторая", tags: ["семья"], emotions: [] },
-];
 
 type Handler = (init?: RequestInit) => Response;
 
@@ -101,33 +90,6 @@ test("главная, Advanced: пустой график и пустой спи
   expect(await screen.findByText(/график появится после первого/)).toBeTruthy();
   expect(await screen.findByText("Пока нет записей.")).toBeTruthy();
   expect(screen.getByText("Сегодня итог ещё не подведён.")).toBeTruthy();
-});
-
-test("главная, Advanced: фильтры записей по тегу, эмоции и датам", async () => {
-  stubApi({
-    "GET /api/me": () => reply(200, ADVANCED),
-    "GET /api/progress": () => reply(200, PROGRESS),
-    "GET /api/day-reviews": () => reply(200, []),
-    "GET /api/analyses/mood": () => reply(200, NO_MOOD),
-    "GET /api/entries": () => reply(200, ENTRIES),
-  });
-  renderAt("/");
-  expect(await screen.findByText("первая")).toBeTruthy();
-  expect(screen.getByText("вторая")).toBeTruthy();
-
-  fireEvent.change(screen.getByLabelText("Тег"), { target: { value: "работа" } });
-  expect(screen.queryByText("вторая")).toBeNull();
-  fireEvent.change(screen.getByLabelText("Тег"), { target: { value: "" } });
-
-  fireEvent.change(screen.getByLabelText("Эмоция"), { target: { value: "тревога" } });
-  expect(screen.queryByText("вторая")).toBeNull();
-  expect(screen.getByText("первая")).toBeTruthy();
-  fireEvent.change(screen.getByLabelText("Эмоция"), { target: { value: "" } });
-
-  fireEvent.change(screen.getByLabelText("С даты"), { target: { value: "2026-09-15" } });
-  expect(screen.queryByText("первая")).toBeNull();
-  fireEvent.change(screen.getByLabelText("По дату"), { target: { value: "2026-09-16" } });
-  expect(screen.getByText("По фильтрам ничего не найдено.")).toBeTruthy();
 });
 
 test("простой режим показывает только последние записи без фильтров", async () => {

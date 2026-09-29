@@ -32,7 +32,8 @@ const emptyProgress = {
 function stubApi(routes: Record<string, (init?: RequestInit) => Response>) {
   const fetchMock = vi.fn<typeof fetch>((input, init) => {
     const key = `${init?.method ?? "GET"} ${String(input)}`;
-    const handler = routes[key];
+    // списки страничные: параметры запроса (limit, cursor, фильтры) на выбор маршрута не влияют
+    const handler = routes[key] ?? routes[key.split("?")[0] ?? key];
     return Promise.resolve(handler ? handler(init) : reply(404, { detail: `нет маршрута ${key}` }));
   });
   vi.stubGlobal("fetch", fetchMock);

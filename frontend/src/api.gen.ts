@@ -91,6 +91,10 @@ export interface components {
       "message": string;
       "contacts": (components["schemas"]["ContactOut"])[];
     };
+    LabelsOut: {
+      "tags": (string)[];
+      "emotions": (string)[];
+    };
     LockPassword: {
       "password": string;
     };

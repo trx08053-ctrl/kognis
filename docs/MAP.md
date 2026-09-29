@@ -18,7 +18,7 @@
 | `kognis.gameplay` | Модуль gameplay: опыт, уровни, серия, достижения, квесты, квизы (D8). | `db` | 7 | [gameplay](modules/gameplay.md) |
 | `kognis.safety` | Модуль safety: кризисные сигналы в тексте (локально, без ИИ) и контакты помощи. | — | 4 | [safety](modules/safety.md) |
 | `kognis.users` | Модуль users: регистрация, вход, сессии. Владеет данными пользователей и сессий. | `db` | 4 | [users](modules/users.md) |
-| `kognis.web` | Модуль web: HTTP-вход приложения — страницы, JSON API, /health. Бизнес-логики не содержит. | `access`, `ai`, `analysis`, `db`, `diary`, `gameplay`, `safety`, `users` | 2 | [web](modules/web.md) |
+| `kognis.web` | Модуль web: HTTP-вход приложения — страницы, JSON API, /health. Бизнес-логики не содержит. | `access`, `ai`, `analysis`, `db`, `diary`, `gameplay`, `safety`, `users` | 3 | [web](modules/web.md) |
 
 ## `kognis.access`
 
@@ -40,7 +40,7 @@
   - `Message` — `src/kognis/ai/_domain.py`
   - `OpenAICompatibleProvider` — `src/kognis/ai/_infra.py`
   - `get_provider` — `src/kognis/ai/_app.py`
-- Тесты: `tests/ai/test_ai.py`, `tests/analysis/test_analysis.py`, `tests/e2e/test_ui.py`, `tests/web/test_private.py`, `tests/web/test_quests.py`, `tests/web/test_timezone.py`
+- Тесты: `tests/ai/test_ai.py`, `tests/analysis/test_analysis.py`, `tests/e2e/test_ui.py`, `tests/security/test_idor.py`, `tests/web/test_private.py`, `tests/web/test_quests.py`, `tests/web/test_timezone.py`
 
 ## `kognis.analysis`
 
@@ -58,7 +58,7 @@
   - `MoodPoint` — `src/kognis/analysis/_domain.py`
   - `NoDataError` — `src/kognis/analysis/_app.py`
   - `Pattern` — `src/kognis/analysis/_domain.py`
-- Тесты: `tests/analysis/test_analysis.py`
+- Тесты: `tests/analysis/test_analysis.py`, `tests/security/test_domain_limits.py`
 
 ## `kognis.db`
 
@@ -82,7 +82,7 @@
   - `EntryDraft` — `src/kognis/diary/_domain.py`
   - `EntryUnreadableError` — `src/kognis/diary/_crypto.py`
   - `WrongLockPasswordError` — `src/kognis/diary/_crypto.py`
-- Тесты: `tests/diary/test_diary.py`, `tests/integration/test_postgres.py`, `tests/web/test_day_reviews.py`
+- Тесты: `tests/diary/test_diary.py`, `tests/integration/test_postgres.py`, `tests/security/test_domain_limits.py`, `tests/web/test_day_reviews.py`
 
 ## `kognis.gameplay`
 
@@ -105,7 +105,7 @@
   - `QuizStatus` — `src/kognis/gameplay/_quests.py`
   - `StepOutcome` — `src/kognis/gameplay/_quests.py`
   - `StepUnavailableError` — `src/kognis/gameplay/_quests.py`
-- Тесты: `tests/gameplay/test_domain.py`, `tests/gameplay/test_quests.py`, `tests/gameplay/test_service.py`
+- Тесты: `tests/gameplay/test_domain.py`, `tests/gameplay/test_quests.py`, `tests/gameplay/test_service.py`, `tests/security/test_domain_limits.py`
 
 ## `kognis.safety`
 
@@ -131,7 +131,7 @@
   - `LoginBlockedError` — `src/kognis/users/_domain.py`
   - `User` — `src/kognis/users/_domain.py`
   - `UserService` — `src/kognis/users/_app.py`
-- Тесты: `tests/integration/test_postgres.py`, `tests/users/test_users.py`, `tests/web/test_hardening.py`
+- Тесты: `tests/integration/test_postgres.py`, `tests/security/test_domain_limits.py`, `tests/users/test_users.py`, `tests/web/test_hardening.py`
 
 ## `kognis.web`
 
@@ -139,7 +139,7 @@
 - Публичный интерфейс:
   - `create_app` — `src/kognis/web/_app.py`
   - `main` — `src/kognis/web/__init__.py`
-- Тесты: `tests/analysis/test_analysis.py`, `tests/e2e/test_ui.py`, `tests/web/test_crisis_review.py`, `tests/web/test_day_reviews.py`, `tests/web/test_gameplay.py`, `tests/web/test_hardening.py`, `tests/web/test_http.py`, `tests/web/test_locked.py`, `tests/web/test_private.py`, `tests/web/test_quests.py`, `tests/web/test_timezone.py`
+- Тесты: `tests/analysis/test_analysis.py`, `tests/e2e/test_ui.py`, `tests/security/test_idor.py`, `tests/web/test_crisis_review.py`, `tests/web/test_day_reviews.py`, `tests/web/test_gameplay.py`, `tests/web/test_hardening.py`, `tests/web/test_http.py`, `tests/web/test_locked.py`, `tests/web/test_private.py`, `tests/web/test_quests.py`, `tests/web/test_timezone.py`
 
 ## Точки входа
 

@@ -64,6 +64,8 @@ from kognis.users import (
     UserService,
 )
 
+from ._limits import BodyLimitMiddleware
+
 HERE = Path(__file__).resolve().parent
 # сборка фронтенда: <корень проекта>/frontend/dist (в образе — /app/frontend/dist)
 DIST = Path(os.environ.get("FRONTEND_DIST", HERE.parents[2] / "frontend" / "dist"))
@@ -118,10 +120,15 @@ class SettingsIn(BaseModel):
     timezone: str | None = Field(default=None, max_length=64)
 
 
+# Лимиты ввода (API4): границы совпадают с доменными, но срабатывают до обработки
+Label = Annotated[str, Field(max_length=50)]
+Answer = Annotated[str, Field(max_length=2_000)]
+
+
 class EntryIn(BaseModel):
-    text: str = ""
-    tags: list[str] = Field(default_factory=list)
-    emotions: list[str] = Field(default_factory=list)
+    text: str = Field(default="", max_length=20_000)
+    tags: list[Label] = Field(default_factory=list, max_length=20)
+    emotions: list[Label] = Field(default_factory=list, max_length=20)
     date: dt.date | None = None
     protection: Literal["plain", "locked", "private"] = "plain"
     lock_password: str | None = Field(default=None, max_length=256)
@@ -159,7 +166,7 @@ class EntryOut(BaseModel):
 class DayReviewIn(BaseModel):
     wellbeing: StrictInt
     mood: StrictInt
-    reflection: str = ""
+    reflection: str = Field(default="", max_length=5_000)
 
 
 class DayReviewOut(BaseModel):
@@ -460,14 +467,14 @@ class DirectionOut(BaseModel):
 
 
 class AnalyzeIn(BaseModel):
-    direction: str
+    direction: str = Field(max_length=64)
     start: dt.date
     end: dt.date
     consent: bool = False
 
 
 class AnswersIn(BaseModel):
-    answers: list[str]
+    answers: list[Answer] = Field(max_length=10)
     consent: bool = False
 
 
@@ -642,7 +649,7 @@ class QuestTemplateOut(BaseModel):
 
 
 class AcceptIn(BaseModel):
-    template: str
+    template: str = Field(max_length=64)
 
 
 class FromAnalysisIn(BaseModel):
@@ -672,7 +679,7 @@ class QuizOut(BaseModel):
 
 
 class QuizAnswersIn(BaseModel):
-    answers: list[str]
+    answers: list[Answer] = Field(max_length=20)
 
 
 class QuizAnswersOut(BaseModel):
@@ -845,6 +852,7 @@ def create_app(
     secure_cookie = os.environ.get("KOGNIS_ENV") != "dev"
     app = FastAPI(title="Kognis", dependencies=[Depends(require_json)])
     app.state.db = db
+    app.add_middleware(BodyLimitMiddleware)
 
     @app.middleware("http")
     async def security_headers(request: Request, call_next: Callable[..., Any]) -> Response:

@@ -21,3 +21,13 @@ Bash у reviewer был недоступен: diff, vitest, tsc и verify он �
 ### NOT CHECKED
 - Побайтовая эквивалентность разметки старого и нового кода (проверены только testid, тесты и e2e).
 - Актуальность `api.gen.ts` относительно бэкенда — проверка `contract` в verify зелёная.
+
+## Раунд 3 (HEAD 72b7ce7)
+
+VERDICT: approve
+
+Blocker/major нет. Reviewer работал без Bash: git-факты (diff-stat, неизменность App.test.tsx и tests/e2e, 39=39 data-testid, verify tree 3998256ecec8, e2e 21 passed) переданы автором.
+
+MINOR: тест AC2 не строгий; регулярка AC1 ищет только `function`-компоненты; jsdom-тест logout проверяет только запрос.
+
+NOT CHECKED: побайтовая эквивалентность разметки; мёртвый код/дублирование в новых файлах.

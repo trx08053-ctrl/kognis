@@ -175,6 +175,19 @@ class EntryRepository:
         )
         return [_to_entry(r) for r in self._session.execute(stmt).all()]
 
+    def list_between(self, owner_id: int, start: date, end: date) -> list[Entry]:
+        """Записи владельца за период (границы включительно); фильтр — в запросе к БД."""
+        stmt = (
+            select(entries_table)
+            .where(
+                entries_table.c.owner_id == owner_id,
+                entries_table.c.entry_date >= start,
+                entries_table.c.entry_date <= end,
+            )
+            .order_by(entries_table.c.entry_date.desc(), entries_table.c.id.desc())
+        )
+        return [_to_entry(r) for r in self._session.execute(stmt).all()]
+
 
 def _to_review(row: Row[tuple[object, ...]]) -> DayReview:
     return DayReview(
@@ -226,5 +239,19 @@ class DayReviewRepository:
             select(day_reviews_table)
             .where(day_reviews_table.c.owner_id == owner_id)
             .order_by(day_reviews_table.c.review_date.desc())
+        )
+        return [_to_review(r) for r in self._session.execute(stmt).all()]
+
+    def list_between(self, owner_id: int, start: date, end: date) -> list[DayReview]:
+        """Итоги дня владельца за период (границы включительно); фильтр — в запросе к БД."""
+        table = day_reviews_table
+        stmt = (
+            select(table)
+            .where(
+                table.c.owner_id == owner_id,
+                table.c.review_date >= start,
+                table.c.review_date <= end,
+            )
+            .order_by(table.c.review_date.desc())
         )
         return [_to_review(r) for r in self._session.execute(stmt).all()]

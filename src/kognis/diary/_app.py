@@ -118,6 +118,10 @@ class DiaryService:
     def list_entries(self, owner_id: int) -> list[Entry]:
         return self._repo.list_for(owner_id)
 
+    def list_entries_between(self, owner_id: int, start: date, end: date) -> list[Entry]:
+        """Записи за период, границы включительно; отбор делает БД."""
+        return self._repo.list_between(owner_id, start, end)
+
     def save_day_review(
         self, owner_id: int, review_date: date, wellbeing: int, mood: int, reflection: str
     ) -> DayReview:
@@ -132,3 +136,7 @@ class DiaryService:
 
     def list_day_reviews(self, owner_id: int) -> list[DayReview]:
         return self._reviews.list_for(owner_id)
+
+    def list_day_reviews_between(self, owner_id: int, start: date, end: date) -> list[DayReview]:
+        """Итоги дня за период, границы включительно; отбор делает БД."""
+        return self._reviews.list_between(owner_id, start, end)

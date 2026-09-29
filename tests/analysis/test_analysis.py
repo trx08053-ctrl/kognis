@@ -196,7 +196,7 @@ def test_feature_gate_and_no_data(engine: Engine, monkeypatch: pytest.MonkeyPatc
     def deny(user_id: int, feature: Feature) -> bool:
         return False
 
-    monkeypatch.setattr("kognis.web._app.can_use", deny)
+    monkeypatch.setattr("kognis.web._analysis.can_use", deny)
     assert analyze(client).status_code == 403
     assert provider.calls == []
 

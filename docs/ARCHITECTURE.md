@@ -29,31 +29,33 @@
 flowchart TB
   web --> analysis
   web --> gameplay
+  web --> diary
+  web --> users
   analysis --> diary
-  gameplay --> diary
-  diary --> ai
-  diary --> safety
-  diary --> access
-  ai --> users
-  safety --> users
-  access --> users
+  analysis --> ai
+  analysis --> safety
+  analysis --> db
+  gameplay --> db
+  diary --> db
   users --> db
 ```
 
-Диаграмма = правила import-linter (слои; «выше» может использовать «ниже»): `web` → `analysis | gameplay` → `diary` →
-`ai | safety | access` → `users` → `db`. Межмодульные эффекты (XP за запись, квесты из анализа) связывает `web`
-(сценарии приложения); модули друг о друге не знают ([DECISIONS-NIGHT](DECISIONS-NIGHT.md) D2).
+Диаграмма — фактические импорты модулей (`just map`). Правила import-linter (слои; «выше» может использовать «ниже»):
+`web` → `analysis | gameplay` → `diary` → `ai | safety | access` → `users` → `db`. Межмодульные эффекты (XP за запись,
+квесты из анализа) связывает `web` (сценарии приложения); модули друг о друге не знают
+([DECISIONS-NIGHT](DECISIONS-NIGHT.md) D2). `safety`, `ai`, `access` сейчас не зависят ни от кого; `web` вызывает
+`safety` и `access` напрямую.
 
 | Модуль | Ответственность | Владеет данными | Публичный API | Может использовать |
 |---|---|---|---|---|
-| [web](modules/web.md) | HTTP: JSON API, раздача интерфейса, /health, сессии | — | `create_app`, `main` | все модули через их API |
-| [users](modules/users.md) | регистрация, вход/выход, хэш пароля (argon2id), сессии | `users`, `sessions` | `User`, `UserService` | `db` |
-| [diary](modules/diary.md) | записи: текст, теги, эмоции, дата; позже оценка дня и режим защиты | `entries` | `DiaryService`, `Entry` | `db` |
-| safety (план) | детектор кризисных сигналов, контакты помощи | — | — | `users` |
-| ai (план) | адаптер провайдера ИИ (фейк для тестов; OpenAI-совместимый) | — | `AiProvider` | `users` |
-| analysis (план) | ИИ-анализ периода, направления психологии, согласие | `analyses` | `AnalysisService` | `diary`, `ai`, `safety`, `access` |
-| gameplay (план) | XP, уровни, streaks, достижения, квесты | `progress`, `quests` | `GameplayService` | `diary`, `users`, `db` |
-| access (план) | `can_use(user, feature)` — доступ по плану (сейчас всё разрешено) | `plans` (позже) | `can_use` | `users` |
+| [web](modules/web.md) | HTTP: JSON API, раздача интерфейса, /health, сессии; по файлу на область (`_auth`, `_diary`, `_reviews`, `_analysis`, `_progress`, `_quests`, `_quizzes`, `_settings`), общее — `_deps`, `_limits` | — | `create_app`, `main` | все модули через их API |
+| [users](modules/users.md) | регистрация, вход/выход, хэш пароля (argon2id), сессии, лимит попыток входа | `users`, `sessions`, `login_attempts` | `User`, `UserService` | `db` |
+| [diary](modules/diary.md) | записи (текст, теги, эмоции, режим защиты), итоги дня, выборка за период | `entries`, `day_reviews` | `DiaryService`, `Entry`, `DayReview` | `db` |
+| [safety](modules/safety.md) | детектор кризисных сигналов, контакты помощи | — | `check_text`, `help_block` | — |
+| [ai](modules/ai.md) | адаптер провайдера ИИ (фейк для тестов; OpenAI-совместимый) | — | `AiProvider`, `get_provider` | — |
+| [analysis](modules/analysis.md) | ИИ-анализ периода, направления психологии, согласие, динамика настроения | `analyses` | `AnalysisService` | `diary`, `ai`, `safety`, `db` |
+| [gameplay](modules/gameplay.md) | XP, уровни, streaks, достижения, квесты, опросники | `xp_events`, `achievements`, `quests`, `quest_steps`, `quiz_answers` | `GameplayService`, `QuestService` | `db` |
+| [access](modules/access.md) | `can_use(user, feature)` — доступ по плану (сейчас всё разрешено) | `plans` (позже) | `can_use` | — |
 | [db](modules/db.md) | подключение, `metadata`, транзакции | — | `make_engine`, `transaction`, `metadata` | — |
 
 Каркасы всех модулей и правила import-linter внесены владельцем (ADR 0002, [D1–D11](DECISIONS-NIGHT.md));
@@ -70,7 +72,9 @@ flowchart TB
 
 ## 4. Владение данными
 Одна таблица — один владелец. Чужие данные читаются через API владельца. «Приватные» записи хранятся как
-непрозрачный шифртекст: сервер и `analysis` их не читают. «Под замком» — шифртекст ключом сервера; расшифровка и
+непрозрачный шифртекст: сервер и `analysis` их не читают.
+Таблицы: `users`, `sessions`, `login_attempts` — `users`; `entries`, `day_reviews` — `diary`; `analyses` — `analysis`;
+`xp_events`, `achievements`, `quests`, `quest_steps`, `quiz_answers` — `gameplay`. «Под замком» — шифртекст ключом сервера; расшифровка и
 передача ИИ только по явному разрешению пользователя на конкретный анализ.
 
 ## 5. Внешние интеграции
@@ -92,6 +96,8 @@ flowchart TB
 | Новые направления психологии, рекомендации | высокая | промпты как данные-конфигурация | analysis |
 | Новые квесты и достижения | средняя | правила как данные | gameplay |
 | Смена схемы шифрования | низкая | версия формата в поле записи | diary |
+| Рост дневника (годы записей) | средняя | отбор по периоду уже в SQL (`DiaryService.list_*_between`); при необходимости — индекс `(owner_id, entry_date)` миграцией | diary, analysis |
+| Новая область API | средняя | отдельный файл роутера в `web/`, сборка в `_app.py`; файл ≤ 400 строк (тест kognis-pj6 AC1) | web |
 
 ## 8. Неизвестные и рискованные предположения
 | # | Предположение | Риск, если неверно | Проверка: эксперимент / задача | Результат |

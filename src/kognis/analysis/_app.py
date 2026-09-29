@@ -56,10 +56,6 @@ class AnalysisOutcome:
     help: HelpBlock | None = None
 
 
-def _in_period(day: date, start: date, end: date) -> bool:
-    return start <= day <= end
-
-
 def _entry_payload(entry: Entry) -> dict[str, object]:
     return {
         "id": entry.id,
@@ -99,8 +95,7 @@ class AnalysisService:
         return mood_dynamics(
             [
                 MoodPoint(r.review_date, r.mood, r.wellbeing)
-                for r in self._diary.list_day_reviews(owner_id)
-                if _in_period(r.review_date, start, end)
+                for r in self._diary.list_day_reviews_between(owner_id, start, end)
             ]
         )
 
@@ -110,15 +105,9 @@ class AnalysisService:
         """Анализ периода. Защищённые и приватные записи не передаются никогда (D4)."""
         focus = direction_by_code(direction)
         validate_period(start, end)
-        in_period = [
-            e for e in self._diary.list_entries(owner_id) if _in_period(e.entry_date, start, end)
-        ]
+        in_period = self._diary.list_entries_between(owner_id, start, end)
         entries = [e for e in in_period if e.protection == "plain"]
-        reviews = [
-            r
-            for r in self._diary.list_day_reviews(owner_id)
-            if _in_period(r.review_date, start, end)
-        ]
+        reviews = self._diary.list_day_reviews_between(owner_id, start, end)
         # локальная проверка (safety) до любой передачи: при сигнале — поддержка вместо паттернов
         block = _crisis_block([e.text for e in entries] + [r.reflection for r in reviews])
         # флаг кризиса учитываем и у защищённых записей: их текст не читаем и не передаём

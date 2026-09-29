@@ -9,6 +9,7 @@
 - текст записи не пуст и ≤ 20 000 символов (`src/kognis/diary/_domain.py::normalize_text`);
 - теги и эмоции — нижний регистр, без пустых и повторов, ≤ 20 штук (`src/kognis/diary/_domain.py::normalize_labels`);
 - каждая операция принимает владельца; чужая запись неотличима от несуществующей — `None` (`src/kognis/diary/_app.py::DiaryService.get_entry`);
+- выборка за период: `list_entries_between` и `list_day_reviews_between` — границы включительно, фильтр по владельцу и датам в SQL-запросе (`src/kognis/diary/_app.py::DiaryService.list_entries_between`); `analysis` использует их, а не грузит всё и не фильтрует в Python;
 - итог дня: самочувствие и настроение — целые 1–10, рефлексия ≤ 5 000 символов (может быть пустой); один итог на владельца и дату, повторное сохранение исправляет его (`src/kognis/diary/_app.py::DiaryService.save_day_review`);
 - запись с кризисным сигналом помечается флагом `crisis` (`src/kognis/diary/_app.py::DiaryService.mark_crisis`); сам сигнал находит `safety`, сценарий связывает `web`; запись сохраняется всегда;
 - режимы защиты: `plain`, `locked` («под замком») и `private` ([ADR 0003](../adr/0003-auth-sessions-and-entry-protection.md));

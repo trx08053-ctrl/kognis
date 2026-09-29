@@ -4,6 +4,9 @@
 
 - **Назначение:** HTTP-вход приложения — JSON API `/api/*`, `/health` и раздача сборки интерфейса
   (`frontend/dist`). Бизнес-логики и SQL не содержит. Интерфейс — `frontend/` (React + TypeScript).
+- **Эксплуатация:** `/health` выполняет `SELECT 1`; при недоступной БД → 503 `{"status":"unavailable"}` без деталей.
+  `/docs`, `/redoc`, `/openapi.json` есть только при `KOGNIS_ENV=dev`, иначе 404 (маршрут-заглушка SPA их не отдаёт);
+  схема для типов фронтенда берётся из `create_app(...).openapi()`, а не по HTTP.
 - **Публичный API:** `src/kognis/web/__init__.py` — `create_app`, `main`.
 - **Структура:** `_app.py` только собирает приложение (заголовки безопасности, middleware, подключение роутеров, SPA);
   по файлу на область — `_auth.py`, `_settings.py`, `_diary.py`, `_reviews.py`, `_progress.py`, `_analysis.py`,

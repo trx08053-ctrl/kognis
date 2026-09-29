@@ -6,6 +6,7 @@
 """
 
 import datetime as dt
+import logging
 import os
 from collections.abc import Callable
 from pathlib import Path
@@ -109,7 +110,8 @@ def create_app(
         try:
             with db.connect() as conn:
                 conn.execute(text("SELECT 1"))
-        except Exception:
+        except Exception as exc:
+            logging.getLogger(__name__).error("health: БД недоступна (%s)", type(exc).__name__)
             return JSONResponse({"status": "unavailable"}, status_code=503)
         return JSONResponse({"status": "ok"})
 

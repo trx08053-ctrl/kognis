@@ -51,5 +51,7 @@ def test_api_docs_hidden_outside_dev(engine: Engine, monkeypatch: pytest.MonkeyP
 def test_runbook_uses_just_backup_and_restore_not_manual_commands() -> None:
     text = RUNBOOK.read_text()
     assert not re.search(r"docker compose[^\n]*(pg_dump|pg_restore)", text)
+    assert "pg_dump" not in text
+    assert "pg_restore" not in text
     assert "just backup" in text
     assert "just restore" in text

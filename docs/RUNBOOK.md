@@ -27,7 +27,8 @@ just restore .deploy/backups/staging-….dump       # остановить app �
 APP_BIND=127.0.0.1 just deploy --host ssh://deploy@srv --port 8000       # прод — решение человека
 just backup --env production --host ssh://deploy@srv                      # перед каждым деплоем со схемой
 ```
-- `/health` проверяет и базу данных: при недоступной БД деплой не пройдёт.
+- `/health` выполняет `SELECT 1`: при недоступной БД отвечает 503 без деталей, деплой не пройдёт.
+- `/docs`, `/redoc`, `/openapi.json` доступны только при `KOGNIS_ENV=dev`; в остальных окружениях → 404.
 - Секреты окружения — `.deploy/<env>.env` (пароль БД) и `.deploy/<env>.app.env` (ключи приложения); дамп
   их не содержит — храните копии отдельно (менеджер паролей).
 - Восстановление репетирует `just selftest-deploy` в шаблоне; в проекте — репетируйте на staging.
@@ -43,15 +44,9 @@ just backup --env production --host ssh://deploy@srv                      # пе
 - `deploy/compose.yml` пока **не передаёт** `KOGNIS_DATA_KEY` в контейнер `app` (защищённый файл, правка — решение человека): добавить `KOGNIS_DATA_KEY: ${KOGNIS_DATA_KEY:-}` в `environment` сервиса `app`, иначе в развёртывании замок отвечает 503.
 
 ## Бэкап и восстановление (PostgreSQL)
-Проект compose называется `<slug>-<env>` (для stage — `kognis-stage`; `docker compose -p … ps` покажет точное имя).
-```bash
-# бэкап: дамп БД (в нём зашифрованные закрытые записи и хэши паролей — хранить как секрет)
-docker compose -p kognis-stage -f deploy/compose.yml exec -T db pg_dump -U app -Fc app > kognis-$(date +%F).dump
-# восстановление (app остановить, затем вернуть)
-docker compose -p kognis-stage -f deploy/compose.yml stop app
-docker compose -p kognis-stage -f deploy/compose.yml exec -T db pg_restore -U app -d app --clean --if-exists < kognis-YYYY-MM-DD.dump
-docker compose -p kognis-stage -f deploy/compose.yml up -d app
-```
+Бэкап и восстановление — только `just backup` / `just restore` (см. «Развёртывание, бэкап, восстановление»):
+дамп содержит зашифрованные закрытые записи и хэши паролей — хранить как секрет.
+**Порядок для релиза со схемой:** `just backup` → деплой → `/health` 200 (при недоступной БД он отвечает 503).
 - Дамп **не содержит** `KOGNIS_DATA_KEY`: без ключа закрытые записи из восстановленной БД не открываются. Бэкапьте ключ отдельно от дампа (в другом хранилище секретов).
 - «Приватные» записи шифруются в браузере: их не прочитать ни из дампа, ни с ключом.
 - После восстановления: `curl /health`, вход тестовым пользователем, открытие закрытой записи; при старом дампе — `alembic upgrade head`. Восстановление стоит периодически репетировать на копии.

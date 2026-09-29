@@ -14,6 +14,7 @@ from typing import Any
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
 from kognis.ai import AiProvider, get_provider
@@ -47,6 +48,7 @@ SECURITY_HEADERS = {
     "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
     "Cross-Origin-Opener-Policy": "same-origin",
 }
+DOC_PATHS = ("docs", "redoc", "openapi.json")  # документация API — только в dev
 HSTS = "max-age=31536000; includeSubDomains"
 
 
@@ -72,7 +74,15 @@ def create_app(
     dist = frontend_dist or DIST
     # Secure по умолчанию; отключается только явным KOGNIS_ENV=dev (ADR 0003)
     secure_cookie = os.environ.get("KOGNIS_ENV") != "dev"
-    app = FastAPI(title="Kognis", dependencies=[Depends(require_json)])
+    is_dev = not secure_cookie
+    # вне dev документации нет; схема доступна коду напрямую: app.openapi() (gen_api_types.py)
+    app = FastAPI(
+        title="Kognis",
+        dependencies=[Depends(require_json)],
+        docs_url="/docs" if is_dev else None,
+        redoc_url="/redoc" if is_dev else None,
+        openapi_url="/openapi.json" if is_dev else None,
+    )
     app.state.db = db
     app.add_middleware(BodyLimitMiddleware)
 
@@ -95,8 +105,13 @@ def create_app(
         return response
 
     @app.get("/health")
-    def health() -> dict[str, str]:
-        return {"status": "ok"}
+    def health() -> Response:
+        try:
+            with db.connect() as conn:
+                conn.execute(text("SELECT 1"))
+        except Exception:
+            return JSONResponse({"status": "unavailable"}, status_code=503)
+        return JSONResponse({"status": "ok"})
 
     app.include_router(auth_router(db, secure_cookie, user_today))
     app.include_router(settings_router(db, user_today))
@@ -112,7 +127,7 @@ def create_app(
     @app.get("/{path:path}")
     def index(path: str) -> Response:
         """Любой путь вне /api — страница SPA (маршруты разбирает React Router)."""
-        if path.startswith("api/"):
+        if path.startswith("api/") or (not is_dev and path in DOC_PATHS):
             raise HTTPException(status_code=404, detail="не найдено")
         page = dist / "index.html"
         if not page.exists():

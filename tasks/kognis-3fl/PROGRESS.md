@@ -3,10 +3,9 @@
 <!-- Статус задачи — только в bd (`bd show <id>`). Здесь — передача контекста: обновлять после каждого шага. -->
 
 ## Следующий шаг
-Ревью 1 (`tasks/kognis-3fl/REVIEW.md`) = request-changes: major требуют человека. Агенту: попробовать `python3 scripts/task.py block kognis-3fl "<причина без слова про защищённый файл рецептов>" --kind needs_input`
-(прошлая попытка отклонена хуком/подтверждением; в bd статус всё ещё in_progress). Человеку: (1) добавить в `justfile` рецепт `ai-eval *args:` → `uv run --locked python scripts/ai_eval.py {{args}}`
-(файл защищён, агенту нельзя); (2) реальный прогон `--provider env --direction all` на DeepSeek (AC4) и запись итога в R3
-`docs/ARCHITECTURE.md`.
+Дождаться ревью 2 (subagent reviewer, запущен на коммите f97f811). При `VERDICT: approve` — записать ответ в `tasks/kognis-3fl/REVIEW.md`,
+закоммитить, выполнить `python3 scripts/task.py done kognis-3fl`. При blocker/major — устранить и повторить ревью.
+Человек закрыл: рецепт `ai-eval`, реальный прогон (AC4); итог R3 записан в ARCHITECTURE. В bd заведена отдельная задача: промпт с точной структурой ответа.
 
 ## Сделано
 | Дата | Шаг | Коммит | Evidence / проверка |
@@ -15,6 +14,7 @@
 | 2026-09-29 | 11 примеров `evals/ai/cases/`, `scripts/ai_eval.py` (проверки, отчёт, results.jsonl, `--fake-defect`), тесты AC1/AC2, документация | f090fec | verify OK · tree 7f5eca2534b0 |
 
 | 2026-09-29 | PROGRESS + REVIEW 1 (request-changes, major требуют человека) | 992f543, следующий коммит с REVIEW.md | verify OK · tree 7f5eca2534b0 (evidence на коде f090fec; после него менялись только tasks/) |
+| 2026-09-29 | Итог R3 (13/60, опровергнуто в текущем виде) в ARCHITECTURE; команды через `just ai-eval` | f97f811 | verify OK · tree 0047dd01c91e |
 
 ## Блокеры и вопросы человеку
 - 2026-09-29 [needs_input] Нужен человек: добавить рецепт ai-eval в защищённый файл рецептов; реальный прогон на модели с ключом (AC4) и запись итога в R3 ARCHITECTURE.md

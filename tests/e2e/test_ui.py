@@ -725,6 +725,10 @@ def test_sidebar_stays_visible_and_full_height_on_long_page(
     assert box["height"] >= DESKTOP["height"] - 1
     background = nav.evaluate("e => getComputedStyle(e).backgroundColor")
     assert background not in {"rgba(0, 0, 0, 0)", "transparent"}
+    # фон колонки меню продолжается на всю высоту страницы (важно и для полноэкранных снимков)
+    layout = page.locator(".layout")
+    assert layout.evaluate("e => getComputedStyle(e).backgroundImage").startswith("linear-gradient")
+    assert layout.evaluate("e => e.getBoundingClientRect().height") >= 4000
     context.close()
 
 

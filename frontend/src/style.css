@@ -22,6 +22,7 @@
   --danger-border: #991b1b;
   --danger-text: #7f1d1d;
   --ok-text: #14532d;
+  --nav-w: 13rem;
   --radius: 1rem;
   --radius-sm: 0.625rem;
   font-family: system-ui, sans-serif;
@@ -218,7 +219,7 @@ body {
   @media (min-width: 768px) {
     .nav {
       inset: 0 auto 0 0;
-      width: 13rem;
+      width: var(--nav-w);
       flex-direction: column;
       gap: 0.25rem;
       border-top: 0;
@@ -235,13 +236,13 @@ body {
     }
     .layout {
       min-height: 100vh;
-      padding-left: 13rem;
+      padding-left: var(--nav-w);
       /* фон меню продолжается на всю высоту страницы, в том числе на полноэкранных снимках */
       background: linear-gradient(
         to right,
-        var(--surface) calc(13rem - 1px),
-        var(--border) calc(13rem - 1px) 13rem,
-        transparent 13rem
+        var(--surface) calc(var(--nav-w) - 1px),
+        var(--border) calc(var(--nav-w) - 1px) var(--nav-w),
+        transparent var(--nav-w)
       );
     }
   }

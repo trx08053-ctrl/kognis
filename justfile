@@ -12,6 +12,7 @@ setup:
     mise install
     uv sync --locked
     lefthook install
+    python3 scripts/check_security.py update
     bd init --non-interactive --skip-agents --skip-hooks --init-if-missing -q
     @just status
 
@@ -87,9 +88,13 @@ regress *args:
 module-card name:
     python3 scripts/new_module.py {{name}} --card-only
 
-# Уязвимости зависимостей (нужна сеть)
+# Уязвимости зависимостей (офлайн-база; обновление — just security-update)
 audit:
-    osv-scanner scan source --lockfile uv.lock
+    python3 scripts/check_security.py deps
+
+# Обновить наборы правил Semgrep и базу уязвимостей (нужна сеть; раз в неделю — автоматически при setup)
+security-update:
+    python3 scripts/check_security.py update --force
 
 # Задачи: новая / начать / заблокировать / закрыть (только с evidence) / в работе
 task-new title *flags:

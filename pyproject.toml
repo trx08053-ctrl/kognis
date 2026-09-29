@@ -74,4 +74,5 @@ markers = [
     "e2e: сквозные пользовательские сценарии",
     "acceptance(task, ac): приёмочный сценарий для критерия ACn задачи — docs/TESTING.md",
     "migration: миграция на данных прошлой версии схемы — docs/EVOLUTION.md",
+    "security(kind, target): проверка безопасности, напр. security(\"idor\", \"GET /api/x/{id}\") — docs/SECURITY.md",
 ]

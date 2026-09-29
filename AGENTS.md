@@ -38,6 +38,7 @@
 | `just review-x --task <id>` | второе мнение другой модели (Ollama Cloud; код уходит во внешнее облако — только для risky-задач или по просьбе человека) |
 
 ## Ограничения
+- **Безопасность по умолчанию** ([правила и чек-лист](docs/SECURITY.md)): маршрут закрыт, пока он не в `security/public-routes.txt` (решение человека); данные фильтруются по владельцу в запросе к БД, чужой объект → 404, на каждый маршрут с `{id}` — тест `@pytest.mark.security("idor", "<METHOD> <path>")`; ввод — через схемы с ограничениями, SQL — только параметры, HTML — только с экранированием; секреты — из окружения, не в коде и не в логах. Для risky-задач — раздел «2c. Угрозы» в TASK. Находки `sast`/`deps` исправляй, а не подавляй.
 - **Не ослабляй проверки.** Не меняй конфиги проверок (`pyproject.toml`, `justfile`, `lefthook.yml`, `.quality-baseline.json`, `scripts/verify.py`, `scripts/check_*`, `.claude/`, `frontend/{package.json,tsconfig.json,biome.json,vite.config.ts}`), не удаляй и не ослабляй тесты, не обходи hooks (`--no-verify`). Подавление (`noqa`, `type: ignore`, `skip`, `@ts-expect-error`, `biome-ignore`) допускается только с `justified: <task-id> <причина>` в той же строке. Если честно пройти проверку нельзя — остановись и эскалируй.
 - **Застревание:** та же причина падения 3 раза подряд (verify печатает `ESCALATE`) → стоп: диагноз и гипотезы в PROGRESS.md, `just task-block <id> "…" --kind needs_input`. Разные новые ошибки — это нормальная отладка.
 - **Секреты:** не читай `.env*`, `secrets/`, ключи; не расшифровывай SOPS; не выводи секреты в логи и коммиты.
@@ -54,5 +55,5 @@
 - [ ] reviewer: нет blocker/major; в отчёте перечислено, что **не** проверено
 
 ## Подробнее
-[Архитектура](docs/ARCHITECTURE.md) · [Карта](docs/MAP.md) · [Компоненты](docs/modules/) · [ADR](docs/adr/) · [Тестирование](docs/TESTING.md) · [Эволюция данных и контрактов](docs/EVOLUTION.md) · [Runbook](docs/RUNBOOK.md) · [Техдолг](docs/TECH_DEBT.md) ·
+[Архитектура](docs/ARCHITECTURE.md) · [Карта](docs/MAP.md) · [Компоненты](docs/modules/) · [ADR](docs/adr/) · [Тестирование](docs/TESTING.md) · [Эволюция данных и контрактов](docs/EVOLUTION.md) · [Runbook](docs/RUNBOOK.md) · [Техдолг](docs/TECH_DEBT.md) · [Безопасность](docs/SECURITY.md) ·
 [Задачи](tasks/README.md) · [Секреты](secrets/README.md) · [Harness и обоснование правил](docs/HARNESS.md)

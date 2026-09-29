@@ -1,0 +1,155 @@
+# Правила безопасности harness — то, что не ловят ruff (S), Biome и наборы правил OWASP из реестра Semgrep.
+# Файл защищён. Подавление — комментарий nosemgrep: <id> с `justified: <task-id> <причина>` в той же строке.
+rules:
+  # ── Python / FastAPI ────────────────────────────────────────────────────────────────────────
+  - id: harness.py.open-redirect
+    languages: [python]
+    severity: ERROR
+    message: >-
+      Открытый редирект (OWASP A01): адрес перехода не литерал. Разрешайте только относительные пути
+      своего приложения или адреса из белого списка.
+    patterns:
+      - pattern-either:
+          - pattern: RedirectResponse($URL, ...)
+          - pattern: RedirectResponse(url=$URL, ...)
+      - pattern-not: RedirectResponse("...", ...)
+      - pattern-not: RedirectResponse(url="...", ...)
+      - pattern-not: RedirectResponse($R.url_for(...), ...)
+      - pattern-not: RedirectResponse(url=$R.url_for(...), ...)
+
+  - id: harness.py.html-from-string
+    languages: [python]
+    severity: ERROR
+    message: >-
+      HTML собирается из строки с подстановкой (XSS, OWASP A03). Используйте шаблоны Jinja2 с автоэкранированием
+      или html.escape для каждого значения.
+    pattern-either:
+      - pattern: HTMLResponse(f"...", ...)
+      - pattern: HTMLResponse("..." % $X, ...)
+      - pattern: HTMLResponse("...".format(...), ...)
+      - pattern: HTMLResponse($A + $B, ...)
+      - pattern: |
+          @$APP.$METHOD(..., response_class=HTMLResponse, ...)
+          def $F(...):
+            ...
+            return f"..."
+      - pattern: Markup(f"...")
+
+  - id: harness.py.secret-in-log
+    languages: [python]
+    severity: ERROR
+    message: >-
+      В лог попадает секрет или содержимое пароля/токена (OWASP A09). Логируйте идентификаторы, а не секреты
+      и не пользовательский текст.
+    patterns:
+      - pattern-either:
+          - pattern: $LOG.$LEVEL(..., $ARG, ...)
+          - pattern: $LOG.$LEVEL(f"...{$ARG}...", ...)
+          - pattern: print(..., $ARG, ...)
+      - metavariable-regex:
+          metavariable: $LEVEL
+          regex: ^(debug|info|warning|warn|error|exception|critical|log)$
+      - metavariable-regex:
+          metavariable: $ARG
+          regex: (?i)^[\w.]*(password|passwd|secret|token|api_key|apikey|private_key|lock_password)[\w]*$
+
+  - id: harness.py.cookie-flags
+    languages: [python]
+    severity: ERROR
+    message: >-
+      Cookie без httponly=True и samesite (OWASP A05/A07). Для cookie сессии также secure=True вне разработки.
+    patterns:
+      - pattern: $RESP.set_cookie(...)
+      - pattern-not: $RESP.set_cookie(..., httponly=True, ..., samesite=$S, ...)
+      - pattern-not: $RESP.set_cookie(..., samesite=$S, ..., httponly=True, ...)
+
+  - id: harness.py.cors-wildcard-credentials
+    languages: [python]
+    severity: ERROR
+    message: 'CORS с allow_origins=["*"] и credentials (OWASP A05) — перечислите доверенные источники.'
+    pattern: 'CORSMiddleware(..., allow_origins=["*"], ..., allow_credentials=True, ...)'
+
+  - id: harness.py.jwt-no-verify
+    languages: [python]
+    severity: ERROR
+    message: Проверка подписи JWT отключена (OWASP A02/A07).
+    pattern-either:
+      - pattern: '$JWT.decode(..., options={..., "verify_signature": False, ...}, ...)'
+      - pattern: $JWT.decode(..., verify=False, ...)
+
+  - id: harness.py.compare-secret-timing
+    languages: [python]
+    severity: WARNING
+    message: >-
+      Сравнение секрета через == уязвимо к атаке по времени — используйте hmac.compare_digest
+      (или проверку хэша библиотекой argon2/bcrypt).
+    patterns:
+      - pattern-either:
+          - pattern: $A == $B
+          - pattern: $A != $B
+      - metavariable-regex:
+          metavariable: $A
+          regex: (?i).*(token|secret|signature|api_key|digest|password_hash)$
+
+  - id: harness.py.path-from-input
+    languages: [python]
+    severity: WARNING
+    message: >-
+      Путь к файлу из пользовательского ввода (path traversal, OWASP A01). Нормализуйте путь и проверяйте,
+      что он внутри разрешённого каталога (Path.resolve().is_relative_to(base)).
+    pattern-either:
+      - pattern: FileResponse($REQ.$ATTR[...], ...)
+      - pattern: |
+          def $F(..., $P: str, ...):
+            ...
+            open($BASE / $P, ...)
+      - pattern: |
+          def $F(..., $P: str, ...):
+            ...
+            FileResponse($BASE / $P, ...)
+
+  # ── TypeScript / React ──────────────────────────────────────────────────────────────────────
+  - id: harness.ts.token-in-web-storage
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: >-
+      Токен/секрет в localStorage/sessionStorage доступен любому скрипту на странице (XSS → кража сессии).
+      Сессия — httpOnly-cookie; в браузерном хранилище — только несекретные настройки.
+    patterns:
+      - pattern-either:
+          - pattern: localStorage.setItem($K, ...)
+          - pattern: sessionStorage.setItem($K, ...)
+          - pattern: window.localStorage.setItem($K, ...)
+      - metavariable-regex:
+          metavariable: $K
+          regex: (?i).*(token|jwt|session|secret|password|credential|api_?key|auth_).*
+
+  - id: harness.ts.navigate-to-variable
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: >-
+      Переход по адресу из переменной (открытый редирект / javascript: URL, OWASP A01/A03). Разрешайте только
+      относительные пути своего приложения (начинаются с одного "/") или адреса из белого списка.
+    patterns:
+      - pattern-either:
+          - pattern: window.location.href = $X
+          - pattern: location.href = $X
+          - pattern: window.location = $X
+          - pattern: window.location.assign($X)
+          - pattern: window.location.replace($X)
+          - pattern: window.open($X, ...)
+      - pattern-not: window.location.href = "..."
+      - pattern-not: location.href = "..."
+      - pattern-not: window.location.assign("...")
+      - pattern-not: window.location.replace("...")
+      - pattern-not: window.open("...", ...)
+
+  - id: harness.ts.href-from-variable
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >-
+      Ссылка с адресом из данных: javascript:-URL выполнит код. Проверяйте схему (https:, mailto:) или
+      используйте только внутренние маршруты.
+    pattern-either:
+      - pattern: <a href={$X.$Y} />
+      - pattern: <a href={$X.$Y}>...</a>

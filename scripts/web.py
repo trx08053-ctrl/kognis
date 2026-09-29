@@ -22,6 +22,7 @@ import argparse
 import os
 import re
 import secrets
+import shutil
 import socket
 import subprocess
 import sys
@@ -149,6 +150,26 @@ def release(env: str, tag: str, port: str, docker_host: str | None) -> None:
     wait_health(port, docker_host)
 
 
+def scan_image(image: str, environ: dict[str, str]) -> None:
+    """Trivy: HIGH/CRITICAL с доступным исправлением — стоп; исключения — .trivyignore (защищён)."""
+    trivy = shutil.which("trivy")
+    if trivy is None:
+        sys.exit(
+            "нет trivy — `mise install` (сканирование образа обязательно перед развёртыванием)"
+        )
+    print("── сканирование образа (trivy: HIGH/CRITICAL с исправлением)", flush=True)
+    proc = subprocess.run(
+        [trivy, "image", "--quiet", "--scanners", "vuln", "--severity", "HIGH,CRITICAL",
+         "--ignore-unfixed", "--exit-code", "1", "--format", "table", image],
+        cwd=ROOT, env=environ, capture_output=True, text=True, check=False,
+    )  # fmt: skip
+    if proc.returncode != 0:
+        sys.exit(
+            f"{(proc.stdout + proc.stderr).strip()[-4000:]}\n\nв образе уязвимости с фиксом — "
+            "обновите базовый образ/пакеты; осознанное исключение — .trivyignore (решение человека)"
+        )
+
+
 def cmd_stage(a: argparse.Namespace) -> None:
     if sh("git", "status", "--porcelain", "--untracked-files=no"):
         sys.exit("есть незакоммиченные изменения — разворачивается только закоммиченный код")
@@ -156,6 +177,7 @@ def cmd_stage(a: argparse.Namespace) -> None:
     environ = {**os.environ, **({"DOCKER_HOST": a.host} if a.host else {})}
     print(f"── образ {SLUG}:{tag}", flush=True)
     sh("docker", "build", "-t", f"{SLUG}:{tag}", ".", env=environ)
+    scan_image(f"{SLUG}:{tag}", environ)
     release(a.env, tag, a.port, a.host)
     hist = [t for t in history(a.env) if t != tag] + [tag]
     (DEPLOY / f"{a.env}.history").write_text("\n".join(hist[-10:]) + "\n")

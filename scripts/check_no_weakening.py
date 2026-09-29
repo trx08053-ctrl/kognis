@@ -26,7 +26,7 @@ SKIP_SUFFIXES = (".md", ".jsonl", ".lock")
 SUPPRESSIONS = re.compile(
     r"#\s*noqa|#\s*type:\s*ignore|#\s*pyright:\s*ignore|pragma:\s*no\s*cover"
     r"|pytest\.mark\.(skip|skipif|xfail)|pytest\.(skip|xfail)\("
-    r"|eslint-disable|biome-ignore|@ts-ignore|@ts-expect-error|@ts-nocheck"
+    r"|eslint-disable|biome-ignore|(#|//)\s*nosemgrep|@ts-ignore|@ts-expect-error|@ts-nocheck"
     r"|\b(it|test|describe)\.(only|skip)\("
 )
 JUSTIFIED = re.compile(r"justified:\s*[\w.-]+-\w+")

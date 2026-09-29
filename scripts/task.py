@@ -126,6 +126,9 @@ def cmd_done(args: argparse.Namespace) -> None:
     open_ui = re.findall(r"^## (UI-\d+) · open ·", ui.read_text(), re.M) if ui.exists() else []
     if open_ui:
         sys.exit(f"Нельзя закрыть: открытые UI-замечания {open_ui} в {ui.relative_to(ROOT)}.")
+    threats = missing_threats(args.id)
+    if threats:
+        sys.exit(threats)
     missing = uncovered_acceptance(args.id)
     if missing:
         sys.exit(
@@ -142,6 +145,24 @@ def cmd_done(args: argparse.Namespace) -> None:
     metrics.record_task(args.id, "accepted", args.human_min)
     print(f"{args.id}: closed ({proof})")
     commit_state(args.id)
+
+
+def missing_threats(task_id: str) -> str:
+    """risky-задача закрывается только с заполненным разделом «2c. Угрозы» (docs/SECURITY.md)."""
+    if metrics.task_meta(task_id)["risk"] != "risky":
+        return ""
+    text = (TASKS / task_id / "TASK.md").read_text()
+    match = re.search(r"^## 2c\..*?\n(.*?)(?=^## |\Z)", text, re.M | re.S)
+    rows = [
+        ln for ln in (match.group(1).splitlines() if match else [])
+        if ln.startswith("|") and "---" not in ln and "Угроза" not in ln and "…" not in ln
+    ]  # fmt: skip
+    if rows:
+        return ""
+    return (
+        f"Нельзя закрыть risky-задачу: в tasks/{task_id}/TASK.md не заполнен раздел «2c. Угрозы» "
+        "(угроза → мера → тест; docs/SECURITY.md)."
+    )
 
 
 def git_out(*args: str) -> str:

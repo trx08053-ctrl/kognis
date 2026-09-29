@@ -58,6 +58,9 @@ PROTECTED = [
     ".github/*",
     ".github/**/*",
     ".copier-answers.yml",
+    "security/*",
+    ".trivyignore",
+    ".zap-rules.tsv",
     ".quality-baseline.json",
 ]
 BYPASS = re.compile(

@@ -51,6 +51,9 @@ ALL_CHECKS: list[tuple[str, list[str], bool]] = [
     ("frontend", ["pnpm", "--dir", "frontend", "run", "check"], (ROOT / "frontend").is_dir()),
     ("tests", ["uv", "run", "--locked", "pytest"], True),
     ("ratchet", [PY, "scripts/check_ratchet.py"], True),
+    # безопасность: Semgrep (harness + OWASP) по коду, osv-scanner по lockfile — docs/SECURITY.md
+    ("sast", [PY, "scripts/check_security.py", "sast"], True),
+    ("deps", [PY, "scripts/check_security.py", "deps"], True),
     ("no-weakening", [PY, "scripts/check_no_weakening.py"], True),
     ("secrets", ["gitleaks", "dir", ".", "--no-banner", "--redact", "-c", ".gitleaks.toml"], True),
     ("map", [PY, "scripts/gen_map.py", "--check"], (ROOT / "docs" / "MAP.md").exists()),
@@ -75,7 +78,7 @@ ALL_CHECKS: list[tuple[str, list[str], bool]] = [
 ]
 CHECKS: list[tuple[str, list[str]]] = [(n, c) for n, c, on in ALL_CHECKS if on]
 
-TOOLS = ["python3", "uv", "ruff", "basedpyright", "gitleaks", "lychee"] + (
+TOOLS = ["python3", "uv", "ruff", "basedpyright", "gitleaks", "lychee", "osv-scanner"] + (
     ["node", "pnpm"] if (ROOT / "frontend").is_dir() else []
 )
 

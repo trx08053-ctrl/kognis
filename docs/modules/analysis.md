@@ -33,6 +33,7 @@
 
 ## Проверка
 - `just test-module analysis` — тесты модуля и его границы; сценарии — `tests/analysis/`.
+- Качество разбора на модели: `python3 scripts/ai_eval.py` (примеры и проверки — `evals/ai/README.md`).
 
 ## Решения
 - D7 в `docs/DECISIONS-NIGHT.md`; реальный вызов ИИ с ключом владельца — отдельное решение человека (R3).

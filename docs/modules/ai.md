@@ -9,6 +9,8 @@
 ## Бизнес-правила
 - Без `KOGNIS_AI_BASE_URL` — `FakeProvider` (детерминированный, без сети): `src/kognis/ai/_app.py::get_provider`.
 - `OpenAICompatibleProvider` (`KOGNIS_AI_BASE_URL`, `KOGNIS_AI_MODEL`, `KOGNIS_AI_API_KEY`): запрос chat/completions, повтор при 429/5xx с растущей паузой (2 повтора), таймаут → `AiTimeoutError`, прочее → `AiError`: `src/kognis/ai/_infra.py::OpenAICompatibleProvider`.
+- Текст `AiError` называет категорию причины: адрес не найден (DNS), соединение отклонено, таймаут, HTTP-код с
+  пояснением (401/403 — ключ отклонён, 404, 429, 5xx — сбой провайдера): `src/kognis/ai/_infra.py::http_failure`.
 - Ключ API не попадает в логи, `repr` и тексты ошибок; тела ответов провайдера в ошибки не включаются.
 
 ## Данные (владение)

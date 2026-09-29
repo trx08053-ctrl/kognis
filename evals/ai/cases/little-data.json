@@ -1,0 +1,11 @@
+{
+  "id": "little-data",
+  "title": "Мало данных: две записи",
+  "period": {"start": "2026-09-01", "end": "2026-09-07"},
+  "entries": [
+    {"date": "2026-09-02", "text": "Сегодня было как-то не так. Не могу объяснить.", "tags": [], "emotions": []},
+    {"date": "2026-09-05", "text": "Устал, но не понимаю от чего.", "tags": [], "emotions": ["усталость"]}
+  ],
+  "day_reviews": [],
+  "expect": {"status": "done", "needs_questions": true}
+}

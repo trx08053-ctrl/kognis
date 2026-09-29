@@ -58,7 +58,7 @@
   - `MoodPoint` — `src/kognis/analysis/_domain.py`
   - `NoDataError` — `src/kognis/analysis/_app.py`
   - `Pattern` — `src/kognis/analysis/_domain.py`
-- Тесты: `tests/analysis/test_analysis.py`, `tests/diary/test_period.py`, `tests/security/test_domain_limits.py`
+- Тесты: `tests/ai/test_ai_eval.py`, `tests/analysis/test_analysis.py`, `tests/diary/test_period.py`, `tests/security/test_domain_limits.py`
 
 ## `kognis.db`
 
@@ -123,7 +123,7 @@
   - `assess` — `src/kognis/safety/_domain.py`
   - `check_text` — `src/kognis/safety/_app.py`
   - `help_block` — `src/kognis/safety/_app.py`
-- Тесты: `tests/safety/test_safety.py`
+- Тесты: `tests/ai/test_ai_eval.py`, `tests/safety/test_safety.py`
 
 ## `kognis.users`
 

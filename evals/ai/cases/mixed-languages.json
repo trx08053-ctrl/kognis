@@ -1,0 +1,15 @@
+{
+  "id": "mixed-languages",
+  "title": "Смешанные русский и английский",
+  "period": {"start": "2026-09-01", "end": "2026-09-07"},
+  "entries": [
+    {"date": "2026-09-01", "text": "Сегодня был deadline по спринту, а я всё ещё дебажу один баг. Feeling like an impostor, все вокруг быстрее меня.", "tags": ["работа"], "emotions": ["тревога"]},
+    {"date": "2026-09-03", "text": "Code review прошёл ок, but I keep thinking they were just being polite. Не верю комплиментам.", "tags": ["работа"], "emotions": ["сомнение"]},
+    {"date": "2026-09-05", "text": "Поехал на weekend к сестре, we cooked together и много смеялись. Как будто отпустило.", "tags": ["семья"], "emotions": ["радость"]},
+    {"date": "2026-09-07", "text": "В воскресенье вечером снова anxiety перед понедельником. Sunday scaries никуда не делись.", "tags": ["работа"], "emotions": ["тревога"]}
+  ],
+  "day_reviews": [
+    {"date": "2026-09-05", "mood": 8, "wellbeing": 7, "reflection": "Good day, надо чаще выбираться."}
+  ],
+  "expect": {"status": "done"}
+}

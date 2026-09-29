@@ -1,5 +1,6 @@
 import json
 import logging
+import socket
 from collections.abc import Callable
 from typing import Any
 
@@ -156,3 +157,47 @@ def test_key_not_in_logs_or_errors(caplog: pytest.LogCaptureFixture) -> None:
         texts += [str(info.value), repr(info.value)]
     texts.append(caplog.text)
     assert not any(KEY in t for t in texts)
+
+
+def _failure(handler: Handler, **kwargs: Any) -> AiError:
+    with pytest.raises(AiError) as info:
+        make(handler, **kwargs).complete("s", MESSAGES)
+    return info.value
+
+
+@pytest.mark.acceptance("kognis-3fl", "AC3")
+def test_error_names_the_failure_category_without_key() -> None:
+    def dns(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("boom", request=request) from socket.gaierror(
+            -2, "Name or service not known"
+        )
+
+    def refused(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("refused", request=request)
+
+    def slow(request: httpx.Request) -> httpx.Response:
+        raise httpx.ReadTimeout("slow", request=request)
+
+    def reset(request: httpx.Request) -> httpx.Response:
+        raise httpx.ReadError("reset", request=request)
+
+    def status(code: int) -> Handler:
+        return lambda request: httpx.Response(code, text="echo " + request.headers["authorization"])
+
+    cases = [
+        (dns, "не найден"),
+        (refused, "не принимает соединение"),
+        (slow, "таймаут"),
+        (reset, "сетевая ошибка"),
+        (status(401), "401: ключ доступа отклонён"),
+        (status(404), "404: адрес или модель не найдены"),
+        (status(429), "429: превышен лимит"),
+        (status(503), "503: сбой на стороне провайдера"),
+        (status(400), "400: запрос отклонён"),
+    ]
+    for handler, expected in cases:
+        err = _failure(handler)
+        assert expected in str(err)
+        assert KEY not in str(err)
+        assert KEY not in repr(err)
+    assert isinstance(_failure(slow), AiTimeoutError)

@@ -90,7 +90,7 @@ class InvalidModelAnswerError(ValueError):
 def _problems(err: ValidationError) -> list[str]:
     """Ошибки валидации без входных значений: в них могут быть тексты записей."""
     return [
-        f"{'.'.join(str(part) for part in e['loc']) or '(корень)'}: {e['msg']}"
+        f"{'.'.join(str(part) for part in e['loc']) or '(корень)'}: {e['msg']}"[:200]
         for e in err.errors(include_url=False, include_input=False, include_context=False)
     ]
 

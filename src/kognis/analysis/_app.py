@@ -27,6 +27,7 @@ from ._domain import (
 from ._infra import AnalysisRepository
 
 ATTEMPTS = 2
+MAX_ECHO_CHARS = 8000  # сколько символов прежнего ответа модели возвращаем в повторном запросе
 # Образец ответа: тест сверяет его ключи со схемой AnalysisResult, чтобы они не разошлись.
 ANSWER_EXAMPLE = {
     "summary": "Краткое резюме периода (1–4 предложения).",
@@ -204,7 +205,7 @@ class AnalysisService:
                 # повтор: модель видит свой ответ и пути полей с ошибками (без текстов записей)
                 convo = [
                     *messages,
-                    Message("assistant", raw),
+                    Message("assistant", raw[:MAX_ECHO_CHARS]),
                     Message("user", _fix_request(err.problems)),
                 ]
         raise AnalysisFailedError("Не удалось разобрать ответ ИИ. Попробуйте ещё раз чуть позже.")

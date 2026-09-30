@@ -71,3 +71,35 @@ def test_level_thresholds_and_freeze_week_boundaries() -> None:
     assert streak_length(_days(2, 3, 4, 5), MON + timedelta(days=7)) == 4
     # через три дня после последней активности серии нет
     assert streak_length(_days(2, 3, 4, 5), MON + timedelta(days=8)) == 0
+
+
+@pytest.mark.acceptance("kognis-0a8", "AC4")
+def test_answer_and_day_review_are_once_per_owner_and_source(engine: Engine) -> None:
+    today = date(2026, 9, 1)
+    with transaction(engine) as session:
+        service = GameplayService(session)
+        service.award_analysis_answer(1, 7, today)
+        repeat = service.award_analysis_answer(1, 7, today)
+        other_analysis = service.award_analysis_answer(1, 8, today)
+        other_owner = service.award_analysis_answer(2, 7, today)
+        service.award_day_review(1, today, today)
+        review_again = service.award_day_review(1, today, today)
+        review_other_owner = service.award_day_review(2, today, today)
+    assert repeat.xp == 10
+    assert other_analysis.xp == 20
+    assert other_owner.xp == 10
+    assert review_again.xp == 35  # 10 + 10 + 15: повтор итога дня XP не даёт
+    assert review_other_owner.xp == 25
+
+
+@pytest.mark.acceptance("kognis-0a8", "AC4")
+def test_reflection_bonus_is_once_per_source_and_independent_across_owners(engine: Engine) -> None:
+    today = date(2026, 9, 1)
+    with transaction(engine) as session:
+        service = GameplayService(session)
+        first = service.award_entry(1, 100, today, today, ["good"])
+        again = service.award_entry(1, 100, today, today, ["good"])
+        other_owner = service.award_entry(2, 100, today, today, ["good"])
+    assert first.xp > 10
+    assert again.xp == first.xp
+    assert other_owner.xp == first.xp

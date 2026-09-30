@@ -1,9 +1,0 @@
-{
-  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended"],
-  "lockFileMaintenance": { "enabled": true, "schedule": ["before 6am on monday"] },
-  "packageRules": [
-    { "matchUpdateTypes": ["patch"], "automerge": true },
-    { "matchUpdateTypes": ["major"], "labels": ["needs-human"] }
-  ]
-}

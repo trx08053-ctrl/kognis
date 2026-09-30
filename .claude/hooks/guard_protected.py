@@ -37,6 +37,7 @@ PROTECTED = [
     "scripts/worktree.py",
     "scripts/costs.py",
     "scripts/context.py",
+    "scripts/locate.py",
     "scripts/test_module.py",
     "scripts/regress.py",
     "scripts/metrics.py",
@@ -53,6 +54,7 @@ PROTECTED = [
     "frontend/tsconfig.json",
     "frontend/biome.json",
     "frontend/vite.config.ts",
+    "frontend/src/vitest.setup.ts",
     "frontend/src/api.gen.ts",
     ".claude/settings.json",
     ".claude/hooks/*",
@@ -74,6 +76,47 @@ DESTRUCTIVE_GIT = re.compile(
     r"|stash\s+(drop|clear)|branch\s+-D)"
 )
 WRITE_OPS = re.compile(r"(\bsed\s+-i|\bperl\s+-i|>>?|\btee\b|\bmv\b|\bcp\b|\brm\b|\btruncate\b)")
+SEPARATORS = {";", "&&", "||", "|", "&", "(", ")"}
+
+
+def write_targets(cmd: str) -> list[str] | None:
+    """Файлы, в которые пишет команда (цели >, tee, cp/mv, rm, sed -i…); None — не разобрали.
+
+    Текст в кавычках — данные: `task.py block id "a > b"` ничего не перезаписывает.
+    """
+    lexer = shlex.shlex(cmd, posix=True, punctuation_chars=True)
+    lexer.whitespace_split = True
+    try:
+        tokens = list(lexer)
+    except ValueError:
+        return None
+    targets: list[str] = []
+    words: list[str] = []
+    for i, tok in enumerate([*tokens, ";"]):
+        if tok in {">", ">>", ">|"} and i + 1 < len(tokens):
+            targets.append(tokens[i + 1])
+        if tok not in SEPARATORS:
+            words.append(tok)
+            continue
+        targets += command_targets(words)
+        words = []
+    return targets
+
+
+def command_targets(words: list[str]) -> list[str]:
+    while words and re.fullmatch(r"\w+=.*", words[0]):  # VAR=value перед командой
+        words = words[1:]
+    if not words:
+        return []
+    name, args = Path(words[0]).name, [w for w in words[1:] if not w.startswith("-")]
+    flags = [w for w in words[1:] if w.startswith("-")]
+    if name in {"tee", "rm", "truncate", "shred", "mv"}:  # mv меняет и источник, и назначение
+        return args
+    if name in {"cp", "install", "ln"}:
+        return args[-1:]
+    if name in {"sed", "perl"} and any(f.startswith("-i") or "i" in f.lstrip("-") for f in flags):
+        return args[1:] if "-e" not in flags else args
+    return []
 
 
 def checkout_discards_files(cmd: str, root: Path) -> bool:
@@ -130,6 +173,8 @@ def main() -> None:
             )
         if re.search(r"\bjust\s+land\b|scripts/land\.py", cmd):
             decide("ask", "Перенос в main (land) — решение человека (AGENTS.md).")
+        if re.search(r"\bjust\s+i18n-adopt\b|check_i18n\.py\s+--adopt", cmd):
+            decide("ask", "Фиксация долга перевода в планке (i18n-adopt) — решение человека.")
         if DESTRUCTIVE_GIT.search(cmd) or checkout_discards_files(cmd, root):
             decide(
                 "ask",
@@ -137,8 +182,11 @@ def main() -> None:
                 "reset --hard/clean). Нужно решение человека; сначала сохрани изменения "
                 "(коммит в ветку).",
             )
-        if WRITE_OPS.search(cmd):
+        targets = write_targets(cmd)
+        if targets is None and WRITE_OPS.search(cmd):  # не разобрали — осторожно, как раньше
             hit = next((p for p in PROTECTED if "*" not in p and p in cmd), None)
+        else:
+            hit = next((h for t in targets or [] if (h := is_protected(str(root / t), root))), None)
             if hit:
                 decide(
                     "ask",

@@ -6,16 +6,23 @@
 - «(план)» у модуля, у которого уже есть публичный API (`__all__` не пуст), — ошибка;
 - каждая таблица БД (`Table("имя", …)`) указана в «Владеет данными» своего модуля и только его;
 - реальные импорты между модулями входят в «Может использовать» («все» — любой модуль);
-- стрелки диаграммы есть в коде; связи бизнес-модулей (с `_domain.py`) есть на диаграмме.
+- стрелки диаграммы есть в коде; связи бизнес-модулей (с `_domain.py`) есть на диаграмме;
+- у каждого риска раздела 8 — записанный результат или ОТКРЫТАЯ задача bd (иначе риск теряется);
+- у каждого пункта docs/TECH_DEBT.md — открытая задача bd или «пересмотр ГГГГ-ММ-ДД» в будущем;
+- каждая переменная окружения из кода (os.environ / getenv) описана в README или RUNBOOK.
 """
 
 from __future__ import annotations
 
 import ast
+import datetime as dt
 import itertools
+import json
 import re
+import subprocess
 import sys
 from pathlib import Path
+from typing import cast
 
 ROOT = Path(__file__).resolve().parent.parent
 DOC = ROOT / "docs" / "ARCHITECTURE.md"
@@ -138,6 +145,84 @@ def check_diagram(
     return errors
 
 
+NO_RESULT = re.compile(r"^(|—|-|…|\.\.\.|вынесен.*|см\. задачу.*|todo|позже)$", re.I)
+
+
+def task_status(task_id: str) -> str:
+    """Статус задачи: из bd, а без базы bd (CI, свежий клон) — из экспорта .beads/issues.jsonl."""
+    out = subprocess.run(["bd", "show", task_id, "--json"], cwd=ROOT, capture_output=True,
+                         text=True, check=False).stdout  # fmt: skip
+    try:
+        data: object = json.loads(out or "{}")
+    except ValueError:
+        data = {}
+    items = cast("list[object]", data) if isinstance(data, list) else [data]
+    item: object = items[0] if items else None
+    if isinstance(item, dict):
+        fields = cast("dict[str, object]", item)
+        if fields.get("id") == task_id:
+            return str(fields.get("status", ""))
+    export = ROOT / ".beads" / "issues.jsonl"
+    for line in export.read_text().splitlines() if export.exists() else []:
+        row = cast("dict[str, object]", json.loads(line)) if line.strip() else {}
+        if row.get("id") == task_id:
+            return str(row.get("status", ""))
+    return ""
+
+
+def check_risks(text: str) -> list[str]:
+    section = re.search(r"^## 8\..*?(?=^## |\Z)", text, re.M | re.S)
+    errors: list[str] = []
+    for line in (section.group(0) if section else "").splitlines():
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if not re.fullmatch(r"R\d+", cells[0] if cells else ""):
+            continue
+        result, tasks = cells[-1], re.findall(r"\b[a-z][a-z0-9-]*-[a-z0-9]{3}\b", line)
+        open_tasks = [t for t in tasks if task_status(t) not in {"", "closed"}]
+        if NO_RESULT.match(result) and not open_tasks:
+            errors.append(
+                f"{cells[0]}: нет результата и нет открытой задачи — запишите итог "
+                "(подтверждено/опровергнуто, данными) или заведите задачу bd и укажите её id"
+            )
+    return errors
+
+
+TASK_ID = re.compile(r"\b[a-z][a-z0-9-]*-[a-z0-9]{3}\b")
+REVIEW_DATE = re.compile(r"пересмотр[:\s]*(\d{4}-\d{2}-\d{2})", re.I)
+ENV_READ = re.compile(r"""(?:environ\.get\(|getenv\(|environ\[)\s*["']([A-Z][A-Z0-9_]+)["']""")
+
+
+def check_debt() -> list[str]:
+    path = ROOT / "docs" / "TECH_DEBT.md"
+    errors: list[str] = []
+    for line in path.read_text().splitlines() if path.exists() else []:
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if not line.startswith("|") or not re.fullmatch(r"TD-\d+", cells[0]):
+            continue
+        open_tasks = [t for t in TASK_ID.findall(line) if task_status(t) not in {"", "closed"}]
+        dates = [dt.date.fromisoformat(d) for d in REVIEW_DATE.findall(line)]
+        if not open_tasks and not any(d >= dt.date.today() for d in dates):
+            errors.append(
+                f"TECH_DEBT {cells[0]}: нет открытой задачи bd и даты «пересмотр ГГГГ-ММ-ДД» — "
+                "заведите задачу, назначьте пересмотр или удалите пункт, если долг погашен"
+            )
+    return errors
+
+
+def check_config() -> list[str]:
+    docs = " ".join(
+        p.read_text() for p in (ROOT / "README.md", ROOT / "docs" / "RUNBOOK.md") if p.exists()
+    )
+    names = sorted(
+        {n for f in (ROOT / "src").rglob("*.py") for n in ENV_READ.findall(f.read_text())}
+    )
+    return [
+        f"переменная окружения {n} читается в коде, но не описана в README.md или docs/RUNBOOK.md"
+        for n in names
+        if not re.search(rf"\b{n}\b", docs)
+    ]
+
+
 def main() -> int:
     pkg = package()
     if pkg is None or not DOC.exists():
@@ -146,8 +231,9 @@ def main() -> int:
     rows, edges = parse_doc(DOC.read_text())
     errors = check_rows(rows, deps, public) + check_tables(rows, tables)
     errors += check_diagram(edges, deps, business)
+    errors += check_risks(DOC.read_text()) + check_debt() + check_config()
     if errors:
-        print("docs/ARCHITECTURE.md расходится с кодом (раздел «3. Модули»):")
+        print("Документация расходится с кодом (ARCHITECTURE, TECH_DEBT, настройки):")
         print("\n".join(f"  - {e}" for e in errors))
         print("Обнови таблицу и диаграмму по коду (`just map`, `just context <модуль>`).")
         return 1

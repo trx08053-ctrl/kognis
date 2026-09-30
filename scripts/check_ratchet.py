@@ -23,6 +23,9 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any, cast
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import check_i18n
+
 ROOT = Path(__file__).resolve().parent.parent
 BASELINE = ROOT / ".quality-baseline.json"
 COVERAGE_XML = ROOT / "coverage.xml"
@@ -116,7 +119,11 @@ def main() -> int:
     front = frontend_coverage()
     if "--update" in sys.argv:
         kept = supp if allowed is None else [s for s in supp if s in allowed]
-        new: dict[str, object] = {"coverage": max(cov, base_cov), "suppressions": kept}
+        # прочие планки (например i18n_hardcoded) сохраняются: их владельцы — свои проверки
+        new: dict[str, object] = {**stored, "coverage": max(cov, base_cov), "suppressions": kept}
+        debt = stored.get(check_i18n.KEY)
+        if isinstance(debt, list):
+            new[check_i18n.KEY] = check_i18n.shrink([str(x) for x in cast("list[object]", debt)])
         if front or base_front:
             new["frontend_coverage"] = {
                 k: max(front.get(k, 0.0), base_front.get(k, 0.0)) for k in {*front, *base_front}

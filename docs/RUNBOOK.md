@@ -6,6 +6,20 @@ just setup
 just dev                  # приложение с автоперезагрузкой; настройки — .deploy/dev.app.env
 ```
 
+## Настройки (переменные окружения)
+Каждая переменная, которую читает код, описана здесь (проверка `arch-doc`). Для `just dev` — в
+`.deploy/dev.app.env`, для окружений — в `.deploy/<env>.app.env` (права 600, не в git).
+
+| Переменная | Назначение | По умолчанию |
+|---|---|---|
+| `DATABASE_URL` | подключение к БД (SQLAlchemy URL) | `sqlite:///./local.db`; в Docker — PostgreSQL из compose |
+| `HOST`, `PORT` | адрес и порт приложения | `127.0.0.1`, `8000`; в образе `0.0.0.0:8000` |
+| `FRONTEND_DIST` | каталог собранного интерфейса | `frontend/dist` |
+| `KOGNIS_AI_BASE_URL` | адрес OpenAI-совместимого API провайдера ИИ (например `https://ollama.com/v1`) | пусто — фейковый провайдер (разработка, тесты) |
+| `KOGNIS_AI_MODEL` | имя модели у провайдера | пусто |
+| `KOGNIS_AI_API_KEY` | ключ провайдера ИИ (секрет: только в `.deploy/<env>.app.env`) | пусто |
+| `KOGNIS_HELP_CONTACTS` | контакты помощи для блока поддержки: JSON-список `{name, phone, note}` | единый номер `112` |
+
 ## Секреты
 См. [secrets/README.md](../secrets/README.md).
 

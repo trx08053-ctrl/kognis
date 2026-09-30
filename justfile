@@ -56,6 +56,10 @@ test-fast *args:
 ratchet-up:
     python3 scripts/check_ratchet.py --update
 
+# однократно для существующего проекта: текущий текст в коде → планка долга перевода (решение человека)
+i18n-adopt:
+    python3 scripts/check_i18n.py --adopt
+
 # Документация: ссылки, ссылки на код, карта (если есть)
 docs-check:
     python3 scripts/verify.py docs refs $(test -f docs/MAP.md && echo map)
@@ -69,8 +73,12 @@ module-new name:
     python3 scripts/new_module.py {{name}}
 
 # Компактный контекст модуля: карточка + API, зависимости, тесты, ADR из кода
-context name:
-    @python3 scripts/context.py {{name}}
+context name *args:
+    @python3 scripts/context.py {{name}} {{args}}
+
+# Какой модуль затрагивает задача: just locate "после переноса сделки пропадает история"
+locate +query:
+    @python3 scripts/locate.py "{{query}}"
 
 # Быстрая проверка одного модуля (тесты + границы); вердикт готовности — только verify
 test-module name *args:

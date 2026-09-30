@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 
@@ -15,6 +16,8 @@ ROOT = Path(__file__).resolve().parent.parent
 LIMIT = 500
 SOURCES = [("src", {".py"}), ("frontend/src", {".ts", ".tsx"})]
 GENERATED = ("auto-generated", "автоматически сгенерирован", "не редактировать вручную")
+# обоснованное исключение в первых строках файла: `size-limit: justified: <задача> <причина>`
+EXCEPTION = re.compile(r"size-limit:\s*justified:\s*[\w.-]+-\w+")
 
 
 def is_generated(text: str) -> bool:
@@ -32,7 +35,8 @@ def main() -> int:
                 continue
             text = path.read_text()
             lines = text.count("\n") + 1
-            if lines > LIMIT and not is_generated(text):
+            head = "\n".join(text.splitlines()[:5])
+            if lines > LIMIT and not is_generated(text) and not EXCEPTION.search(head):
                 too_big.append(f"{path.relative_to(ROOT)}: {lines} строк")
     if too_big:
         print(f"Файлы длиннее {LIMIT} строк — разделите по областям ответственности:")

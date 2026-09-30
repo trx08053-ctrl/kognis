@@ -34,6 +34,8 @@ const emptyProgress = {
   weekend_days: [],
   recovery: null,
   achievements: [],
+  categories: [],
+  hidden: [],
 };
 
 // ответы по адресу и методу: запросы идут параллельно, порядок между адресами не гарантирован
@@ -269,20 +271,16 @@ test("виджет показывает уровень, серию и опыт",
     "GET /api/entries": () => reply(200, []),
     "GET /api/progress": () =>
       reply(200, {
+        ...emptyProgress,
         xp: 60,
         level: 2,
         level_start_xp: 50,
         next_level_xp: 120,
         streak: 3,
         best_streak: 3,
-        freezes: 2,
         days_30: 3,
         days_total: 3,
-        weekly_goal: 3,
         week_days: 3,
-        weekend_days: [],
-        recovery: null,
-        achievements: [],
       }),
   });
   renderApp();

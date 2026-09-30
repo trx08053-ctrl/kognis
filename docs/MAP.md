@@ -16,7 +16,7 @@
 | `kognis.db` | Платформа данных: подключение, метаданные таблиц, транзакции. | — | 1 | [db](modules/db.md) |
 | `kognis.diary` | Модуль diary: записи дневника и итоги дня; владеет `entries` и `day_reviews`. | `db`, `errors` | 5 | [diary](modules/diary.md) |
 | `kognis.errors` | Ошибки для показа человеку: код и параметры вместо фразы (docs/I18N.md, правило 2). | — | 1 | [errors](modules/errors.md) |
-| `kognis.gameplay` | Модуль gameplay: опыт, уровни, серия, достижения, квесты, квизы (D8). | `db`, `errors` | 8 | [gameplay](modules/gameplay.md) |
+| `kognis.gameplay` | Модуль gameplay: опыт, уровни, серия, достижения, квесты, квизы (D8). | `db`, `errors` | 9 | [gameplay](modules/gameplay.md) |
 | `kognis.safety` | Модуль safety: кризисные сигналы в тексте (локально, без ИИ) и контакты помощи. | — | 4 | [safety](modules/safety.md) |
 | `kognis.users` | Модуль users: регистрация, вход, сессии. Владеет данными пользователей и сессий. | `db`, `errors` | 4 | [users](modules/users.md) |
 | `kognis.web` | Модуль web: HTTP-вход приложения — страницы, JSON API, /health. Бизнес-логики не содержит. | `access`, `ai`, `analysis`, `db`, `diary`, `errors`, `gameplay`, `safety`, `users` | 13 | [web](modules/web.md) |
@@ -41,7 +41,7 @@
   - `Message` — `src/kognis/ai/_domain.py`
   - `OpenAICompatibleProvider` — `src/kognis/ai/_infra.py`
   - `get_provider` — `src/kognis/ai/_app.py`
-- Тесты: `tests/ai/test_ai.py`, `tests/analysis/test_analysis.py`, `tests/analysis/test_continuity.py`, `tests/analysis/test_crisis_detector_off.py`, `tests/analysis/test_history.py`, `tests/diary/test_period.py`, `tests/e2e/test_analysis_history.py`, `tests/e2e/test_ui.py`, `tests/security/test_idor.py`, `tests/web/test_private.py`, `tests/web/test_quests.py`, `tests/web/test_timezone.py`
+- Тесты: `tests/ai/test_ai.py`, `tests/analysis/test_analysis.py`, `tests/analysis/test_continuity.py`, `tests/analysis/test_crisis_detector_off.py`, `tests/analysis/test_history.py`, `tests/diary/test_period.py`, `tests/e2e/test_analysis_history.py`, `tests/e2e/test_ui.py`, `tests/security/test_idor.py`, `tests/web/test_achievements.py`, `tests/web/test_private.py`, `tests/web/test_quests.py`, `tests/web/test_timezone.py`
 
 ## `kognis.analysis`
 
@@ -64,7 +64,7 @@
   - `NoDataError` — `src/kognis/analysis/_app.py`
   - `Pattern` — `src/kognis/analysis/_domain.py`
   - `PeriodSuggestion` — `src/kognis/analysis/_domain.py`
-- Тесты: `tests/ai/test_ai_eval.py`, `tests/analysis/test_analysis.py`, `tests/analysis/test_crisis_detector_off.py`, `tests/diary/test_period.py`, `tests/security/test_domain_limits.py`, `tests/users/test_error_code_units.py`
+- Тесты: `tests/ai/test_ai_eval.py`, `tests/analysis/test_analysis.py`, `tests/analysis/test_crisis_detector_off.py`, `tests/diary/test_period.py`, `tests/security/test_domain_limits.py`, `tests/users/test_error_code_units.py`, `tests/web/test_achievements.py`
 
 ## `kognis.db`
 
@@ -74,7 +74,7 @@
   - `make_engine` — `src/kognis/db/__init__.py`
   - `metadata` — `src/kognis/db/__init__.py`
   - `transaction` — `src/kognis/db/__init__.py`
-- Тесты: `tests/diary/test_boundaries.py`, `tests/diary/test_diary.py`, `tests/diary/test_period.py`, `tests/gameplay/test_migration_0016.py`, `tests/gameplay/test_mutants.py`, `tests/gameplay/test_quests.py`, `tests/gameplay/test_service.py`, `tests/integration/test_postgres.py`, `tests/users/test_locale.py`, `tests/users/test_users.py`, `tests/web/test_hardening.py`
+- Тесты: `tests/diary/test_boundaries.py`, `tests/diary/test_diary.py`, `tests/diary/test_period.py`, `tests/gameplay/test_migration_0016.py`, `tests/gameplay/test_migration_0017.py`, `tests/gameplay/test_mutants.py`, `tests/gameplay/test_quests.py`, `tests/gameplay/test_service.py`, `tests/gameplay/test_xp_balance.py`, `tests/integration/test_postgres.py`, `tests/users/test_locale.py`, `tests/users/test_users.py`, `tests/web/test_achievements.py`, `tests/web/test_hardening.py`
 
 ## `kognis.diary`
 
@@ -126,7 +126,7 @@
   - `RecoveryUnavailableError` — `src/kognis/gameplay/_app.py`
   - `StepOutcome` — `src/kognis/gameplay/_quests.py`
   - `StepUnavailableError` — `src/kognis/gameplay/_quests.py`
-- Тесты: `tests/gameplay/test_domain.py`, `tests/gameplay/test_migration_0016.py`, `tests/gameplay/test_mutants.py`, `tests/gameplay/test_quests.py`, `tests/gameplay/test_service.py`, `tests/gameplay/test_streak_model.py`, `tests/security/test_domain_limits.py`
+- Тесты: `tests/gameplay/test_domain.py`, `tests/gameplay/test_migration_0016.py`, `tests/gameplay/test_migration_0017.py`, `tests/gameplay/test_mutants.py`, `tests/gameplay/test_quests.py`, `tests/gameplay/test_service.py`, `tests/gameplay/test_streak_model.py`, `tests/gameplay/test_xp_balance.py`, `tests/security/test_domain_limits.py`, `tests/web/test_achievements.py`, `tests/web/test_gameplay.py`
 
 ## `kognis.safety`
 
@@ -165,7 +165,7 @@
 - Публичный интерфейс:
   - `create_app` — `src/kognis/web/_app.py`
   - `main` — `src/kognis/web/__init__.py`
-- Тесты: `tests/analysis/test_analysis.py`, `tests/analysis/test_continuity.py`, `tests/analysis/test_crisis_detector_off.py`, `tests/analysis/test_history.py`, `tests/e2e/test_analysis_history.py`, `tests/e2e/test_ui.py`, `tests/security/test_body_limit.py`, `tests/security/test_errors.py`, `tests/security/test_idor.py`, `tests/security/test_locale_access.py`, `tests/users/test_locale.py`, `tests/web/test_crisis_review.py`, `tests/web/test_day_reviews.py`, `tests/web/test_error_codes.py`, `tests/web/test_gameplay.py`, `tests/web/test_hardening.py`, `tests/web/test_http.py`, `tests/web/test_locked.py`, `tests/web/test_motivation.py`, `tests/web/test_operations.py`, `tests/web/test_private.py`, `tests/web/test_quests.py`, `tests/web/test_timezone.py`
+- Тесты: `tests/analysis/test_analysis.py`, `tests/analysis/test_continuity.py`, `tests/analysis/test_crisis_detector_off.py`, `tests/analysis/test_history.py`, `tests/e2e/test_analysis_history.py`, `tests/e2e/test_ui.py`, `tests/security/test_body_limit.py`, `tests/security/test_errors.py`, `tests/security/test_idor.py`, `tests/security/test_locale_access.py`, `tests/users/test_locale.py`, `tests/web/test_achievements.py`, `tests/web/test_crisis_review.py`, `tests/web/test_day_reviews.py`, `tests/web/test_error_codes.py`, `tests/web/test_gameplay.py`, `tests/web/test_hardening.py`, `tests/web/test_http.py`, `tests/web/test_locked.py`, `tests/web/test_motivation.py`, `tests/web/test_operations.py`, `tests/web/test_private.py`, `tests/web/test_quests.py`, `tests/web/test_timezone.py`
 
 ## Точки входа
 

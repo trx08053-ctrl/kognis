@@ -7,6 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.engine import Engine
 
+from kognis.gameplay._achievements import CATEGORY_TARGETS, HIDDEN
 from kognis.web import create_app
 
 VALID_PW = "correct horse"
@@ -88,11 +89,25 @@ def test_new_user_starts_at_level_one(api: TestClient) -> None:
         "week_days": 0,
         "weekend_days": [],
         "recovery": None,
+        # мотивация 2.0 (kognis-0a8): сетка достижений по категориям, скрытые — «?»
+        "categories": [
+            {
+                "category": category,
+                "value": 0,
+                "next_target": targets[0],
+                "levels": [
+                    {"code": f"{category}_{i}", "level": i, "target": t, "earned_on": None}
+                    for i, t in enumerate(targets, 1)
+                ],
+            }
+            for category, targets in CATEGORY_TARGETS.items()
+        ],
+        "hidden": [{"code": c, "earned_on": None} for c in HIDDEN],
     }
 
 
 @pytest.mark.acceptance("kognis-50k", "AC1")
-def test_entry_xp_capped_at_three_per_day_review_adds_twenty(api: TestClient) -> None:
+def test_entry_xp_capped_at_three_per_day_review_adds_fifteen(api: TestClient) -> None:
     signup(api)
     write(api, "2026-09-01")
     assert progress(api)["xp"] == 10
@@ -104,9 +119,9 @@ def test_entry_xp_capped_at_three_per_day_review_adds_twenty(api: TestClient) ->
     assert progress(api)["xp"] == 40
 
     review(api, "2026-09-01")
-    assert progress(api)["xp"] == 60
+    assert progress(api)["xp"] == 55  # итог дня — 15 XP (kognis-0a8)
     review(api, "2026-09-01")  # повторное сохранение того же итога XP не даёт
-    assert progress(api)["xp"] == 60
+    assert progress(api)["xp"] == 55
 
 
 @pytest.mark.acceptance("kognis-50k", "AC1")

@@ -1,7 +1,7 @@
 """Общие зависимости роутеров: текущий пользователь, CSRF-проверка, «сегодня», блок помощи."""
 
 import datetime as dt
-from typing import Annotated
+from typing import Annotated, Literal
 from zoneinfo import ZoneInfo
 
 from fastapi import Cookie, Depends, Request
@@ -26,6 +26,9 @@ Label = Annotated[str, Field(max_length=50)]
 # постраничные списки: тело — обычный массив, курсор следующей страницы — в заголовке
 NEXT_CURSOR_HEADER = "X-Next-Cursor"
 Answer = Annotated[str, Field(max_length=2_000)]
+
+# отметки рефлексии: ставит сам пользователь (маленький шаг, хорошее, переформулировка, инсайт)
+Mark = Literal["step", "good", "reframe", "insight"]
 
 
 class ContactOut(BaseModel):

@@ -34,6 +34,8 @@ const PROGRESS = {
   weekend_days: [] as number[],
   recovery: { streak_before: 9, broken_on: "2026-09-12", expires_on: "2026-09-15" },
   achievements: [],
+  categories: [],
+  hidden: [],
 };
 
 afterEach(() => {

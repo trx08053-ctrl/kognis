@@ -4,6 +4,7 @@ import { createEntry } from "../../api";
 import { addUnique, ChipToggleGroup, CustomChipInput, splitList } from "../../components/Chips";
 import { ErrorMessage } from "../../components/ErrorMessage";
 import { HelpPanel } from "../../components/HelpPanel";
+import { type Mark, MarksField } from "../../components/MarksField";
 import { encryptText, MIN_PRIVATE_PASSWORD } from "../../privateCrypto";
 
 const inputClass = "input";
@@ -43,6 +44,7 @@ export function EntryForm() {
   const [tags, setTags] = useState<string[]>([]);
   const [pendingTag, setPendingTag] = useState("");
   const [emotions, setEmotions] = useState<string[]>([]);
+  const [marks, setMarks] = useState<Mark[]>([]);
   const [pendingEmotion, setPendingEmotion] = useState("");
   const [protection, setProtection] = useState<Protection>("plain");
   const [lockPassword, setLockPassword] = useState("");
@@ -55,6 +57,7 @@ export function EntryForm() {
       const labels = {
         tags: addUnique(tags, splitList(pendingTag)),
         emotions: addUnique(emotions, splitList(pendingEmotion)),
+        marks,
       };
       if (!isPrivate) {
         return createEntry({
@@ -74,6 +77,7 @@ export function EntryForm() {
       setPendingTag("");
       setEmotions([]);
       setPendingEmotion("");
+      setMarks([]);
       setProtection("plain");
       setLockPassword("");
       setPrivatePassword("");
@@ -134,6 +138,7 @@ export function EntryForm() {
         onRemove={(value) => setTags(tags.filter((t) => t !== value))}
         removeLabel="Убрать тег"
       />
+      <MarksField value={marks} onChange={setMarks} />
       <fieldset className="space-y-2">
         <legend className="mb-1 font-semibold">Защита записи</legend>
         <div className="segmented" role="radiogroup" aria-label="Режим защиты">

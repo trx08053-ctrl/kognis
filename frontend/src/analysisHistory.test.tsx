@@ -29,6 +29,8 @@ const PROGRESS = {
   next_level_xp: 50,
   streak: 0,
   achievements: [],
+  categories: [],
+  hidden: [],
 };
 const PERIOD = {
   start: "2026-09-23",

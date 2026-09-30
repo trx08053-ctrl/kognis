@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from kognis.errors import CodedValueError
 
+from ._app import GameplayService
 from ._infra import ProgressRepository
 from ._quests import (
     KIND_QUEST,
@@ -113,6 +114,7 @@ class QuestService:
         except IntegrityError:
             # параллельная отметка того же шага успела раньше: XP уже начислен ей
             return StepOutcome(self._quests.fetch(quest_id), 0)
+        GameplayService(self._session).refresh(owner_id, today)  # «Забота о себе»
         return StepOutcome(self._quests.fetch(quest_id), xp)
 
     def quiz_statuses(self, owner_id: int, today: date) -> list[QuizStatus]:
@@ -138,6 +140,8 @@ class QuestService:
                 xp = self._grant(owner_id, KIND_QUIZ, ref, today, QUIZ_XP) if reward else 0
         except IntegrityError:  # параллельный запрос успел раньше (уникальность держит БД)
             raise QuizDoneTodayError("gameplay.quiz_done_today") from None
+        if reward:
+            GameplayService(self._session).refresh(owner_id, today)  # «Исследователь»
         return QuizOutcome(xp, QuizAnswers(code, today, answers))
 
     def _accept(self, owner_id: int, new: NewQuest, today: date) -> Quest:

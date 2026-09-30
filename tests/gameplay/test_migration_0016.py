@@ -52,7 +52,7 @@ def test_existing_streaks_do_not_shrink_after_migration(
     assert min(old[1], old[2]) > 0
     assert old[3] == 0
 
-    command.upgrade(config, "0016")
+    command.upgrade(config, "head")  # схема новее 0016; правила серии те же
     with transaction(engine) as session:
         service = GameplayService(session)
         after = {owner: service.progress(owner, today) for owner in HISTORIES}

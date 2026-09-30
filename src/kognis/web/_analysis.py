@@ -7,6 +7,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.engine import Engine
+from sqlalchemy.orm import Session
 
 from kognis.access import Feature, can_use
 from kognis.ai import AiProvider
@@ -24,6 +25,7 @@ from kognis.analysis import (
     NoDataError,
 )
 from kognis.db import transaction
+from kognis.gameplay import GameplayService
 from kognis.safety import HelpBlock
 from kognis.users import User
 
@@ -186,6 +188,23 @@ def continuity_routes(
             AnalysisService(session, provider).clear_memory(user.id)
 
 
+def reward_analysis(
+    session: Session, owner_id: int, analysis: Analysis, today: dt.date, answered: int | None = None
+) -> None:
+    """Игровая механика за разбор (D2: оркестрация здесь), кризисный разбор — без неё.
+
+    Новый разбор — направление для «Исследователя»; ответ на вопросы (`answered` — id разбора,
+    на который ответили) — XP.
+    """
+    if analysis.status != "done":
+        return
+    service = GameplayService(session)
+    if answered is None:
+        service.record_direction(owner_id, analysis.direction, today)
+    else:
+        service.award_analysis_answer(owner_id, answered, today)
+
+
 def analysis_router(
     db: Engine, provider: AiProvider, today: Callable[[User], dt.date]
 ) -> APIRouter:
@@ -200,6 +219,7 @@ def analysis_router(
                 outcome = AnalysisService(session, provider).analyze(
                     user.id, payload.direction, payload.start, payload.end, consent=payload.consent
                 )
+                reward_analysis(session, user.id, outcome.analysis, today(user))
         except ConsentRequiredError as err:
             raise http_error(403, err) from err
         except DuplicateAnalysisError as err:
@@ -219,6 +239,8 @@ def analysis_router(
                 outcome = AnalysisService(session, provider).answer(
                     user.id, analysis_id, payload.answers, consent=payload.consent
                 )
+                if outcome is not None:
+                    reward_analysis(session, user.id, outcome.analysis, today(user), analysis_id)
         except ConsentRequiredError as err:
             raise http_error(403, err) from err
         except AnalysisFailedError as err:

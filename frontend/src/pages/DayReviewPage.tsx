@@ -3,6 +3,7 @@ import { type FormEvent, useState } from "react";
 import { type DayReview, listDayReviews, saveDayReview } from "../api";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { HelpPanel } from "../components/HelpPanel";
+import { type Mark, MarksField } from "../components/MarksField";
 import { ScaleField } from "../components/ScaleField";
 import { useToday } from "../dates";
 
@@ -16,9 +17,10 @@ function DayReviewForm() {
   const [wellbeing, setWellbeing] = useState("5");
   const [mood, setMood] = useState("5");
   const [reflection, setReflection] = useState("");
+  const [marks, setMarks] = useState<Mark[]>([]);
   const save = useMutation({
     mutationFn: () =>
-      saveDayReview(date, { wellbeing: Number(wellbeing), mood: Number(mood), reflection }),
+      saveDayReview(date, { wellbeing: Number(wellbeing), mood: Number(mood), reflection, marks }),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ["progress"] });
       return client.invalidateQueries({ queryKey: ["day-reviews"] });
@@ -75,6 +77,7 @@ function DayReviewForm() {
           onChange={(event) => setReflection(event.target.value)}
         />
       </div>
+      <MarksField value={marks} onChange={setMarks} />
       <button type="submit" className={buttonClass} data-testid="save-review">
         Сохранить итог
       </button>

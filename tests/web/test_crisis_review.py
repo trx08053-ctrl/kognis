@@ -54,11 +54,11 @@ def test_ordinary_reflection_has_no_help_block(api: TestClient) -> None:
 
 
 @pytest.mark.acceptance("kognis-cdu", "AC2")
-def test_crisis_reflection_gives_no_xp_ordinary_gives_twenty(api: TestClient) -> None:
+def test_crisis_reflection_gives_no_xp_ordinary_gives_fifteen(api: TestClient) -> None:
     save_review(api, CRISIS_TEXT, "2026-09-01")
     assert xp(api) == 0
     save_review(api, "Спокойный день")  # тот же итог, переписанный без сигнала
-    assert xp(api) == 20
+    assert xp(api) == 15  # итог дня: 15 XP (мотивация 2.0, kognis-0a8)
 
 
 @pytest.mark.acceptance("kognis-cdu", "AC2")

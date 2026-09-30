@@ -42,6 +42,8 @@ const PROGRESS = {
   weekend_days: [],
   recovery: null,
   achievements: [],
+  categories: [],
+  hidden: [],
 };
 
 const NO_MOOD = { points: [], average_mood: null, average_wellbeing: null, trend: "unknown" };

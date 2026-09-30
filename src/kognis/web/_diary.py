@@ -31,7 +31,7 @@ from kognis.users import (
     User,
 )
 
-from ._deps import NEXT_CURSOR_HEADER, Authed, HelpOut, Label, help_out
+from ._deps import NEXT_CURSOR_HEADER, Authed, HelpOut, Label, Mark, help_out
 from ._errors import http_error
 from ._limits import AttemptLimiter
 
@@ -40,6 +40,7 @@ class EntryIn(BaseModel):
     text: str = Field(default="", max_length=20_000)
     tags: list[Label] = Field(default_factory=list, max_length=20)
     emotions: list[Label] = Field(default_factory=list, max_length=20)
+    marks: list[Mark] = Field(default_factory=list, max_length=4)  # отметки рефлексии (XP-бонус)
     date: dt.date | None = None
     protection: Literal["plain", "locked", "private"] = "plain"
     lock_password: str | None = Field(default=None, max_length=256)
@@ -222,7 +223,7 @@ def diary_router(db: Engine, today: Callable[[User], dt.date], data_key: str | N
                     entry = diary.mark_crisis(user.id, entry.id) or entry
                 else:
                     GameplayService(session).award_entry(
-                        user.id, entry.id, entry.entry_date, today(user)
+                        user.id, entry.id, entry.entry_date, today(user), payload.marks
                     )
         except ValueError as err:
             raise http_error(422, err) from err

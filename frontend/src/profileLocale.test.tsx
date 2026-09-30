@@ -21,6 +21,8 @@ const PROGRESS = {
   next_level_xp: 50,
   streak: 0,
   achievements: [],
+  categories: [],
+  hidden: [],
 };
 // тестовый второй язык живёт только здесь: в LOCALES его нет
 const CATALOGS: Record<string, Catalog> = { ru, en: { ...ru, "shell.logout": "Log out" } };

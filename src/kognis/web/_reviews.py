@@ -25,7 +25,7 @@ from kognis.users import (
     User,
 )
 
-from ._deps import NEXT_CURSOR_HEADER, Authed, HelpOut, help_out
+from ._deps import NEXT_CURSOR_HEADER, Authed, HelpOut, Mark, help_out
 from ._errors import http_error
 
 
@@ -33,6 +33,7 @@ class DayReviewIn(BaseModel):
     wellbeing: StrictInt
     mood: StrictInt
     reflection: str = Field(default="", max_length=5_000)
+    marks: list[Mark] = Field(default_factory=list, max_length=4)  # отметки рефлексии (XP-бонус)
 
 
 class DayReviewOut(BaseModel):
@@ -69,7 +70,9 @@ def day_review_router(db: Engine, today: Callable[[User], dt.date]) -> APIRouter
                     user.id, review_date, payload.wellbeing, payload.mood, payload.reflection
                 )
                 if assessment.allows_rewards:
-                    GameplayService(session).award_day_review(user.id, review_date, today(user))
+                    GameplayService(session).award_day_review(
+                        user.id, review_date, today(user), payload.marks
+                    )
                 return review
 
         try:

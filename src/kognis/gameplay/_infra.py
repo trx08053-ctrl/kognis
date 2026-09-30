@@ -21,6 +21,8 @@ from sqlalchemy.orm import Session
 
 from kognis.db import metadata
 
+from ._domain import KIND_REFLECTION
+
 STREAK_KINDS = ("entry", "day_review")
 
 xp_events_table = Table(
@@ -35,6 +37,8 @@ xp_events_table = Table(
     Column("day", Date, nullable=False),
     Column("xp", Integer, nullable=False),
     Column("created_at", DateTime, nullable=False),
+    # отметки рефлексии через запятую (только у событий `reflection`)
+    Column("marks", String(32), nullable=True),
     UniqueConstraint("owner_id", "kind", "ref", name="uq_xp_events_owner_kind_ref"),
 )
 
@@ -98,13 +102,46 @@ class ProgressRepository:
         """
         try:
             with self._session.begin_nested():
+                self.add_event(owner_id, kind, ref, day, xp)
+        except IntegrityError:
+            return
+
+    def add_reflection_once(self, owner_id: int, ref: str, day: date, xp: int, marks: str) -> None:
+        """Бонус рефлексии с отметками (для достижений «Глубины»); повтор тихо игнорируется."""
+        try:
+            with self._session.begin_nested():
                 self._session.execute(
                     insert(xp_events_table).values(
-                        owner_id=owner_id, kind=kind, ref=ref, day=day, xp=xp, created_at=_now()
+                        owner_id=owner_id,
+                        kind=KIND_REFLECTION,
+                        ref=ref,
+                        day=day,
+                        xp=xp,
+                        marks=marks,
+                        created_at=_now(),
                     )
                 )
         except IntegrityError:
             return
+
+    def xp_on_day(self, owner_id: int, kinds: tuple[str, ...], day: date) -> int:
+        t = xp_events_table
+        stmt = select(func.coalesce(func.sum(t.c.xp), 0)).where(
+            t.c.owner_id == owner_id, t.c.kind.in_(kinds), t.c.day == day
+        )
+        return int(self._session.execute(stmt).scalar_one())
+
+    def refs(self, owner_id: int, kind: str) -> list[str]:
+        t = xp_events_table
+        stmt = select(t.c.ref).where(t.c.owner_id == owner_id, t.c.kind == kind)
+        return [r.ref for r in self._session.execute(stmt).all()]
+
+    def reflection_marks(self, owner_id: int) -> list[frozenset[str]]:
+        """Отметки каждой рефлексии владельца (события с бонусом или без него)."""
+        t = xp_events_table
+        stmt = select(t.c.marks).where(t.c.owner_id == owner_id, t.c.kind == KIND_REFLECTION)
+        rows = self._session.execute(stmt).all()
+        return [frozenset((r.marks or "").split(",")) - {""} for r in rows]
 
     def count_events(self, owner_id: int, kind: str, day: date | None = None) -> int:
         t = xp_events_table

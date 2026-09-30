@@ -29,6 +29,8 @@ const PROGRESS = {
   next_level_xp: 50,
   streak: 0,
   achievements: [],
+  categories: [],
+  hidden: [],
 };
 const NO_MOOD = { points: [], average_mood: null, average_wellbeing: null, trend: "unknown" };
 const ACTIVE = {

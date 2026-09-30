@@ -34,6 +34,25 @@ class RecoveryOfferOut(BaseModel):
     expires_on: dt.date
 
 
+class LevelOut(BaseModel):
+    code: str
+    level: int
+    target: int
+    earned_on: dt.date | None
+
+
+class CategoryOut(BaseModel):
+    category: str
+    value: int
+    next_target: int | None
+    levels: list[LevelOut]
+
+
+class HiddenOut(BaseModel):
+    code: str
+    earned_on: dt.date | None  # None — интерфейс показывает «?»
+
+
 class ProgressOut(BaseModel):
     xp: int
     level: int
@@ -49,6 +68,8 @@ class ProgressOut(BaseModel):
     weekend_days: list[int]
     recovery: RecoveryOfferOut | None
     achievements: list[AchievementOut]
+    categories: list[CategoryOut]
+    hidden: list[HiddenOut]
 
 
 class SettingsIn(BaseModel):
@@ -88,6 +109,19 @@ def progress_out(progress: Progress) -> ProgressOut:
             )
             for a in progress.achievements
         ],
+        categories=[
+            CategoryOut(
+                category=c.category,
+                value=c.value,
+                next_target=c.next_target,
+                levels=[
+                    LevelOut(code=lv.code, level=lv.level, target=lv.target, earned_on=lv.earned_on)
+                    for lv in c.levels
+                ],
+            )
+            for c in progress.categories
+        ],
+        hidden=[HiddenOut(code=h.code, earned_on=h.earned_on) for h in progress.hidden],
     )
 
 

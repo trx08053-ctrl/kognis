@@ -36,6 +36,12 @@ export interface components {
       "answers": (string)[];
       "consent"?: boolean;
     };
+    CategoryOut: {
+      "category": string;
+      "value": number;
+      "next_target": number | null;
+      "levels": (components["schemas"]["LevelOut"])[];
+    };
     ContactOut: {
       "name": string;
       "phone": string;
@@ -49,6 +55,7 @@ export interface components {
       "wellbeing": number;
       "mood": number;
       "reflection"?: string;
+      "marks"?: ("step" | "good" | "reframe" | "insight")[];
     };
     DayReviewOut: {
       "id": number;
@@ -66,6 +73,7 @@ export interface components {
       "text"?: string;
       "tags"?: (string)[];
       "emotions"?: (string)[];
+      "marks"?: ("step" | "good" | "reframe" | "insight")[];
       "date"?: string | null;
       "protection"?: "plain" | "locked" | "private";
       "lock_password"?: string | null;
@@ -93,9 +101,19 @@ export interface components {
       "message": string;
       "contacts": (components["schemas"]["ContactOut"])[];
     };
+    HiddenOut: {
+      "code": string;
+      "earned_on": string | null;
+    };
     LabelsOut: {
       "tags": (string)[];
       "emotions": (string)[];
+    };
+    LevelOut: {
+      "code": string;
+      "level": number;
+      "target": number;
+      "earned_on": string | null;
     };
     LockPassword: {
       "password": string;
@@ -143,6 +161,8 @@ export interface components {
       "weekend_days": (number)[];
       "recovery": components["schemas"]["RecoveryOfferOut"] | null;
       "achievements": (components["schemas"]["AchievementOut"])[];
+      "categories": (components["schemas"]["CategoryOut"])[];
+      "hidden": (components["schemas"]["HiddenOut"])[];
     };
     QuestOut: {
       "id": number;

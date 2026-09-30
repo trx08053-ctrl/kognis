@@ -5,12 +5,28 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from itertools import pairwise
 
+from ._achievements import CategoryProgress, HiddenProgress
+
+# Правила опыта (мотивация 2.0) — данные. Награда — за факт действия и отмеченные признаки
+# рефлексии, не за длину и не за тон текста.
 ENTRY_XP = 10
 ENTRY_DAILY_CAP = 3  # записей в день, за которые начисляется XP
-DAY_REVIEW_XP = 20
+DAY_REVIEW_XP = 15
+ANSWER_XP = 10  # ответ на уточняющий вопрос разбора
+MARK_XP = 5  # за каждую отметку рефлексии
+REFLECTION_MAX_XP = 15
+DAILY_XP_CAP = 60  # потолок по записям, итогам, ответам разбора и рефлексии за один день
 
 KIND_ENTRY = "entry"
 KIND_DAY_REVIEW = "day_review"
+KIND_ANSWER = "analysis_answer"
+KIND_REFLECTION = "reflection"
+KIND_DIRECTION = "direction"  # разбор по направлению (XP 0): нужен только для достижений
+CAPPED_KINDS = (KIND_ENTRY, KIND_DAY_REVIEW, KIND_ANSWER, KIND_REFLECTION)
+
+# отметки рефлексии ставит сам пользователь: маленький шаг, хорошее, переформулировка, инсайт
+MARKS = ("step", "good", "reframe", "insight")
+DEEP_MARKS = frozenset({"step", "insight"})  # «Глубина»: рефлексия с шагом или инсайтом
 
 BACKDATE_DAYS = 7  # насколько назад можно записать день и получить за него опыт
 ONE_MISSED_DAY = 2  # разница дат при ровно одном пропущенном дне между активными
@@ -40,7 +56,8 @@ REVIEWS_FOR_ACHIEVEMENT = 10
 
 
 def achievement_def(code: str) -> AchievementDef:
-    return next(a for a in ACHIEVEMENTS if a.code == code)
+    """Описание старого достижения; у новых (по категориям) текст — в словарях интерфейса."""
+    return next((a for a in ACHIEVEMENTS if a.code == code), AchievementDef(code, "", ""))
 
 
 def is_rewardable_day(day: date, today: date) -> bool:
@@ -51,6 +68,22 @@ def is_rewardable_day(day: date, today: date) -> bool:
 def entry_xp(entries_already_today: int) -> int:
     """XP за очередную запись дня: +10, но только за первые три."""
     return ENTRY_XP if entries_already_today < ENTRY_DAILY_CAP else 0
+
+
+def clean_marks(marks: Iterable[str]) -> tuple[str, ...]:
+    """Известные отметки без повторов, в порядке `MARKS`."""
+    given = set(marks)
+    return tuple(m for m in MARKS if m in given)
+
+
+def reflection_bonus(marks: Iterable[str]) -> int:
+    """Бонус рефлексии: 5 XP за отметку, не больше 15; без отметок — 0 (длина текста не важна)."""
+    return min(REFLECTION_MAX_XP, MARK_XP * len(clean_marks(marks)))
+
+
+def capped_xp(xp: int, earned_today: int) -> int:
+    """Сколько из `xp` можно начислить, если за день уже набрано `earned_today` (потолок 60)."""
+    return max(0, min(xp, DAILY_XP_CAP - earned_today))
 
 
 def level_for(xp: int) -> int:
@@ -148,3 +181,5 @@ class Progress:
     week_days: int = 0  # активных дней в текущей ISO-неделе
     weekend_days: tuple[int, ...] = ()
     recovery: RecoveryOffer | None = None
+    categories: tuple[CategoryProgress, ...] = ()  # достижения по категориям и уровням
+    hidden: tuple[HiddenProgress, ...] = ()

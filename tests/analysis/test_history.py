@@ -25,10 +25,21 @@ class Numbered:
         self, system: str, messages: Sequence[Message], schema: dict[str, Any] | None = None
     ) -> str:
         self.count += 1
+        data = json.loads(messages[0].content)
+        ids = [e["id"] for e in data.get("entries", [])] or [
+            i for p in data["previous_result"]["patterns"] for i in p["entry_ids"]
+        ]
         return json.dumps(
             {
                 "summary": f"Разбор {self.count}",
-                "patterns": [],
+                "patterns": [
+                    {
+                        "title": "Избегание",
+                        "description": "Откладываешь звонки.",
+                        "entry_ids": ids,
+                        "quotes": ["не хочется звонить"],
+                    }
+                ],
                 "questions": ["Что помогло?"],
                 "quest_ideas": [],
             }
@@ -97,6 +108,28 @@ def test_history_items_have_date_period_direction_status(ann: TestClient) -> Non
 )
 def test_history_rejects_bad_paging(ann: TestClient, params: dict[str, Any]) -> None:
     assert ann.get("/api/analyses", params=params).status_code == 422
+
+
+@pytest.mark.acceptance("kognis-qkh", "AC3")
+def test_reopened_analysis_has_patterns_quotes_questions_and_follow_up(ann: TestClient) -> None:
+    first = analyze(ann)
+    follow = ann.post(
+        f"/api/analyses/{first['id']}/answers",
+        json={"answers": ["Позвонить утром"], "consent": True},
+    )
+    assert follow.status_code == 201, follow.text
+    analyze(ann)  # более новый разбор не подменяет старые
+
+    opened = ann.get(f"/api/analyses/{first['id']}").json()
+    assert opened["patterns"][0]["title"] == "Избегание"
+    assert opened["patterns"][0]["quotes"] == ["не хочется звонить"]
+    assert opened["patterns"][0]["entry_ids"]
+    assert opened["questions"] == ["Что помогло?"]
+
+    reopened = ann.get(f"/api/analyses/{follow.json()['id']}").json()
+    assert reopened["answers"] == ["Позвонить утром"]
+    assert reopened["parent_id"] == first["id"]
+    assert reopened["patterns"][0]["quotes"] == ["не хочется звонить"]
 
 
 @pytest.mark.acceptance("kognis-qkh", "AC4")

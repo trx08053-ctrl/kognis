@@ -120,8 +120,15 @@ export const listDirections = (): Promise<Direction[]> =>
   fetch("/api/analyses/directions").then((r) => parse<Direction[]>(r));
 export const getMood = (start: string, end: string): Promise<MoodDynamics> =>
   fetch(`/api/analyses/mood?start=${start}&end=${end}`).then((r) => parse<MoodDynamics>(r));
-export const listAnalyses = (): Promise<Analysis[]> =>
-  fetch("/api/analyses").then((r) => parse<Analysis[]>(r));
+// страница истории: следующее смещение приходит в X-Next-Cursor
+export const listAnalyses = (offset: string | null = null): Promise<Page<Analysis>> =>
+  getPage<Analysis>(pageUrl("/api/analyses", { offset }));
+export const deleteAnalysis = (id: number): Promise<void> =>
+  fetch(`/api/analyses/${id}`, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: "{}",
+  }).then((r) => parse<void>(r));
 export const runAnalysis = (request: AnalysisRequest): Promise<Analysis> =>
   post<Analysis>("/api/analyses", request);
 export const answerAnalysis = (

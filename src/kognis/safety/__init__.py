@@ -2,6 +2,7 @@
 
 from ._app import HelpBlock, check_text, help_block
 from ._domain import DISCLAIMER, Assessment, Contact, assess
+from ._infra import crisis_detector_enabled
 
 __all__ = [
     "DISCLAIMER",
@@ -10,5 +11,6 @@ __all__ = [
     "HelpBlock",
     "assess",
     "check_text",
+    "crisis_detector_enabled",
     "help_block",
 ]

@@ -6,6 +6,7 @@ import art3 from "../../assets/landing/art3.webp";
 import story1 from "../../assets/landing/story1.webp";
 import story2 from "../../assets/landing/story2.webp";
 import story3 from "../../assets/landing/story3.webp";
+import { SAFETY_FAQ_ANSWER, SAFETY_TEXT, SAFETY_TITLE } from "../../i18n/landingSafety";
 
 export const STATS = [
   { value: 5, suffix: "", label: "направлений психологии для разбора" },
@@ -44,8 +45,8 @@ export const FEATURES: readonly { key: FeatureKey; title: string; text: string }
   },
   {
     key: "safety",
-    title: "Бережная безопасность",
-    text: "Если в записи звучит кризис, Kognis не анализирует, а сразу показывает, куда обратиться за помощью.",
+    title: SAFETY_TITLE,
+    text: SAFETY_TEXT,
   },
 ];
 
@@ -252,7 +253,7 @@ export const FAQ = [
   },
   {
     q: "Что, если мне сейчас очень плохо?",
-    a: "Если в записи звучит кризис, Kognis покажет контакты помощи. В опасной ситуации звоните 112 — не откладывайте.",
+    a: SAFETY_FAQ_ANSWER,
   },
   {
     q: "Сколько времени это занимает?",

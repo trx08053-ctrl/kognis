@@ -1,4 +1,5 @@
-"""Контакты помощи — конфигурация: `KOGNIS_HELP_CONTACTS` (JSON-список {name, phone, note})."""
+"""Конфигурация safety: `KOGNIS_HELP_CONTACTS` (JSON-список {name, phone, note}) и
+`KOGNIS_CRISIS_DETECTOR` (on/off, по умолчанию off)."""
 
 import json
 import logging
@@ -7,6 +8,11 @@ import os
 from ._domain import DEFAULT_CONTACTS, Contact
 
 logger = logging.getLogger(__name__)
+
+
+def crisis_detector_enabled() -> bool:
+    """Единственное место чтения настройки: детектор включён только явным `on`."""
+    return os.environ.get("KOGNIS_CRISIS_DETECTOR", "").strip().lower() == "on"
 
 
 def load_contacts() -> tuple[Contact, ...]:

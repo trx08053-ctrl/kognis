@@ -8,6 +8,8 @@ from kognis.safety import DISCLAIMER, assess, check_text, help_block
 
 PHRASES = json.loads((Path(__file__).parent / "phrases.json").read_text(encoding="utf-8"))
 VALID_PW = "correct horse"
+# поведение детектора проверяется с явным включением; по умолчанию он выключен (kognis-xci)
+pytestmark = pytest.mark.usefixtures("crisis_on")
 
 
 def signup(client: TestClient) -> None:

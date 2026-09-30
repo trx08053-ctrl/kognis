@@ -271,7 +271,9 @@ def test_quiz_validation_and_isolation(engine: Engine, clock: Clock) -> None:
     assert eve.get("/api/quizzes").json()[0]["done_today"] is False
 
 
-def test_crisis_quiz_answers_saved_without_xp(engine: Engine, clock: Clock) -> None:
+def test_crisis_quiz_answers_saved_without_xp(
+    engine: Engine, clock: Clock, crisis_on: None
+) -> None:
     client = make(engine, clock)
     crisis = ["Не хочу жить", "Ничего", "Ничего"]
     r = client.post("/api/quizzes/evening/answers", json={"answers": crisis})

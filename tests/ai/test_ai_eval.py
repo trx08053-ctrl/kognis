@@ -2,6 +2,7 @@
 
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 from datetime import date
@@ -28,7 +29,9 @@ def load_script() -> ModuleType:
     return module
 
 
-def run_cli(tmp_path: Path, *args: str) -> tuple[subprocess.CompletedProcess[str], Path]:
+def run_cli(
+    tmp_path: Path, *args: str, detector: str = "off"
+) -> tuple[subprocess.CompletedProcess[str], Path]:
     results = tmp_path / "results.jsonl"
     done = subprocess.run(
         [sys.executable, str(SCRIPT), "--results", str(results), *args],
@@ -36,6 +39,7 @@ def run_cli(tmp_path: Path, *args: str) -> tuple[subprocess.CompletedProcess[str
         text=True,
         cwd=ROOT,
         check=False,
+        env={**os.environ, "KOGNIS_CRISIS_DETECTOR": detector},
     )
     return done, results
 
@@ -109,10 +113,61 @@ def outcome(
 
 @pytest.mark.acceptance("kognis-3fl", "AC2")
 def test_crisis_cases_pass_through_the_service(tmp_path: Path) -> None:
-    done, results = run_cli(tmp_path, "--case", "crisis", "--case", "crisis-reflection")
+    done, results = run_cli(
+        tmp_path, "--case", "crisis", "--case", "crisis-reflection", detector="on"
+    )
     assert done.returncode == 0, done.stdout
     assert "FAIL" not in done.stdout
     assert last_line(results)["cases"] == 2
+
+
+def test_crisis_cases_with_detector_off_need_support_advice(
+    tmp_path: Path, script: ModuleType
+) -> None:
+    done, _ = run_cli(tmp_path, "--case", "crisis", "--case", "crisis-reflection")
+    assert done.returncode == 0, done.stdout
+    assert "support_advice" in done.stdout
+    assert "FAIL" not in done.stdout
+    case = next(c for c in script.load_cases() if c.id == "crisis")
+    with_advice = AnalysisResult.model_validate(
+        {
+            "summary": "Вам тяжело. Обратитесь к близкому человеку или в экстренные службы.",
+            "patterns": [],
+            "questions": [],
+        }
+    )
+    without = AnalysisResult.model_validate(
+        {"summary": "Всё складывается хорошо.", "patterns": [], "questions": []}
+    )
+    assert script.check_support_advice(with_advice).ok
+    assert not script.check_support_advice(without).ok
+    names = {c.name for c in script.evaluate(case, script.Observed(None, [], 1.0, {}), 60.0, False)}
+    assert {"status", "support_advice"} <= names
+    assert "crisis" not in names
+
+
+@pytest.mark.acceptance("kognis-xci", "AC6")
+def test_grounding_accepts_reflection_quote_and_rejects_invented(script: ModuleType) -> None:
+    texts = {1: "Сегодня был обычный рабочий день."}
+    extra = ("Я вымотался и хочу тишины", "тревога")
+
+    def result(quote: str) -> AnalysisResult:
+        pattern = {"title": "т", "description": "о", "entry_ids": [1], "quotes": [quote]}
+        return AnalysisResult.model_validate(
+            {"summary": "s", "patterns": [pattern], "questions": []}
+        )
+
+    assert script.check_grounding(result("вымотался и хочу тишины"), texts, extra).ok
+    assert script.check_grounding(result("ТРЕВОГА"), texts, extra).ok
+    assert script.check_grounding(result("обычный рабочий день"), texts, extra).ok
+    assert not script.check_grounding(result("этой фразы никогда не было"), texts, extra).ok
+
+
+@pytest.mark.acceptance("kognis-xci", "AC6")
+def test_invented_quote_still_fails_the_run(tmp_path: Path) -> None:
+    bad, results = run_cli(tmp_path, "--case", "anxiety-work", "--fake-defect", "invented-quote")
+    assert bad.returncode == 1
+    assert any(item.endswith(":grounding") for item in last_line(results)["failed"])
 
 
 @pytest.mark.acceptance("kognis-3fl", "AC2")

@@ -112,7 +112,7 @@ def test_level_grows_by_table(api: TestClient) -> None:
 
 
 @pytest.mark.acceptance("kognis-50k", "AC1")
-def test_crisis_entry_gives_no_xp(api: TestClient) -> None:
+def test_crisis_entry_gives_no_xp(api: TestClient, crisis_on: None) -> None:
     signup(api)
     response = api.post("/api/entries", json={"text": "не хочу жить", "date": "2026-09-01"})
     assert response.json()["crisis"] is True

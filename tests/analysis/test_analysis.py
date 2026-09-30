@@ -244,7 +244,9 @@ def test_provider_error_gives_clear_message(engine: Engine) -> None:
 
 
 @pytest.mark.acceptance("kognis-kai", "AC4")
-def test_crisis_entry_gives_support_without_patterns_or_provider(engine: Engine) -> None:
+def test_crisis_entry_gives_support_without_patterns_or_provider(
+    engine: Engine, crisis_on: None
+) -> None:
     provider = ScriptedProvider()
     client = make(engine, provider)
     add_entry(client, "Сегодня я не хочу больше жить")
@@ -260,7 +262,7 @@ def test_crisis_entry_gives_support_without_patterns_or_provider(engine: Engine)
 
 
 @pytest.mark.acceptance("kognis-kai", "AC4")
-def test_crisis_in_day_review_reflection(engine: Engine) -> None:
+def test_crisis_in_day_review_reflection(engine: Engine, crisis_on: None) -> None:
     provider = ScriptedProvider()
     client = make(engine, provider)
     add_entry(client, "обычная запись")
@@ -275,7 +277,7 @@ def test_crisis_in_day_review_reflection(engine: Engine) -> None:
 
 
 @pytest.mark.acceptance("kognis-kai", "AC4")
-def test_crisis_in_follow_up_answer(engine: Engine) -> None:
+def test_crisis_in_follow_up_answer(engine: Engine, crisis_on: None) -> None:
     provider = ScriptedProvider()
     client = make(engine, provider)
     first = first_analysis(client, provider)
@@ -343,7 +345,7 @@ def test_day_reviews_are_sent_with_entries(engine: Engine) -> None:
     assert "устал, но доволен" in provider.calls[0][1][0].content
 
 
-def test_follow_up_errors(engine: Engine) -> None:
+def test_follow_up_errors(engine: Engine, crisis_on: None) -> None:
     provider = ScriptedProvider()
     client = make(engine, provider)
     first = first_analysis(client, provider)

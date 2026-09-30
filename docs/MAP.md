@@ -12,7 +12,7 @@
 |---|---|---|---|---|
 | `kognis.access` | Модуль access: решает, доступна ли пользователю функция (D9); сейчас — всегда да. | — | 4 | [access](modules/access.md) |
 | `kognis.ai` | Модуль ai: единый интерфейс к языковой модели; провайдер выбирается настройкой. | — | 4 | [ai](modules/ai.md) |
-| `kognis.analysis` | Модуль analysis: ИИ-анализ периода по направлениям и динамика настроения; владеет `analyses`. | `ai`, `db`, `diary`, `safety` | 4 | [analysis](modules/analysis.md) |
+| `kognis.analysis` | Модуль analysis: ИИ-анализ периода по направлениям и динамика настроения; владеет `analyses`. | `ai`, `db`, `diary`, `safety` | 5 | [analysis](modules/analysis.md) |
 | `kognis.db` | Платформа данных: подключение, метаданные таблиц, транзакции. | — | 1 | [db](modules/db.md) |
 | `kognis.diary` | Модуль diary: записи дневника и итоги дня; владеет `entries` и `day_reviews`. | `db` | 5 | [diary](modules/diary.md) |
 | `kognis.gameplay` | Модуль gameplay: опыт, уровни, серия, достижения, квесты, квизы (D8). | `db` | 7 | [gameplay](modules/gameplay.md) |
@@ -40,7 +40,7 @@
   - `Message` — `src/kognis/ai/_domain.py`
   - `OpenAICompatibleProvider` — `src/kognis/ai/_infra.py`
   - `get_provider` — `src/kognis/ai/_app.py`
-- Тесты: `tests/ai/test_ai.py`, `tests/analysis/test_analysis.py`, `tests/diary/test_period.py`, `tests/e2e/test_ui.py`, `tests/security/test_idor.py`, `tests/web/test_private.py`, `tests/web/test_quests.py`, `tests/web/test_timezone.py`
+- Тесты: `tests/ai/test_ai.py`, `tests/analysis/test_analysis.py`, `tests/analysis/test_crisis_detector_off.py`, `tests/diary/test_period.py`, `tests/e2e/test_ui.py`, `tests/security/test_idor.py`, `tests/web/test_private.py`, `tests/web/test_quests.py`, `tests/web/test_timezone.py`
 
 ## `kognis.analysis`
 
@@ -58,7 +58,7 @@
   - `MoodPoint` — `src/kognis/analysis/_domain.py`
   - `NoDataError` — `src/kognis/analysis/_app.py`
   - `Pattern` — `src/kognis/analysis/_domain.py`
-- Тесты: `tests/ai/test_ai_eval.py`, `tests/analysis/test_analysis.py`, `tests/diary/test_period.py`, `tests/security/test_domain_limits.py`
+- Тесты: `tests/ai/test_ai_eval.py`, `tests/analysis/test_analysis.py`, `tests/analysis/test_crisis_detector_off.py`, `tests/diary/test_period.py`, `tests/security/test_domain_limits.py`
 
 ## `kognis.db`
 
@@ -122,8 +122,9 @@
   - `HelpBlock` — `src/kognis/safety/_app.py`
   - `assess` — `src/kognis/safety/_domain.py`
   - `check_text` — `src/kognis/safety/_app.py`
+  - `crisis_detector_enabled` — `src/kognis/safety/_infra.py`
   - `help_block` — `src/kognis/safety/_app.py`
-- Тесты: `tests/ai/test_ai_eval.py`, `tests/analysis/test_analysis.py`, `tests/safety/test_safety.py`
+- Тесты: `tests/ai/test_ai_eval.py`, `tests/analysis/test_analysis.py`, `tests/analysis/test_crisis_detector_off.py`, `tests/safety/test_safety.py`
 
 ## `kognis.users`
 
@@ -144,7 +145,7 @@
 - Публичный интерфейс:
   - `create_app` — `src/kognis/web/_app.py`
   - `main` — `src/kognis/web/__init__.py`
-- Тесты: `tests/analysis/test_analysis.py`, `tests/e2e/test_ui.py`, `tests/security/test_body_limit.py`, `tests/security/test_errors.py`, `tests/security/test_idor.py`, `tests/web/test_crisis_review.py`, `tests/web/test_day_reviews.py`, `tests/web/test_gameplay.py`, `tests/web/test_hardening.py`, `tests/web/test_http.py`, `tests/web/test_locked.py`, `tests/web/test_operations.py`, `tests/web/test_private.py`, `tests/web/test_quests.py`, `tests/web/test_timezone.py`
+- Тесты: `tests/analysis/test_analysis.py`, `tests/analysis/test_crisis_detector_off.py`, `tests/e2e/test_ui.py`, `tests/security/test_body_limit.py`, `tests/security/test_errors.py`, `tests/security/test_idor.py`, `tests/web/test_crisis_review.py`, `tests/web/test_day_reviews.py`, `tests/web/test_gameplay.py`, `tests/web/test_hardening.py`, `tests/web/test_http.py`, `tests/web/test_locked.py`, `tests/web/test_operations.py`, `tests/web/test_private.py`, `tests/web/test_quests.py`, `tests/web/test_timezone.py`
 
 ## Точки входа
 

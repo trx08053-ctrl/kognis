@@ -103,6 +103,19 @@ def test_landing_sections_and_a11y(
     page.context.close()
 
 
+@pytest.mark.acceptance("kognis-xci", "AC4")
+@pytest.mark.e2e
+def test_landing_does_not_promise_crisis_detection(browser: Browser, live_server: str) -> None:
+    """Лендинг не обещает распознавания кризиса, направляет к близким и экстренным службам."""
+    page = open_landing(browser, live_server)
+    body = page.locator("body").text_content() or ""  # включая свёрнутые ответы FAQ
+    for promise in ("распозна", "звучит кризис", "покажет контакты", "сразу показывает"):
+        assert promise not in body.lower(), promise
+    assert "Kognis не заменяет специалиста" in body
+    assert "экстренные службы своей страны" in body
+    page.context.close()
+
+
 @pytest.mark.acceptance("kognis-6sk", "AC1")
 @pytest.mark.e2e
 def test_landing_fits_phone(browser: Browser, live_server: str) -> None:

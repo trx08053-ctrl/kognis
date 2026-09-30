@@ -7,6 +7,7 @@
 - **Публичный API:** только `src/kognis/safety/__init__.py` (`__all__`): `assess`, `check_text`, `help_block`, `Assessment`, `HelpBlock`, `Contact`, `DISCLAIMER`; файлы `_*.py` — внутренности.
 
 ## Бизнес-правила
+- **детектор выключен по умолчанию** (решение владельца 2026-09-30, риск R4 в ARCHITECTURE): `check_text` при `KOGNIS_CRISIS_DETECTOR` ≠ `on` возвращает «нет сигнала» и не ищет фразы; `assess`, фразы, контакты и колонка `entries.crisis` сохранены, включение — `on` без правок кода (`src/kognis/safety/_infra.py::crisis_detector_enabled`); задача на включение по языкам — kognis-fvn;
 - детектор — данные-конфигурация `src/kognis/safety/_domain.py::CRISIS_PATTERNS`: фразы после нормализации (регистр, «ё», пунктуация); отрицания и обороты вроде «умираю от смеха», «не хочу жить в этом городе», «don't want to die» не срабатывают (`src/kognis/safety/_domain.py::assess`);
 - то же для рефлексии «Итога дня»: `web` проверяет её `check_text`, возвращает блок помощи в `help`, XP за итог не начисляет (kognis-cdu);
 - при сигнале запись не даёт XP и не порождает квестов: `Assessment.allows_rewards` — `False` (`src/kognis/safety/_domain.py::Assessment`); учитывать обязаны gameplay/analysis через `web` (D2, D5);
@@ -20,7 +21,7 @@
 | — (своих таблиц нет; флаг кризиса у записи — `entries.crisis`, владелец `diary`) | `safety` | `web` | только `safety` |
 
 ## Внешние зависимости
-- переменная окружения `KOGNIS_HELP_CONTACTS`; сети и сервисов нет.
+- переменные окружения `KOGNIS_CRISIS_DETECTOR` (on/off, по умолчанию off) и `KOGNIS_HELP_CONTACTS`; сети и сервисов нет.
 
 ## Проверка
 - `just test-module safety` — тесты модуля и его границы; фразы — `tests/safety/phrases.json`.

@@ -50,6 +50,16 @@ test("гость видит лендинг со всеми разделами и
   expect(screen.getByTestId("landing-disclaimer").textContent).toContain("112");
 });
 
+// @acceptance kognis-xci AC4
+test("лендинг не обещает распознавания кризиса и советует обратиться за помощью", async () => {
+  renderAnonymous();
+  await screen.findByRole("heading", { level: 1, name: /первый шаг к спокойствию/ });
+  const text = document.body.textContent ?? "";
+  expect(text).not.toMatch(/распозна|звучит кризис|покажет контакты|сразу показывает/i);
+  expect(text).toContain("Kognis не заменяет специалиста");
+  expect(text).toContain("экстренные службы своей страны");
+});
+
 test("кнопки «Начать» переключают форму на регистрацию", async () => {
   renderAnonymous();
   fireEvent.click(await screen.findByTestId("cta-hero"));

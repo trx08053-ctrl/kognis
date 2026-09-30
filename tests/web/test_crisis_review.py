@@ -16,7 +16,7 @@ CRISIS_TEXT = "Сегодня я не хочу больше жить"
 
 
 @pytest.fixture
-def api(engine: Engine) -> TestClient:
+def api(engine: Engine, crisis_on: None) -> TestClient:
     client = TestClient(create_app(engine, clock=lambda: NOON))
     response = client.post(
         "/api/auth/register", json={"email": "ann@example.com", "password": VALID_PW}

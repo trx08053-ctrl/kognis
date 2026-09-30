@@ -155,7 +155,7 @@ def test_day_review_saved_error_shown_and_history_private(
 
 @pytest.mark.acceptance("kognis-d5q", "AC1")
 @pytest.mark.e2e
-def test_crisis_entry_shows_accessible_help_block(page: Page) -> None:
+def test_crisis_entry_shows_accessible_help_block(page: Page, crisis_on: None) -> None:
     """Запись с кризисной фразой сохраняется, интерфейс заметно показывает контакты помощи."""
     register(page, "ann@example.com")
     page.get_by_label("Что произошло и что вы чувствуете").fill("Не хочу больше жить")
@@ -324,7 +324,7 @@ def test_private_entry_encrypted_in_browser(page: Page, engine: Engine) -> None:
 
 @pytest.mark.acceptance("kognis-kai", "AC6")
 @pytest.mark.e2e
-def test_analysis_screen(browser: Browser, engine: Engine) -> None:
+def test_analysis_screen(browser: Browser, engine: Engine, crisis_on: None) -> None:
     """Экран разбора: согласие, результат с паттернами, вопросы; кризис без паттернов; axe."""
     with serve(create_app(engine, ai_provider=CannedProvider())) as url:
         page = fresh_page(browser, url)

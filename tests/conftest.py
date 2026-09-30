@@ -29,6 +29,18 @@ def dev_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("KOGNIS_ENV", "dev")
 
 
+@pytest.fixture
+def crisis_on(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Кризисный детектор включён явно (по умолчанию он выключен — kognis-xci)."""
+    monkeypatch.setenv("KOGNIS_CRISIS_DETECTOR", "on")
+
+
+@pytest.fixture(autouse=True)
+def crisis_default_off(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Тесты не зависят от окружения разработчика: без явного `crisis_on` детектор выключен."""
+    monkeypatch.delenv("KOGNIS_CRISIS_DETECTOR", raising=False)
+
+
 def migrate(url: str, monkeypatch: pytest.MonkeyPatch) -> Engine:
     """Схема — только из миграций Alembic (как в продакшене)."""
     monkeypatch.setenv("DATABASE_URL", url)

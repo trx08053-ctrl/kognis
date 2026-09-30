@@ -57,7 +57,7 @@ class SettingsIn(BaseModel):
 
 
 class RecoveryIn(BaseModel):
-    note: str = Field(min_length=1, max_length=500)
+    note: str = Field(min_length=1, max_length=500, pattern=r"\S")
 
 
 def progress_out(progress: Progress) -> ProgressOut:

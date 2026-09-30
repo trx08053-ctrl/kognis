@@ -34,6 +34,29 @@ def test_concurrent_achievement_grant_does_not_fail_or_duplicate(
     assert codes == ["first_entry"]
 
 
+def test_concurrent_event_and_first_settings_do_not_fail(
+    engine: Engine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Параллельный запрос успел записать то же событие / первые настройки: конфликт не падает."""
+    with transaction(engine) as session:
+        repo = _infra.ProgressRepository(session)
+        repo.add_event_once(1, "weekly_goal", "2026-W37", TODAY, 50)
+        repo.add_event_once(1, "weekly_goal", "2026-W37", TODAY, 50)
+        assert repo.count_events(1, "weekly_goal") == 1
+        repo.save_settings(1, frozenset({5}), 4)
+        real = _infra.ProgressRepository.settings
+
+        def stale(_repo: object, _owner_id: int) -> None:
+            return None
+
+        monkeypatch.setattr(_infra.ProgressRepository, "settings", stale)
+        repo.save_settings(1, frozenset({6}), 5)
+        monkeypatch.setattr(_infra.ProgressRepository, "settings", real)
+        saved = repo.settings(1)
+    assert saved is not None
+    assert saved[:2] == (frozenset({6}), 5)
+
+
 def _broken_streak(engine: Engine) -> date:
     """Серия из трёх дней, затем три пропуска (запас заморозок — две): «сегодня» — 13 сентября."""
     with transaction(engine) as session:

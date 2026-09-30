@@ -154,6 +154,7 @@ def test_recovery_note_is_limited_and_needs_login(api: TestClient) -> None:
     signup(api)
     assert api.post("/api/progress/recovery", json={"note": ""}).status_code == 422
     assert api.post("/api/progress/recovery", json={"note": "я" * 501}).status_code == 422
+    assert api.post("/api/progress/recovery", json={"note": "   "}).status_code == 422
     assert (
         api.put("/api/progress/settings", json={"weekend_days": [], "weekly_goal": 3}).status_code
         == 200

@@ -91,6 +91,21 @@ class ProgressRepository:
             )
         )
 
+    def add_event_once(self, owner_id: int, kind: str, ref: str, day: date, xp: int) -> None:
+        """Записать событие XP; если параллельный запрос успел раньше — тихо ничего не делать.
+
+        Savepoint не даёт конфликту откатить всю транзакцию (вместе с записью дневника).
+        """
+        try:
+            with self._session.begin_nested():
+                self._session.execute(
+                    insert(xp_events_table).values(
+                        owner_id=owner_id, kind=kind, ref=ref, day=day, xp=xp, created_at=_now()
+                    )
+                )
+        except IntegrityError:
+            return
+
     def count_events(self, owner_id: int, kind: str, day: date | None = None) -> int:
         t = xp_events_table
         stmt = select(func.count()).where(t.c.owner_id == owner_id, t.c.kind == kind)
@@ -147,16 +162,24 @@ class ProgressRepository:
         """Сохранить выбор пользователя; `rules_from` (переход на новые правила) не трогаем."""
         t = gameplay_settings_table
         csv = ",".join(str(d) for d in sorted(weekend_days))
-        if self.settings(owner_id) is None:
-            self._session.execute(
-                insert(t).values(owner_id=owner_id, weekend_days=csv, weekly_goal=weekly_goal)
-            )
-        else:
-            self._session.execute(
-                update(t)
-                .where(t.c.owner_id == owner_id)
-                .values(weekend_days=csv, weekly_goal=weekly_goal)
-            )
+        if self.settings(owner_id) is not None:
+            self._update_settings(owner_id, csv, weekly_goal)
+            return
+        try:
+            with self._session.begin_nested():
+                self._session.execute(
+                    insert(t).values(owner_id=owner_id, weekend_days=csv, weekly_goal=weekly_goal)
+                )
+        except IntegrityError:  # параллельный первый PUT успел раньше
+            self._update_settings(owner_id, csv, weekly_goal)
+
+    def _update_settings(self, owner_id: int, csv: str, weekly_goal: int) -> None:
+        t = gameplay_settings_table
+        self._session.execute(
+            update(t)
+            .where(t.c.owner_id == owner_id)
+            .values(weekend_days=csv, weekly_goal=weekly_goal)
+        )
 
     def recovered_after_days(self, owner_id: int) -> frozenset[date]:
         t = streak_recoveries_table

@@ -105,7 +105,7 @@ class GameplayService:
         week_done = active_days_in_week(self._repo.active_days(owner_id), today)
         ref = week_ref(today)
         if week_done >= goal and not self._repo.has_event(owner_id, KIND_WEEKLY_GOAL, ref):
-            self._repo.add_event(owner_id, KIND_WEEKLY_GOAL, ref, today, WEEKLY_GOAL_XP)
+            self._repo.add_event_once(owner_id, KIND_WEEKLY_GOAL, ref, today, WEEKLY_GOAL_XP)
         have = [code for code, _ in self._repo.achievements(owner_id)]
         for code in earned_achievements(
             entries=self._repo.count_events(owner_id, KIND_ENTRY),

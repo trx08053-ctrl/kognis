@@ -348,6 +348,7 @@ test("разбор: без согласия кнопка выключена, с 
     ],
     questions: ["Что помогло бы начать?"],
     quest_ideas: [],
+    changes: [],
     answers: [],
     help: null,
   };

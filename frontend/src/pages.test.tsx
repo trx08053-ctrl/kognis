@@ -226,6 +226,7 @@ const DONE = {
   patterns: [{ title: "Сон", description: "мало спите", entry_ids: [1, 2], quotes: ["не спал"] }],
   questions: ["Что помогло?"],
   quest_ideas: ["Прогулка"],
+  changes: [],
   answers: [],
   help: null,
 };
@@ -287,6 +288,7 @@ test("разбор: принятая идея ведёт в квесты; кри
           patterns: [],
           questions: [],
           quest_ideas: [],
+          changes: [],
           help: { message: "Вы не одни", contacts: [] },
         });
       },

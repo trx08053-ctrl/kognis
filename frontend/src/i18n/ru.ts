@@ -120,6 +120,19 @@ export const ru = {
   "analysis.history.delete_confirm": "Удалить разбор насовсем?",
   "analysis.history.delete_yes": "Да, удалить",
   "analysis.history.delete_no": "Отмена",
+  "analysis.period.no_new": "С прошлого разбора новых записей и итогов дня нет.",
+  "analysis.period.open_last": "Открыть последний разбор",
+  "analysis.period.truncated":
+    "С прошлого разбора прошло больше {max} дней — по умолчанию взяты последние {max}. Более ранние дни можно разобрать, выбрав период вручную.",
+  "analysis.period.reset": "Вернуть период по умолчанию",
+  "analysis.duplicate.open": "Открыть существующий разбор",
+  "analysis.changes.title": "Что изменилось с прошлого разбора",
+  "analysis.memory.title": "Что ИИ помнит обо мне",
+  "analysis.memory.hint":
+    "Краткий дайджест прошлых разборов: он помогает ИИ учитывать вашу историю без повторной отправки старых записей.",
+  "analysis.memory.empty": "Пока ничего: память появится после первого разбора.",
+  "analysis.memory.clear": "Очистить память",
+  "analysis.memory.cleared": "Память очищена.",
   "analysis.status.done": "готов",
   "analysis.status.crisis": "нужна поддержка",
 } as const;

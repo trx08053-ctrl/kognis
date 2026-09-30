@@ -30,6 +30,13 @@ const PROGRESS = {
   streak: 0,
   achievements: [],
 };
+const PERIOD = {
+  start: "2026-09-23",
+  end: "2026-09-29",
+  active: true,
+  truncated: false,
+  last_analysis_id: null,
+};
 const NO_MOOD = { points: [], average_mood: null, average_wellbeing: null, trend: "unknown" };
 
 function analysis(id: number, extra: Record<string, unknown> = {}) {
@@ -44,6 +51,7 @@ function analysis(id: number, extra: Record<string, unknown> = {}) {
     patterns: [],
     questions: [],
     quest_ideas: [],
+    changes: [],
     answers: [],
     created_at: `2026-09-${10 + id}T09:00:00Z`,
     help: null,
@@ -92,6 +100,8 @@ function baseRoutes(): Record<string, Handler> {
     "GET /api/progress": () => reply(200, PROGRESS),
     "GET /api/analyses/directions": () => reply(200, [{ code: "cbt", title: "КПТ" }]),
     "GET /api/analyses/mood": () => reply(200, NO_MOOD),
+    "GET /api/analyses/period": () => reply(200, PERIOD),
+    "GET /api/analyses/memory": () => reply(200, { digest: "", updated_at: null }),
   };
 }
 

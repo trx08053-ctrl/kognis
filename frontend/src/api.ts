@@ -129,6 +129,22 @@ export const deleteAnalysis = (id: number): Promise<void> =>
     headers: { "Content-Type": "application/json" },
     body: "{}",
   }).then((r) => parse<void>(r));
+export const getAnalysis = (id: number): Promise<Analysis> =>
+  fetch(`/api/analyses/${id}`).then((r) => parse<Analysis>(r));
+// период по умолчанию: от конца последнего разбора до сегодня
+export type AnalysisPeriod = Schemas["PeriodOut"];
+export const getDefaultPeriod = (): Promise<AnalysisPeriod> =>
+  fetch("/api/analyses/period").then((r) => parse<AnalysisPeriod>(r));
+// «Что ИИ помнит обо мне»
+export type AnalysisMemory = Schemas["MemoryOut"];
+export const getMemory = (): Promise<AnalysisMemory> =>
+  fetch("/api/analyses/memory").then((r) => parse<AnalysisMemory>(r));
+export const clearMemory = (): Promise<void> =>
+  fetch("/api/analyses/memory", {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: "{}",
+  }).then((r) => parse<void>(r));
 export const runAnalysis = (request: AnalysisRequest): Promise<Analysis> =>
   post<Analysis>("/api/analyses", request);
 export const answerAnalysis = (

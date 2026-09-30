@@ -353,6 +353,12 @@ def test_analysis_screen(browser: Browser, engine: Engine, crisis_on: None) -> N
         expect(page.get_by_test_id("help-block")).to_be_visible()
         page.get_by_role("link", name="Разбор").click()
         page.get_by_label("Согласен(на) передать записи").check()
+        # сегодня уже был разбор — по умолчанию он неактивен (kognis-sky), период выбираем вручную
+        expect(page.get_by_test_id("run-analysis")).to_be_disabled()
+        page.get_by_text("Период и направление").click()
+        start = page.get_by_label("С даты")
+        earlier = dt.date.fromisoformat(start.input_value()) - dt.timedelta(days=1)
+        start.fill(earlier.isoformat())
         page.get_by_test_id("run-analysis").click()
         crisis = page.get_by_test_id("analysis-crisis")
         expect(crisis.get_by_role("link", name="112")).to_be_visible()

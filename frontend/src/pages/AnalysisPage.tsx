@@ -3,10 +3,14 @@ import { useState } from "react";
 import { Link } from "react-router";
 import {
   type Analysis,
+  ApiError,
   acceptQuestFromAnalysis,
   answerAnalysis,
+  clearMemory,
   type Direction,
-  deleteAnalysis,
+  getAnalysis,
+  getDefaultPeriod,
+  getMemory,
   getMood,
   listAnalyses,
   listDirections,
@@ -16,7 +20,9 @@ import { ErrorMessage } from "../components/ErrorMessage";
 import { HelpPanel } from "../components/HelpPanel";
 import { shiftDay, useToday } from "../dates";
 import { useI18n } from "../i18n";
+import { AnalysisHistory } from "./analysis/AnalysisHistory";
 
+const MAX_PERIOD_DAYS = 31; // совпадает с лимитом сервера (analysis.period_long)
 const inputClass = "input";
 const buttonClass = "btn";
 
@@ -74,6 +80,18 @@ function AnalysisView({ analysis, directions }: { analysis: Analysis; directions
         Разбор ({direction}), {analysis.start} — {analysis.end}
       </h3>
       <p>{analysis.summary}</p>
+      {analysis.changes.length > 0 && (
+        <section aria-labelledby={`changes-${analysis.id}`} data-testid="analysis-changes">
+          <h4 id={`changes-${analysis.id}`} className="font-semibold">
+            {t("analysis.changes.title")}
+          </h4>
+          <ul className="list-disc ps-5">
+            {analysis.changes.map((change) => (
+              <li key={change}>{change}</li>
+            ))}
+          </ul>
+        </section>
+      )}
       {analysis.patterns.length > 0 && (
         <ul className="space-y-2" aria-label="Паттерны">
           {analysis.patterns.map((pattern) => (
@@ -107,6 +125,46 @@ function AnalysisView({ analysis, directions }: { analysis: Analysis; directions
       )}
       <QuestIdeas analysis={analysis} />
     </article>
+  );
+}
+
+// «Что ИИ помнит обо мне»: дайджест виден человеку и очищается кнопкой (152-ФЗ)
+function MemoryPanel() {
+  const { t } = useI18n();
+  const client = useQueryClient();
+  const memory = useQuery({ queryKey: ["analysis-memory"], queryFn: getMemory });
+  const clear = useMutation({
+    mutationFn: clearMemory,
+    onSuccess: () => client.invalidateQueries({ queryKey: ["analysis-memory"] }),
+  });
+  const digest = memory.data?.digest ?? "";
+  return (
+    <section aria-labelledby="memory-title" className="space-y-2" data-testid="ai-memory">
+      <h3 id="memory-title" className="text-lg font-semibold">
+        {t("analysis.memory.title")}
+      </h3>
+      <p className="text-sm muted">{t("analysis.memory.hint")}</p>
+      {digest ? (
+        <>
+          <p className="whitespace-pre-wrap" data-testid="ai-memory-digest">
+            {digest}
+          </p>
+          <button
+            type="button"
+            className="link"
+            disabled={clear.isPending}
+            onClick={() => clear.mutate()}
+          >
+            {t("analysis.memory.clear")}
+          </button>
+        </>
+      ) : (
+        <p className="muted">
+          {clear.isSuccess ? t("analysis.memory.cleared") : t("analysis.memory.empty")}
+        </p>
+      )}
+      <ErrorMessage error={memory.error ?? clear.error} />
+    </section>
   );
 }
 
@@ -148,136 +206,6 @@ function QuestIdeas({ analysis }: { analysis: Analysis }) {
         </p>
       )}
       <ErrorMessage error={take.error} />
-    </section>
-  );
-}
-
-function HistoryItem({
-  analysis,
-  directions,
-  current,
-  onOpen,
-  onDeleted,
-}: {
-  analysis: Analysis;
-  directions: Direction[];
-  current: boolean;
-  onOpen: () => void;
-  onDeleted: () => void;
-}) {
-  const { t, formatDate } = useI18n();
-  const client = useQueryClient();
-  const [confirming, setConfirming] = useState(false);
-  const remove = useMutation({
-    mutationFn: () => deleteAnalysis(analysis.id),
-    onSuccess: async () => {
-      await client.invalidateQueries({ queryKey: ["analyses"] });
-      onDeleted();
-    },
-  });
-  const created = analysis.created_at ? formatDate(analysis.created_at) : `№${analysis.id}`;
-  const label = t("analysis.history.item", {
-    created,
-    start: formatDate(analysis.start),
-    end: formatDate(analysis.end),
-    direction: directions.find((d) => d.code === analysis.direction)?.title ?? analysis.direction,
-    status: t(analysis.status === "crisis" ? "analysis.status.crisis" : "analysis.status.done"),
-  });
-  return (
-    <li className="card-sm space-y-2" data-testid="analysis-history-item">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <button
-          type="button"
-          className="link text-start"
-          aria-current={current ? "true" : undefined}
-          aria-label={t("analysis.history.open", { created })}
-          onClick={onOpen}
-        >
-          {label}
-        </button>
-        {confirming ? (
-          <span className="flex items-center gap-2">
-            <span>{t("analysis.history.delete_confirm")}</span>
-            <button
-              type="button"
-              className="link"
-              disabled={remove.isPending}
-              onClick={() => remove.mutate()}
-            >
-              {t("analysis.history.delete_yes")}
-            </button>
-            <button type="button" className="link" onClick={() => setConfirming(false)}>
-              {t("analysis.history.delete_no")}
-            </button>
-          </span>
-        ) : (
-          <button
-            type="button"
-            className="link"
-            aria-label={t("analysis.history.delete_aria", { created })}
-            onClick={() => setConfirming(true)}
-          >
-            {t("analysis.history.delete")}
-          </button>
-        )}
-      </div>
-      <ErrorMessage error={remove.error} />
-    </li>
-  );
-}
-
-function AnalysisHistory({
-  items,
-  directions,
-  currentId,
-  hasMore,
-  loadingMore,
-  onMore,
-  onOpen,
-  onDeleted,
-}: {
-  items: Analysis[];
-  directions: Direction[];
-  currentId: number | null;
-  hasMore: boolean;
-  loadingMore: boolean;
-  onMore: () => void;
-  onOpen: (analysis: Analysis) => void;
-  onDeleted: (analysis: Analysis) => void;
-}) {
-  const { t } = useI18n();
-  return (
-    <section aria-labelledby="analysis-history-title" className="space-y-3">
-      <h3 id="analysis-history-title" className="text-lg font-semibold">
-        {t("analysis.history.title")}
-      </h3>
-      {items.length === 0 ? (
-        <p className="muted">{t("analysis.history.empty")}</p>
-      ) : (
-        <ul className="space-y-2" data-testid="analysis-history">
-          {items.map((analysis) => (
-            <HistoryItem
-              key={analysis.id}
-              analysis={analysis}
-              directions={directions}
-              current={analysis.id === currentId}
-              onOpen={() => onOpen(analysis)}
-              onDeleted={() => onDeleted(analysis)}
-            />
-          ))}
-        </ul>
-      )}
-      {hasMore && (
-        <button
-          type="button"
-          className={buttonClass}
-          data-testid="more-analyses"
-          disabled={loadingMore}
-          onClick={onMore}
-        >
-          {t("analysis.history.more")}
-        </button>
-      )}
     </section>
   );
 }
@@ -333,12 +261,18 @@ function FollowUp({
 }
 
 export function AnalysisPage() {
+  const { t } = useI18n();
   const today = useToday();
-  const [start, setStart] = useState(() => shiftDay(today, -6));
-  const [end, setEnd] = useState(today);
+  const client = useQueryClient();
+  // период по умолчанию — от конца прошлого разбора; ручной выбор его перекрывает
+  const period = useQuery({ queryKey: ["analysis-period"], queryFn: getDefaultPeriod });
+  const suggested = period.data ?? null;
+  const [manual, setManual] = useState<{ start: string; end: string } | null>(null);
+  const start = manual?.start ?? suggested?.start ?? shiftDay(today, -6);
+  const end = manual?.end ?? suggested?.end ?? today;
+  const idle = manual === null && suggested !== null && !suggested.active;
   const [direction, setDirection] = useState("cbt");
   const [consent, setConsent] = useState(false);
-  const client = useQueryClient();
   // явно выбранный разбор (новый или открытый из истории); пока не выбран — последний из истории
   const [chosen, setChosen] = useState<Analysis | null>(null);
   const directions = useQuery({ queryKey: ["directions"], queryFn: listDirections });
@@ -353,11 +287,21 @@ export function AnalysisPage() {
   const show = (analysis: Analysis) => {
     setChosen(analysis);
     void client.invalidateQueries({ queryKey: ["analyses"] });
+    void client.invalidateQueries({ queryKey: ["analysis-period"] });
+    void client.invalidateQueries({ queryKey: ["analysis-memory"] });
   };
   const run = useMutation({
     mutationFn: () => runAnalysis({ direction, start, end, consent }),
-    onSuccess: show,
+    onSuccess: (analysis) => {
+      setManual(null);
+      show(analysis);
+    },
   });
+  const openById = useMutation({ mutationFn: getAnalysis, onSuccess: setChosen });
+  const duplicateId =
+    run.error instanceof ApiError && run.error.code === "analysis.duplicate"
+      ? Number(run.error.params.existing_id)
+      : null;
   const list = directions.data ?? [];
   return (
     <div className="space-y-6">
@@ -385,7 +329,7 @@ export function AnalysisPage() {
               type="date"
               className={inputClass}
               value={start}
-              onChange={(event) => setStart(event.target.value)}
+              onChange={(event) => setManual({ start: event.target.value, end })}
             />
           </div>
           <div>
@@ -395,7 +339,7 @@ export function AnalysisPage() {
               type="date"
               className={inputClass}
               value={end}
-              onChange={(event) => setEnd(event.target.value)}
+              onChange={(event) => setManual({ start, end: event.target.value })}
             />
           </div>
           <div>
@@ -414,18 +358,46 @@ export function AnalysisPage() {
             </select>
           </div>
         </div>
+        {manual && (
+          <button type="button" className="link mt-2" onClick={() => setManual(null)}>
+            {t("analysis.period.reset")}
+          </button>
+        )}
       </details>
+      {idle && (
+        <p data-testid="analysis-no-new">
+          {t("analysis.period.no_new")}{" "}
+          {suggested?.last_analysis_id != null && (
+            <button
+              type="button"
+              className="link"
+              onClick={() => openById.mutate(suggested.last_analysis_id as number)}
+            >
+              {t("analysis.period.open_last")}
+            </button>
+          )}
+        </p>
+      )}
+      {!manual && suggested?.truncated && (
+        <p className="text-sm">{t("analysis.period.truncated", { max: MAX_PERIOD_DAYS })}</p>
+      )}
       <button
         type="button"
         className={buttonClass}
         data-testid="run-analysis"
-        disabled={run.isPending || !consent}
+        disabled={run.isPending || !consent || idle}
         onClick={() => run.mutate()}
       >
         {run.isPending ? "Разбираю…" : "Разобрать неделю"}
       </button>
       {!consent && <p className="text-sm">Отметьте согласие, чтобы запустить разбор.</p>}
       <ErrorMessage error={run.error} />
+      {duplicateId !== null && (
+        <button type="button" className="link" onClick={() => openById.mutate(duplicateId)}>
+          {t("analysis.duplicate.open")}
+        </button>
+      )}
+      <ErrorMessage error={openById.error} />
       <MoodSummary start={start} end={end} />
       {result && (
         <>
@@ -433,6 +405,7 @@ export function AnalysisPage() {
           <FollowUp key={result.id} analysis={result} consent={consent} onDone={show} />
         </>
       )}
+      <MemoryPanel />
       {history.isError ? (
         <ErrorMessage error={history.error} />
       ) : (

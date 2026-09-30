@@ -3,7 +3,7 @@
 from dataclasses import replace
 from datetime import UTC, datetime
 
-from sqlalchemy import JSON, Column, Date, DateTime, Integer, String, Table, insert, select
+from sqlalchemy import JSON, Column, Date, DateTime, Integer, String, Table, delete, insert, select
 from sqlalchemy.engine import Row
 from sqlalchemy.orm import Session
 
@@ -39,6 +39,7 @@ def _to_analysis(row: Row[tuple[object, ...]]) -> Analysis:
         status=row.status,
         result=AnalysisResult.model_validate(row.result) if row.result else None,
         answers=tuple(row.answers),
+        created_at=row.created_at,
     )
 
 
@@ -73,10 +74,22 @@ class AnalysisRepository:
         ).first()
         return _to_analysis(row) if row else None
 
-    def list_for(self, owner_id: int) -> list[Analysis]:
+    def list_for(self, owner_id: int, *, limit: int, offset: int) -> list[Analysis]:
+        """Страница анализов владельца, новые первыми."""
         stmt = (
             select(analyses_table)
             .where(analyses_table.c.owner_id == owner_id)
             .order_by(analyses_table.c.id.desc())
+            .limit(limit)
+            .offset(offset)
         )
         return [_to_analysis(r) for r in self._session.execute(stmt).all()]
+
+    def delete(self, owner_id: int, analysis_id: int) -> bool:
+        """Удалить анализ владельца; чужой или несуществующий — `False`."""
+        deleted = self._session.execute(
+            delete(analyses_table)
+            .where(analyses_table.c.id == analysis_id, analyses_table.c.owner_id == owner_id)
+            .returning(analyses_table.c.id)
+        ).first()
+        return deleted is not None

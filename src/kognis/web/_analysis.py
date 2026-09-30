@@ -1,15 +1,18 @@
 """Анализ периода и динамика настроения."""
 
 import datetime as dt
+from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.engine import Engine
 
 from kognis.access import Feature, can_use
 from kognis.ai import AiProvider
 from kognis.analysis import (
+    DEFAULT_PAGE_SIZE,
     DIRECTIONS,
+    MAX_PAGE_SIZE,
     Analysis,
     AnalysisFailedError,
     AnalysisOutcome,
@@ -21,8 +24,10 @@ from kognis.analysis import (
 from kognis.db import transaction
 from kognis.safety import HelpBlock
 
-from ._deps import Answer, Authed, HelpOut, help_out
+from ._deps import NEXT_CURSOR_HEADER, Answer, Authed, HelpOut, help_out
 from ._errors import http_error
+
+MAX_OFFSET = 1_000_000  # чтобы огромное смещение не превращалось в 500 на int-границе БД
 
 
 class DirectionOut(BaseModel):
@@ -61,6 +66,7 @@ class AnalysisOut(BaseModel):
     questions: list[str]
     quest_ideas: list[str]
     answers: list[str]
+    created_at: dt.datetime | None
     help: HelpOut | None = None
 
 
@@ -91,6 +97,7 @@ def analysis_out(analysis: Analysis, block: HelpBlock | None = None) -> Analysis
         questions=result.questions if result else [],
         quest_ideas=result.quest_ideas if result else [],
         answers=list(analysis.answers),
+        created_at=analysis.created_at.replace(tzinfo=dt.UTC) if analysis.created_at else None,
         help=help_out(block),
     )
 
@@ -165,9 +172,25 @@ def analysis_router(db: Engine, provider: AiProvider) -> APIRouter:
         return outcome_out(outcome)
 
     @router.get("")
-    def history(user: Authed) -> list[AnalysisOut]:
+    def history(
+        user: Authed,
+        response: Response,
+        limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = DEFAULT_PAGE_SIZE,
+        offset: Annotated[int, Query(ge=0, le=MAX_OFFSET)] = 0,
+    ) -> list[AnalysisOut]:
+        """Страница истории, новые первыми; смещение следующей — в заголовке `X-Next-Cursor`."""
         with transaction(db) as session:
-            return [analysis_out(a) for a in AnalysisService(session, provider).history(user.id)]
+            page = AnalysisService(session, provider).history(user.id, limit=limit, offset=offset)
+        if page.next_offset is not None:
+            response.headers[NEXT_CURSOR_HEADER] = str(page.next_offset)
+        return [analysis_out(a) for a in page.items]
+
+    @router.delete("/{analysis_id}", status_code=204)
+    def delete_analysis(analysis_id: int, user: Authed) -> None:
+        with transaction(db) as session:
+            deleted = AnalysisService(session, provider).delete(user.id, analysis_id)
+        if not deleted:  # чужой анализ неотличим от несуществующего
+            raise http_error(404, "analysis.not_found")
 
     @router.get("/{analysis_id}")
     def get_analysis(analysis_id: int, user: Authed) -> AnalysisOut:

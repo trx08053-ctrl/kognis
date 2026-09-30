@@ -13,7 +13,9 @@ from kognis.errors import CodedError, CodedValueError
 from kognis.safety import HelpBlock, check_text, help_block
 
 from ._domain import (
+    DEFAULT_PAGE_SIZE,
     MAX_ENTRIES,
+    MAX_PAGE_SIZE,
     Analysis,
     AnalysisResult,
     InvalidModelAnswerError,
@@ -78,6 +80,12 @@ class AnalysisFailedError(CodedError):
 class AnalysisOutcome:
     analysis: Analysis
     help: HelpBlock | None = None
+
+
+@dataclass(frozen=True)
+class AnalysisPage:
+    items: list[Analysis]
+    next_offset: int | None  # смещение следующей страницы; `None` — это последняя
 
 
 def _entry_payload(entry: Entry) -> dict[str, object]:
@@ -187,8 +195,18 @@ class AnalysisService:
     def get(self, owner_id: int, analysis_id: int) -> Analysis | None:
         return self._repo.get(owner_id, analysis_id)
 
-    def history(self, owner_id: int) -> list[Analysis]:
-        return self._repo.list_for(owner_id)
+    def history(
+        self, owner_id: int, *, limit: int = DEFAULT_PAGE_SIZE, offset: int = 0
+    ) -> AnalysisPage:
+        """Страница истории, новые первыми; размер страницы ограничен `MAX_PAGE_SIZE`."""
+        size = max(1, min(limit, MAX_PAGE_SIZE))
+        start = max(0, offset)
+        rows = self._repo.list_for(owner_id, limit=size + 1, offset=start)  # +1 — есть ли следующая
+        return AnalysisPage(rows[:size], start + size if len(rows) > size else None)
+
+    def delete(self, owner_id: int, analysis_id: int) -> bool:
+        """Удалить свой анализ; чужой неотличим от несуществующего (`False`)."""
+        return self._repo.delete(owner_id, analysis_id)
 
     def _ask(
         self, system: str, messages: list[Message], known_ids: frozenset[int]

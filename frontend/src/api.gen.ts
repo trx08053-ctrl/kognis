@@ -22,6 +22,7 @@ export interface components {
       "questions": (string)[];
       "quest_ideas": (string)[];
       "answers": (string)[];
+      "created_at": string | null;
       "help"?: components["schemas"]["HelpOut"] | null;
     };
     AnalyzeIn: {

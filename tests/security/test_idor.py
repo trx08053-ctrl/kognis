@@ -170,6 +170,19 @@ def test_get_analysis(ann_eve: tuple[TestClient, TestClient]) -> None:
     assert ann.get(f"/api/analyses/{analysis['id']}").status_code == 200
 
 
+@pytest.mark.acceptance("kognis-qkh", "AC4")
+@pytest.mark.security("idor", "DELETE /api/analyses/{analysis_id}")
+def test_delete_analysis(ann_eve: tuple[TestClient, TestClient]) -> None:
+    ann, eve = ann_eve
+    analysis = create_analysis(ann)
+    url = f"/api/analyses/{analysis['id']}"
+    assert eve.request("DELETE", url, json={}).status_code == 404
+    assert eve.request("DELETE", f"/api/analyses/{MISSING}", json={}).status_code == 404
+    assert ann.get(f"/api/analyses/{analysis['id']}").status_code == 200
+    assert ann.request("DELETE", url, json={}).status_code == 204
+    assert ann.get(f"/api/analyses/{analysis['id']}").status_code == 404
+
+
 @pytest.mark.security("idor", "POST /api/analyses/{analysis_id}/answers")
 def test_answer_analysis(ann_eve: tuple[TestClient, TestClient]) -> None:
     ann, eve = ann_eve
@@ -233,6 +246,7 @@ def test_ab_scenario_owner_data_untouched(ann_eve: tuple[TestClient, TestClient]
         eve.post(f"/api/entries/{locked['id']}/unlock", json=lock),
         eve.get(f"/api/analyses/{analysis['id']}"),
         eve.post(f"/api/analyses/{analysis['id']}/answers", json=answers),
+        eve.request("DELETE", f"/api/analyses/{analysis['id']}", json={}),
         eve.post(f"/api/quests/{quest['id']}/steps/0/done", json={}),
         eve.post("/api/quests/from-analysis", json={"analysis_id": analysis["id"], "idea": 0}),
     ]

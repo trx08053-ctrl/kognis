@@ -3,7 +3,7 @@
 import json
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
@@ -12,6 +12,8 @@ from kognis.errors import CodedValueError
 
 MAX_PERIOD_DAYS = 92
 MAX_ENTRIES = 100
+DEFAULT_PAGE_SIZE = 30
+MAX_PAGE_SIZE = 100
 MAX_ANSWERS = 10
 MAX_ANSWER_LENGTH = 2_000
 MIN_TREND_DELTA = 0.5
@@ -126,6 +128,7 @@ class Analysis:
     status: Literal["done", "crisis"]
     result: AnalysisResult | None
     answers: tuple[str, ...]
+    created_at: datetime | None = None  # UTC; у ещё не сохранённого анализа его нет
 
 
 def validate_period(start: date, end: date) -> None:

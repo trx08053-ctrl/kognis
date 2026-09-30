@@ -41,16 +41,19 @@
   - `Message` — `src/kognis/ai/_domain.py`
   - `OpenAICompatibleProvider` — `src/kognis/ai/_infra.py`
   - `get_provider` — `src/kognis/ai/_app.py`
-- Тесты: `tests/ai/test_ai.py`, `tests/analysis/test_analysis.py`, `tests/analysis/test_crisis_detector_off.py`, `tests/diary/test_period.py`, `tests/e2e/test_ui.py`, `tests/security/test_idor.py`, `tests/web/test_private.py`, `tests/web/test_quests.py`, `tests/web/test_timezone.py`
+- Тесты: `tests/ai/test_ai.py`, `tests/analysis/test_analysis.py`, `tests/analysis/test_crisis_detector_off.py`, `tests/analysis/test_history.py`, `tests/diary/test_period.py`, `tests/e2e/test_ui.py`, `tests/security/test_idor.py`, `tests/web/test_private.py`, `tests/web/test_quests.py`, `tests/web/test_timezone.py`
 
 ## `kognis.analysis`
 
 - Код: `src/kognis/analysis`
 - Публичный интерфейс:
+  - `DEFAULT_PAGE_SIZE` — `src/kognis/analysis/_domain.py`
   - `DIRECTIONS` — `src/kognis/analysis/_domain.py`
+  - `MAX_PAGE_SIZE` — `src/kognis/analysis/_domain.py`
   - `Analysis` — `src/kognis/analysis/_domain.py`
   - `AnalysisFailedError` — `src/kognis/analysis/_app.py`
   - `AnalysisOutcome` — `src/kognis/analysis/_app.py`
+  - `AnalysisPage` — `src/kognis/analysis/_app.py`
   - `AnalysisResult` — `src/kognis/analysis/_domain.py`
   - `AnalysisService` — `src/kognis/analysis/_app.py`
   - `ConsentRequiredError` — `src/kognis/analysis/_app.py`
@@ -158,7 +161,7 @@
 - Публичный интерфейс:
   - `create_app` — `src/kognis/web/_app.py`
   - `main` — `src/kognis/web/__init__.py`
-- Тесты: `tests/analysis/test_analysis.py`, `tests/analysis/test_crisis_detector_off.py`, `tests/e2e/test_ui.py`, `tests/security/test_body_limit.py`, `tests/security/test_errors.py`, `tests/security/test_idor.py`, `tests/security/test_locale_access.py`, `tests/users/test_locale.py`, `tests/web/test_crisis_review.py`, `tests/web/test_day_reviews.py`, `tests/web/test_error_codes.py`, `tests/web/test_gameplay.py`, `tests/web/test_hardening.py`, `tests/web/test_http.py`, `tests/web/test_locked.py`, `tests/web/test_operations.py`, `tests/web/test_private.py`, `tests/web/test_quests.py`, `tests/web/test_timezone.py`
+- Тесты: `tests/analysis/test_analysis.py`, `tests/analysis/test_crisis_detector_off.py`, `tests/analysis/test_history.py`, `tests/e2e/test_ui.py`, `tests/security/test_body_limit.py`, `tests/security/test_errors.py`, `tests/security/test_idor.py`, `tests/security/test_locale_access.py`, `tests/users/test_locale.py`, `tests/web/test_crisis_review.py`, `tests/web/test_day_reviews.py`, `tests/web/test_error_codes.py`, `tests/web/test_gameplay.py`, `tests/web/test_hardening.py`, `tests/web/test_http.py`, `tests/web/test_locked.py`, `tests/web/test_operations.py`, `tests/web/test_private.py`, `tests/web/test_quests.py`, `tests/web/test_timezone.py`
 
 ## Точки входа
 

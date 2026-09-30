@@ -17,7 +17,7 @@
       "Bash(git commit:*)",
       "Bash(git switch:*)",
       "Bash(git worktree:*)",
-      "Bash(python3 scripts/:*)"
+      "Bash(python3 scripts/*)"
     ],
     "ask": [
       "Bash(git push:*)",

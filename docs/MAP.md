@@ -59,7 +59,7 @@
   - `MoodPoint` — `src/kognis/analysis/_domain.py`
   - `NoDataError` — `src/kognis/analysis/_app.py`
   - `Pattern` — `src/kognis/analysis/_domain.py`
-- Тесты: `tests/ai/test_ai_eval.py`, `tests/analysis/test_analysis.py`, `tests/analysis/test_crisis_detector_off.py`, `tests/diary/test_period.py`, `tests/security/test_domain_limits.py`
+- Тесты: `tests/ai/test_ai_eval.py`, `tests/analysis/test_analysis.py`, `tests/analysis/test_crisis_detector_off.py`, `tests/diary/test_period.py`, `tests/security/test_domain_limits.py`, `tests/users/test_error_code_units.py`
 
 ## `kognis.db`
 
@@ -88,7 +88,7 @@
   - `InvalidCursorError` — `src/kognis/diary/_domain.py`
   - `Page` — `src/kognis/diary/_domain.py`
   - `WrongLockPasswordError` — `src/kognis/diary/_crypto.py`
-- Тесты: `tests/diary/test_boundaries.py`, `tests/diary/test_diary.py`, `tests/diary/test_label_filter_sql.py`, `tests/diary/test_period.py`, `tests/integration/test_postgres.py`, `tests/security/test_domain_limits.py`, `tests/web/test_day_reviews.py`
+- Тесты: `tests/diary/test_boundaries.py`, `tests/diary/test_diary.py`, `tests/diary/test_label_filter_sql.py`, `tests/diary/test_period.py`, `tests/integration/test_postgres.py`, `tests/security/test_domain_limits.py`, `tests/users/test_error_code_units.py`, `tests/web/test_day_reviews.py`
 
 ## `kognis.errors`
 
@@ -96,7 +96,7 @@
 - Публичный интерфейс:
   - `CodedError` — `src/kognis/errors.py`
   - `CodedValueError` — `src/kognis/errors.py`
-- Тесты: **нет**
+- Тесты: `tests/users/test_error_code_units.py`
 
 ## `kognis.gameplay`
 
@@ -150,7 +150,7 @@
   - `User` — `src/kognis/users/_domain.py`
   - `UserService` — `src/kognis/users/_app.py`
   - `pick_locale` — `src/kognis/users/_domain.py`
-- Тесты: `tests/integration/test_postgres.py`, `tests/security/test_domain_limits.py`, `tests/users/test_users.py`, `tests/web/test_hardening.py`
+- Тесты: `tests/integration/test_postgres.py`, `tests/security/test_domain_limits.py`, `tests/users/test_error_code_units.py`, `tests/users/test_users.py`, `tests/web/test_hardening.py`
 
 ## `kognis.web`
 

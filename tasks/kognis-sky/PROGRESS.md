@@ -8,5 +8,10 @@
 ## Не сделано (нужен человек)
 - Пункт 7 постановки — ai-eval пример с предыдущей памятью: требует правки `scripts/ai_eval.py` (защищённый каталог) — вынесено отдельной задачей bd; прогон на реальной модели и принятие ADR 0005 — техответственный.
 
+## Ревью и состояние
+- Коммит 89d9042: IDOR памяти ИИ (`tests/security/test_idor.py`), ревью `tasks/kognis-sky/REVIEW.md` — VERDICT: approve (blocker нет, major устранены).
+- Evidence: `.evidence/4c7f8b32fa04975e18b1f41d4fa768652cdbfdbc.json` (verified).
+- Попытка `python3 scripts/task.py done kognis-sky` дважды отклонена запросом подтверждения (автономный режим, человека нет) — задача не закрыта.
+
 ## Следующий шаг
-Ревью subagent `reviewer` → `tasks/kognis-sky/REVIEW.md`, устранить blocker/major, затем `python3 scripts/task.py done kognis-sky`.
+Человек (или сессия с разрешением) выполняет `python3 scripts/task.py done kognis-sky` (перезапустит verify). Затем: принять ADR 0005, прогнать память/«Что изменилось» на реальной модели, решить про TECH_DEBT (гонка `set_memory`); ai-eval — задача kognis-bgo.

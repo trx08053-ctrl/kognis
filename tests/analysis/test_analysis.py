@@ -450,3 +450,18 @@ def test_prompt_does_not_ask_for_disclaimer(engine: Engine) -> None:
     assert r.status_code == 201
     assert DISCLAIMER not in provider.calls[0][0]
     assert DISCLAIMER not in r.json()["summary"]
+
+
+def test_retry_limits_echo_and_error_lengths(engine: Engine) -> None:
+    provider = ScriptedProvider()
+    client = make(engine, provider)
+    eid = add_entry(client)
+    junk = {f"k{i}_" + "x" * 300: i for i in range(40)}
+    bad = json.dumps({"summary": "s", "patterns": [], "questions": [], **junk})
+    provider.replies += [bad + " " * 20000, good([eid])]
+    assert analyze(client).status_code == 201
+    second = provider.calls[1][1]
+    assert len(second[1].content) <= 8000
+    lines = [ln for ln in second[2].content.splitlines() if ln.startswith("- ")]
+    assert 0 < len(lines) <= 20
+    assert all(len(ln) <= 202 for ln in lines)

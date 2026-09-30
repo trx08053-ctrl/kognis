@@ -1,5 +1,5 @@
 # Образ приложения: собирается из закоммиченного кода (`just stage` / CI). Непривилегированный пользователь.
-FROM node:22-bookworm-slim AS frontend
+FROM node:26-bookworm-slim AS frontend
 RUN npm install -g pnpm@12.5.1
 WORKDIR /frontend
 COPY frontend/package.json frontend/pnpm-lock.yaml ./

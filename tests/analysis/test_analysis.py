@@ -3,7 +3,7 @@
 import datetime as dt
 import json
 from collections.abc import Sequence
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from fastapi.testclient import TestClient
@@ -386,9 +386,10 @@ def _schema_keys(schema: dict[str, Any], node: dict[str, Any]) -> Any:
 
 def _example_keys(node: Any) -> Any:
     if isinstance(node, dict):
-        return {k: _example_keys(v) for k, v in node.items()}
+        fields = cast("dict[str, Any]", node)
+        return {k: _example_keys(v) for k, v in fields.items()}
     if isinstance(node, list):
-        return [_example_keys(node[0])]
+        return [_example_keys(cast("list[Any]", node)[0])]
     return "integer" if isinstance(node, int) else "string"
 
 

@@ -218,12 +218,13 @@ body {
   }
   @media (min-width: 768px) {
     .nav {
-      inset: 0 auto 0 0;
+      inset-block: 0;
+      inset-inline: 0 auto;
       width: var(--nav-w);
       flex-direction: column;
       gap: 0.25rem;
       border-top: 0;
-      border-right: 1px solid var(--border);
+      border-inline-end: 1px solid var(--border);
       padding: 5rem 0.75rem 1rem;
     }
     .nav-link {
@@ -236,10 +237,19 @@ body {
     }
     .layout {
       min-height: 100vh;
-      padding-left: var(--nav-w);
+      padding-inline-start: var(--nav-w);
       /* фон меню продолжается на всю высоту страницы, в том числе на полноэкранных снимках */
       background: linear-gradient(
         to right,
+        var(--surface) calc(var(--nav-w) - 1px),
+        var(--border) calc(var(--nav-w) - 1px) var(--nav-w),
+        transparent var(--nav-w)
+      );
+    }
+    /* градиент не следует за направлением письма — зеркалим вручную */
+    [dir="rtl"] .layout {
+      background: linear-gradient(
+        to left,
         var(--surface) calc(var(--nav-w) - 1px),
         var(--border) calc(var(--nav-w) - 1px) var(--nav-w),
         transparent var(--nav-w)

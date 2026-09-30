@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { saveSettings, type User } from "../api";
 import { ErrorMessage } from "../components/ErrorMessage";
+import { LanguageSwitcher } from "../components/LanguageSwitcher";
 import { Achievements } from "../components/Progress";
 import { timeZoneNames } from "../dates";
 
@@ -78,6 +79,7 @@ export function ProfilePage({ user }: { user: User }) {
         <p className="text-sm muted">Графики настроения и фильтры записей на странице «Дневник».</p>
         <ErrorMessage error={mode.error} />
         <TimezoneField user={user} />
+        <LanguageSwitcher />
       </section>
       <Achievements />
     </div>

@@ -12,30 +12,44 @@ import {
 } from "recharts";
 import { getMood } from "../api";
 import { shiftDay, useToday } from "../dates";
+import { useI18n } from "../i18n";
 
 const MOOD_COLOR = "#6366f1";
 const WELLBEING_COLOR = "#10b981";
 const PERIOD_DAYS = 30;
 
 export function MoodChart() {
+  const { t, formatDate, formatNumber } = useI18n();
   const end = useToday();
   const start = shiftDay(end, -(PERIOD_DAYS - 1));
   const mood = useQuery({ queryKey: ["mood", start, end], queryFn: () => getMood(start, end) });
-  if (mood.isError) return <p role="alert">Не удалось загрузить график: {mood.error.message}</p>;
+  if (mood.isError)
+    return (
+      <p role="alert">
+        {t("chart.load_error")} {mood.error.message}
+      </p>
+    );
   if (!mood.data) return null;
   const { points } = mood.data;
-  // «дд.мм» по-русски; дата ISO остаётся ключом
-  const data = points.map((p) => ({ ...p, label: `${p.date.slice(8)}.${p.date.slice(5, 7)}` }));
+  // подпись оси — день и месяц по правилам языка; дата ISO остаётся ключом
+  const data = points.map((p) => ({
+    ...p,
+    label: formatDate(p.date, { day: "2-digit", month: "2-digit" }),
+  }));
+  const average = (value: number | null | undefined) =>
+    value == null
+      ? "—"
+      : formatNumber(value, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
   return (
     <section aria-labelledby="mood-chart-title" data-testid="mood-chart" className="space-y-2 card">
       <h2 id="mood-chart-title" className="text-xl font-semibold">
-        Настроение и самочувствие за {PERIOD_DAYS} дней
+        {t("chart.title", { days: PERIOD_DAYS })}
       </h2>
       {data.length === 0 ? (
-        <p className="muted">Пока нет итогов дня — график появится после первого.</p>
+        <p className="muted">{t("chart.empty")}</p>
       ) : (
         <>
-          <div role="img" aria-label={`График: ${data.length} итогов дня, шкала от 1 до 10`}>
+          <div role="img" aria-label={t("chart.aria", { count: data.length })}>
             <ResponsiveContainer width="100%" height={240}>
               <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -20 }}>
                 <CartesianGrid stroke="currentColor" strokeOpacity={0.2} />
@@ -51,7 +65,7 @@ export function MoodChart() {
                 <Line
                   type="monotone"
                   dataKey="mood"
-                  name="Настроение"
+                  name={t("chart.mood")}
                   stroke={MOOD_COLOR}
                   strokeWidth={2}
                   isAnimationActive={false}
@@ -59,7 +73,7 @@ export function MoodChart() {
                 <Line
                   type="monotone"
                   dataKey="wellbeing"
-                  name="Самочувствие"
+                  name={t("chart.wellbeing")}
                   stroke={WELLBEING_COLOR}
                   strokeWidth={2}
                   strokeDasharray="6 3"
@@ -69,8 +83,10 @@ export function MoodChart() {
             </ResponsiveContainer>
           </div>
           <p className="text-sm muted">
-            Среднее настроение: {mood.data.average_mood?.toFixed(1) ?? "—"} · самочувствие:{" "}
-            {mood.data.average_wellbeing?.toFixed(1) ?? "—"} (из 10).
+            {t("chart.average", {
+              mood: average(mood.data.average_mood),
+              wellbeing: average(mood.data.average_wellbeing),
+            })}
           </p>
         </>
       )}

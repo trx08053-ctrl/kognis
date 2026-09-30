@@ -294,7 +294,7 @@ test("страница достижений показывает дату пол
   fireEvent.click(await screen.findByRole("link", { name: "Профиль" }));
   const list = await screen.findByTestId("achievements");
   expect(list.textContent).toContain("Первая запись");
-  expect(list.textContent).toContain("Получено: 2026-09-01");
+  expect(list.textContent).toContain("Получено: 1 сент. 2026 г.");
 });
 
 test("итог дня с кризисным сигналом в рефлексии показывает блок помощи", async () => {

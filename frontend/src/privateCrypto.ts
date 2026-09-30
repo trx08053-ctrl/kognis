@@ -24,13 +24,13 @@ export type Envelope = {
 
 export class WrongPasswordError extends Error {
   constructor() {
-    super("Неверный пароль или запись повреждена. Пароль восстановить нельзя.");
+    super("error.private.wrong_password"); // ключ словаря интерфейса (ErrorMessage переводит)
   }
 }
 
 export class UnsupportedFormatError extends Error {
   constructor() {
-    super("Запись создана в неизвестном формате — обновите приложение.");
+    super("error.private.unsupported_format");
   }
 }
 

@@ -7,6 +7,7 @@ import base64
 import datetime as dt
 import importlib
 import json
+import re
 import socket
 import threading
 import time
@@ -225,7 +226,7 @@ def test_progress_widget_and_achievements_page(page: Page) -> None:
     item = page.get_by_test_id("achievements").get_by_role("listitem")
     expect(item).to_have_count(1)
     expect(item).to_contain_text("Первая запись")
-    expect(item).to_contain_text("Получено: 20")
+    expect(item).to_contain_text(re.compile(r"Получено: \d{1,2} \S+ 20\d\d г\."))
     page.screenshot(path=str(SCREENS / "e2e-achievements.png"), full_page=True)
     violations = cast("list[dict[str, Any]]", Axe().run(page).response["violations"])
     serious = [v for v in violations if v["impact"] in {"serious", "critical"}]
@@ -776,3 +777,27 @@ def test_theme_button_name_describes_action(browser: Browser, live_server: str) 
     assert not is_dark(page)
     expect(page.get_by_role("button", name="Тёмная тема")).to_be_visible()
     context.close()
+
+
+@pytest.mark.acceptance("kognis-i7j", "AC4")
+@pytest.mark.e2e
+def test_shell_texts_unchanged_after_i18n(page: Page) -> None:
+    """Тексты каркаса те же после выноса в словарь; <html lang dir> есть; переключателя нет."""
+    register(page, "ann@example.com")
+    assert page.evaluate("document.documentElement.lang") == "ru"
+    assert page.evaluate("document.documentElement.dir") == "ltr"
+    expect(page.get_by_role("heading", level=1)).to_have_text("Kognis")
+    expect(page.get_by_test_id("level")).to_have_text("Уровень 1")
+    expect(page.get_by_test_id("disclaimer")).to_have_text(
+        "Kognis — не медицинская помощь и не заменяет специалиста. "
+        "В кризисной ситуации звоните 112."
+    )
+    nav = page.get_by_role("navigation", name="Разделы")
+    for name in ["Дневник", "Итог дня", "Разбор", "Квесты", "Профиль"]:
+        expect(nav.get_by_role("link", name=name, exact=True)).to_be_visible()
+    expect(page.get_by_role("button", name="Выйти")).to_be_visible()
+    page.get_by_role("link", name="Профиль", exact=True).click()
+    expect(page.get_by_test_id("timezone-select")).to_be_visible()
+    expect(page.get_by_test_id("language-select")).to_have_count(0)
+    SCREENS.mkdir(parents=True, exist_ok=True)
+    page.screenshot(path=str(SCREENS / "e2e-i18n-profile.png"), full_page=True)

@@ -39,7 +39,9 @@ test("соль и iv случайны: один текст даёт разные
 test("неверный пароль — понятная ошибка", async () => {
   const envelope = await encryptText(PASSWORD, TEXT);
   await expect(decryptText("другой-пароль-1", envelope)).rejects.toBeInstanceOf(WrongPasswordError);
-  await expect(decryptText("другой-пароль-1", envelope)).rejects.toThrow(/Неверный пароль/);
+  await expect(decryptText("другой-пароль-1", envelope)).rejects.toThrow(
+    "error.private.wrong_password",
+  );
 });
 
 test("порча шифртекста обнаруживается", async () => {

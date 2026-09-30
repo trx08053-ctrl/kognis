@@ -12,10 +12,12 @@ import {
   SunIcon,
   UserIcon,
 } from "../Icons";
+import { type Key, useI18n } from "../i18n";
 import { useTheme } from "../theme";
 import { ProgressWidget, useProgress } from "./Progress";
 
 export function Shell({ user, children }: { user: User; children: ReactNode }) {
+  const { t } = useI18n();
   const client = useQueryClient();
   const out = useMutation({
     mutationFn: logout,
@@ -43,11 +45,13 @@ export function Shell({ user, children }: { user: User; children: ReactNode }) {
             {progress.data && (
               <p className="flex flex-wrap items-center gap-2 text-sm font-semibold">
                 <span className="badge" data-testid="level">
-                  Уровень {progress.data.level}
+                  {t("shell.level", { level: progress.data.level })}
                 </span>
                 <span className="badge">
                   <FlameIcon />
-                  <span data-testid="streak">Серия: {progress.data.streak} дн.</span>
+                  <span data-testid="streak">
+                    {t("shell.streak", { days: progress.data.streak })}
+                  </span>
                 </span>
               </p>
             )}
@@ -61,35 +65,35 @@ export function Shell({ user, children }: { user: User; children: ReactNode }) {
             onClick={toggleTheme}
           >
             {theme === "dark" ? <SunIcon /> : <MoonIcon />}
-            {theme === "dark" ? "Светлая тема" : "Тёмная тема"}
+            {theme === "dark" ? t("shell.theme_light") : t("shell.theme_dark")}
           </button>
           <button type="button" className="btn-ghost" onClick={() => out.mutate()}>
             <LogoutIcon />
-            Выйти
+            {t("shell.logout")}
           </button>
         </div>
       </header>
       <ProgressWidget />
-      <nav aria-label="Разделы" className="nav m-0">
+      <nav aria-label={t("shell.nav")} className="nav m-0">
         {NAV.map(({ to, label, Icon }) => (
           <NavLink key={to} to={to} end className="nav-link">
             <Icon />
-            {label}
+            {t(label)}
           </NavLink>
         ))}
       </nav>
       {children}
       <p className="border-t border-[var(--border)] pt-3 text-sm muted" data-testid="disclaimer">
-        Kognis — не медицинская помощь и не заменяет специалиста. В кризисной ситуации звоните 112.
+        {t("shell.disclaimer")}
       </p>
     </div>
   );
 }
 
-const NAV = [
-  { to: "/", label: "Дневник", Icon: BookIcon },
-  { to: "/day", label: "Итог дня", Icon: SunIcon },
-  { to: "/analysis", label: "Разбор", Icon: SparkIcon },
-  { to: "/quests", label: "Квесты", Icon: FlagIcon },
-  { to: "/profile", label: "Профиль", Icon: UserIcon },
+const NAV: { to: string; label: Key; Icon: () => ReactNode }[] = [
+  { to: "/", label: "shell.nav.diary", Icon: BookIcon },
+  { to: "/day", label: "shell.nav.day", Icon: SunIcon },
+  { to: "/analysis", label: "shell.nav.analysis", Icon: SparkIcon },
+  { to: "/quests", label: "shell.nav.quests", Icon: FlagIcon },
+  { to: "/profile", label: "shell.nav.profile", Icon: UserIcon },
 ];

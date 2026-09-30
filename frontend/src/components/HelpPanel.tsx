@@ -1,6 +1,8 @@
 import type { HelpBlock } from "../api";
+import { useI18n } from "../i18n";
 
 export function HelpPanel({ help }: { help: HelpBlock }) {
+  const { t } = useI18n();
   return (
     <section
       role="alert"
@@ -9,7 +11,7 @@ export function HelpPanel({ help }: { help: HelpBlock }) {
       className="rounded-2xl border-2 border-[var(--danger-border)] bg-[var(--danger-bg)] p-4 text-[var(--danger-text)]"
     >
       <h3 id="help-title" className="text-lg font-bold">
-        Вам может понадобиться помощь
+        {t("help.title")}
       </h3>
       <p className="mt-1">{help.message}</p>
       <ul className="mt-2 space-y-1">

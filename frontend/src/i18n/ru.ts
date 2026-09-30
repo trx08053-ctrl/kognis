@@ -1,0 +1,37 @@
+// Базовый словарь (ru). Остальные языки имеют тип Catalog: без ключа проект не соберётся (docs/I18N.md).
+// Множественное число: ключи `<ключ>.one|few|many|other` + параметр count (Intl.PluralRules).
+export const ru = {
+  "app.tagline": "Дневник переживаний.",
+  "app.loading": "Загрузка…",
+  "lang.label": "Язык",
+  "error.private.wrong_password":
+    "Неверный пароль или запись повреждена. Пароль восстановить нельзя.",
+  "error.private.unsupported_format": "Запись создана в неизвестном формате — обновите приложение.",
+  "shell.level": "Уровень {level}",
+  "shell.streak": "Серия: {days} дн.",
+  "shell.theme_light": "Светлая тема",
+  "shell.theme_dark": "Тёмная тема",
+  "shell.logout": "Выйти",
+  "shell.nav": "Разделы",
+  "shell.nav.diary": "Дневник",
+  "shell.nav.day": "Итог дня",
+  "shell.nav.analysis": "Разбор",
+  "shell.nav.quests": "Квесты",
+  "shell.nav.profile": "Профиль",
+  "shell.disclaimer":
+    "Kognis — не медицинская помощь и не заменяет специалиста. В кризисной ситуации звоните 112.",
+  "progress.title": "Прогресс",
+  "progress.level_aria": "Опыт до следующего уровня: {done} из {span}",
+  "progress.xp": "Опыт: {xp} из {next}",
+  "achievements.title": "Достижения",
+  "achievements.empty": "Пока нет достижений.",
+  "achievements.earned": "Получено:",
+  "chart.load_error": "Не удалось загрузить график:",
+  "chart.title": "Настроение и самочувствие за {days} дней",
+  "chart.empty": "Пока нет итогов дня — график появится после первого.",
+  "chart.aria": "График: {count} итогов дня, шкала от 1 до 10",
+  "chart.mood": "Настроение",
+  "chart.wellbeing": "Самочувствие",
+  "chart.average": "Среднее настроение: {mood} · самочувствие: {wellbeing} (из 10).",
+  "help.title": "Вам может понадобиться помощь",
+} as const;

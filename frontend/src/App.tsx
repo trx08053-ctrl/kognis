@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from "react-router";
 import { ApiError, getMe } from "./api";
 import { ErrorMessage } from "./components/ErrorMessage";
 import { Shell } from "./components/Shell";
+import { APP_NAME, useI18n } from "./i18n";
 import { AnalysisPage } from "./pages/AnalysisPage";
 import { DayReviewPage } from "./pages/DayReviewPage";
 import { HomePage } from "./pages/HomePage";
@@ -11,6 +12,7 @@ import { ProfilePage } from "./pages/ProfilePage";
 import { QuestsPage } from "./pages/QuestsPage";
 
 export function App() {
+  const { t } = useI18n();
   const me = useQuery({
     queryKey: ["me"],
     queryFn: getMe,
@@ -19,7 +21,7 @@ export function App() {
   const user = me.data;
   const anonymous = me.error instanceof ApiError && me.error.status === 401;
 
-  let body = <p>Загрузка…</p>;
+  let body = <p>{t("app.loading")}</p>;
   if (user) {
     body = (
       <Routes>
@@ -82,8 +84,8 @@ export function App() {
   return (
     <div className={user ? "layout" : ""}>
       <main className="mx-auto max-w-2xl space-y-6 px-4 pb-28 pt-6 md:pb-10">
-        <h1 className="text-3xl font-bold">Kognis</h1>
-        <p className="text-sm muted">Дневник переживаний.</p>
+        <h1 className="text-3xl font-bold">{APP_NAME}</h1>
+        <p className="text-sm muted">{t("app.tagline")}</p>
         {body}
       </main>
     </div>

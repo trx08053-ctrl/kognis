@@ -11,6 +11,7 @@
   `tests/security/test_locale_access.py` (AC4), `frontend/src/profileLocale.test.tsx`.
 - Доказательство: `just verify` OK · tree 4dda371bd5b2.
 
+- Ревью: 2 раунда reviewer, VERDICT: approve (`REVIEW.md`); minor про тест «один раз» устранён.
+
 ## Следующий шаг
-Ревью: subagent `reviewer` → `tasks/kognis-b7x/REVIEW.md`, устранить blocker/major, затем
 `python3 scripts/task.py done kognis-b7x`.

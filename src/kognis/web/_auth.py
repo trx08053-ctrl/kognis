@@ -10,6 +10,7 @@ from sqlalchemy.engine import Engine
 
 from kognis.db import transaction
 from kognis.users import (
+    DEFAULT_LOCALE,
     DEFAULT_TIMEZONE,
     SESSION_LIFETIME,
     EmailTakenError,
@@ -17,6 +18,7 @@ from kognis.users import (
     LoginBlockedError,
     User,
     UserService,
+    pick_locale,
 )
 
 from ._deps import COOKIE, Authed
@@ -38,12 +40,18 @@ class UserOut(BaseModel):
     email: str
     advanced: bool = False
     timezone: str = DEFAULT_TIMEZONE
+    locale: str = DEFAULT_LOCALE
     today: dt.date
 
 
 def user_out(user: User, today: dt.date) -> UserOut:
     return UserOut(
-        id=user.id, email=user.email, advanced=user.advanced, timezone=user.timezone, today=today
+        id=user.id,
+        email=user.email,
+        advanced=user.advanced,
+        timezone=user.timezone,
+        locale=user.locale,
+        today=today,
     )
 
 
@@ -63,11 +71,13 @@ def auth_router(db: Engine, secure_cookie: bool, today: Callable[[User], dt.date
         )
 
     @router.post("/api/auth/register", status_code=201)
-    def register(payload: RegisterIn, response: Response) -> UserOut:
+    def register(payload: RegisterIn, request: Request, response: Response) -> UserOut:
+        # язык профиля — язык браузера из запроса (Accept-Language), иначе язык по умолчанию
+        locale = pick_locale(request.headers.get("accept-language"))
         try:
             with transaction(db) as session:
                 user = UserService(session).register(
-                    payload.email, payload.password, payload.timezone
+                    payload.email, payload.password, payload.timezone, locale
                 )
         except EmailTakenError as err:
             raise http_error(409, err) from err

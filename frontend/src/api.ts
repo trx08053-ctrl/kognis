@@ -13,7 +13,10 @@ type Refine<T, R extends { [K in keyof R]: K extends keyof T ? T[K] : never }> =
   R;
 
 // поля со значением по умолчанию сервер отдаёт всегда, хотя в схеме они необязательны
-export type User = Refine<Schemas["UserOut"], { advanced: boolean; timezone: string }>;
+export type User = Refine<
+  Schemas["UserOut"],
+  { advanced: boolean; timezone: string; locale: string }
+>;
 export type HelpContact = Schemas["ContactOut"];
 export type HelpBlock = Schemas["HelpOut"];
 export type Entry = Refine<Schemas["EntryOut"], { crisis: boolean; cipher?: Envelope | null }>;
@@ -67,7 +70,11 @@ export const register = (
 ): Promise<User> => post<User>("/api/auth/register", { email, password, timezone });
 export const login = (email: string, password: string): Promise<User> =>
   post<User>("/api/auth/login", { email, password });
-export const saveSettings = (settings: { advanced?: boolean; timezone?: string }): Promise<User> =>
+export const saveSettings = (settings: {
+  advanced?: boolean;
+  timezone?: string;
+  locale?: string;
+}): Promise<User> =>
   fetch("/api/me/settings", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },

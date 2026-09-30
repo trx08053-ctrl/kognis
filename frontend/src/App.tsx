@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { Navigate, Route, Routes } from "react-router";
 import { ApiError, getMe } from "./api";
 import { ErrorMessage } from "./components/ErrorMessage";
@@ -12,13 +13,20 @@ import { ProfilePage } from "./pages/ProfilePage";
 import { QuestsPage } from "./pages/QuestsPage";
 
 export function App() {
-  const { t } = useI18n();
+  const { t, locale, locales, setLocale } = useI18n();
   const me = useQuery({
     queryKey: ["me"],
     queryFn: getMe,
     retry: false,
   });
   const user = me.data;
+  // язык из профиля после входа: он важнее языка браузера (docs/I18N.md, правило 5)
+  const profileLocale = user?.locale;
+  useEffect(() => {
+    if (profileLocale && profileLocale !== locale && locales.includes(profileLocale)) {
+      setLocale(profileLocale);
+    }
+  }, [profileLocale, locale, locales, setLocale]);
   const anonymous = me.error instanceof ApiError && me.error.status === 401;
 
   let body = <p>{t("app.loading")}</p>;

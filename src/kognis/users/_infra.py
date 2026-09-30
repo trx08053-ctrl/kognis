@@ -25,7 +25,13 @@ from sqlalchemy.orm import Session
 
 from kognis.db import metadata
 
-from ._domain import DEFAULT_TIMEZONE, EmailTakenError, User
+from ._domain import (
+    DEFAULT_LOCALE,
+    DEFAULT_TIMEZONE,
+    MAX_LOCALE_LENGTH,
+    EmailTakenError,
+    User,
+)
 
 users_table = Table(
     "users",
@@ -36,6 +42,8 @@ users_table = Table(
     Column("created_at", DateTime, nullable=False),
     Column("advanced", Boolean, nullable=False, server_default=false()),
     Column("timezone", String(64), nullable=False, server_default=DEFAULT_TIMEZONE),
+    # expand (docs/EVOLUTION.md): nullable, пусто читается как язык по умолчанию
+    Column("locale", String(MAX_LOCALE_LENGTH), nullable=True, server_default=DEFAULT_LOCALE),
 )
 
 sessions_table = Table(
@@ -75,18 +83,28 @@ def verify_password(password_hash: str, password: str) -> bool:
 
 
 def _user(row: Row[Any]) -> User:
-    return User(id=row.id, email=row.email, advanced=bool(row.advanced), timezone=row.timezone)
+    return User(
+        id=row.id,
+        email=row.email,
+        advanced=bool(row.advanced),
+        timezone=row.timezone,
+        locale=row.locale or DEFAULT_LOCALE,
+    )
 
 
 class UserRepository:
     def __init__(self, session: Session) -> None:
         self._session = session
 
-    def add(self, email: str, password_hash: str, timezone: str) -> User:
+    def add(self, email: str, password_hash: str, timezone: str, locale: str) -> User:
         stmt = (
             insert(users_table)
             .values(
-                email=email, password_hash=password_hash, created_at=utcnow(), timezone=timezone
+                email=email,
+                password_hash=password_hash,
+                created_at=utcnow(),
+                timezone=timezone,
+                locale=locale,
             )
             .returning(users_table.c.id)
         )
@@ -95,7 +113,7 @@ class UserRepository:
                 user_id = self._session.execute(stmt).scalar_one()
         except IntegrityError as err:
             raise EmailTakenError("user.email_taken") from err
-        return User(id=int(user_id), email=email, timezone=timezone)
+        return User(id=int(user_id), email=email, timezone=timezone, locale=locale)
 
     def get(self, user_id: int) -> User | None:
         row = self._session.execute(select(users_table).where(users_table.c.id == user_id)).first()
@@ -109,6 +127,11 @@ class UserRepository:
     def set_timezone(self, user_id: int, timezone: str) -> None:
         self._session.execute(
             update(users_table).where(users_table.c.id == user_id).values(timezone=timezone)
+        )
+
+    def set_locale(self, user_id: int, locale: str) -> None:
+        self._session.execute(
+            update(users_table).where(users_table.c.id == user_id).values(locale=locale)
         )
 
     def find_with_hash(self, email: str) -> tuple[User, str] | None:

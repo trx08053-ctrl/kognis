@@ -22,6 +22,7 @@ export const ru = {
   "error.user.email_invalid": "Некорректный email",
   "error.user.password_short": "Пароль должен быть не короче {min} символов",
   "error.user.password_long": "Пароль слишком длинный",
+  "error.user.locale_unsupported": "Этот язык не поддерживается",
   "error.user.timezone_unknown": "Неизвестный часовой пояс",
   "error.user.login_blocked": "Слишком много попыток входа, попробуйте позже",
   "error.lock.password_short": "Пароль замка: от {min} символов",

@@ -173,6 +173,7 @@ export interface components {
     SettingsIn: {
       "advanced"?: boolean | null;
       "timezone"?: string | null;
+      "locale"?: string | null;
     };
     StepDoneOut: {
       "quest": components["schemas"]["QuestOut"];
@@ -183,6 +184,7 @@ export interface components {
       "email": string;
       "advanced"?: boolean;
       "timezone"?: string;
+      "locale"?: string;
       "today": string;
     };
     ValidationError: {

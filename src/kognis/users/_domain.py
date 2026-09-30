@@ -10,6 +10,9 @@ from kognis.errors import CodedError, CodedValueError
 MAX_EMAIL_LENGTH = 254
 MAX_TIMEZONE_LENGTH = 64
 DEFAULT_TIMEZONE = "Europe/Moscow"  # пояс по умолчанию (D11), пока пользователь не задал свой
+SUPPORTED_LOCALES = ("ru",)  # языки интерфейса (docs/I18N.md); новый язык — строка здесь и словарь
+DEFAULT_LOCALE = "ru"
+MAX_LOCALE_LENGTH = 16
 MIN_PASSWORD_LENGTH = 8
 MAX_PASSWORD_LENGTH = 256
 LOGIN_WINDOW = timedelta(minutes=15)  # окно подсчёта неудачных попыток входа
@@ -23,6 +26,7 @@ class User:
     email: str
     advanced: bool = False  # режим интерфейса: простой (по умолчанию) или Advanced
     timezone: str = DEFAULT_TIMEZONE  # IANA; по нему считается «сегодня» пользователя
+    locale: str = DEFAULT_LOCALE  # язык интерфейса, писем и уведомлений
 
 
 class EmailTakenError(CodedValueError):
@@ -74,6 +78,33 @@ def validate_timezone(name: str) -> str:
     except (ValueError, ZoneInfoNotFoundError, OSError) as err:
         raise CodedValueError("user.timezone_unknown") from err
     return name
+
+
+def validate_locale(code: str) -> str:
+    """Код языка из списка поддерживаемых; иной — ошибка с кодом."""
+    if code not in SUPPORTED_LOCALES:
+        raise CodedValueError("user.locale_unsupported")
+    return code
+
+
+def pick_locale(accept_language: str | None) -> str:
+    """Язык по заголовку Accept-Language: первый поддерживаемый по весу q, иначе язык по умолчанию.
+
+    Заголовок присылает клиент, ему не доверяем: неразборчивое и неизвестное игнорируется.
+    """
+    ranked: list[tuple[float, int, str]] = []
+    for position, part in enumerate((accept_language or "")[:512].split(",")):
+        tag, _, params = part.partition(";")
+        weight = 1.0
+        if params.strip().startswith("q="):
+            try:
+                weight = float(params.strip()[2:])
+            except ValueError:
+                continue
+        primary = tag.strip().lower().split("-")[0]
+        if primary in SUPPORTED_LOCALES and weight > 0:
+            ranked.append((-weight, position, primary))
+    return min(ranked)[2] if ranked else DEFAULT_LOCALE
 
 
 def hash_token(token: str) -> str:

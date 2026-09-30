@@ -69,7 +69,7 @@
   - `make_engine` — `src/kognis/db/__init__.py`
   - `metadata` — `src/kognis/db/__init__.py`
   - `transaction` — `src/kognis/db/__init__.py`
-- Тесты: `tests/diary/test_boundaries.py`, `tests/diary/test_diary.py`, `tests/diary/test_period.py`, `tests/gameplay/test_mutants.py`, `tests/gameplay/test_quests.py`, `tests/gameplay/test_service.py`, `tests/integration/test_postgres.py`, `tests/users/test_users.py`, `tests/web/test_hardening.py`
+- Тесты: `tests/diary/test_boundaries.py`, `tests/diary/test_diary.py`, `tests/diary/test_period.py`, `tests/gameplay/test_mutants.py`, `tests/gameplay/test_quests.py`, `tests/gameplay/test_service.py`, `tests/integration/test_postgres.py`, `tests/users/test_locale.py`, `tests/users/test_users.py`, `tests/web/test_hardening.py`
 
 ## `kognis.diary`
 
@@ -139,13 +139,17 @@
 
 - Код: `src/kognis/users`
 - Публичный интерфейс:
+  - `DEFAULT_LOCALE` — `src/kognis/users/_domain.py`
   - `DEFAULT_TIMEZONE` — `src/kognis/users/_domain.py`
+  - `MAX_LOCALE_LENGTH` — `src/kognis/users/_domain.py`
   - `SESSION_LIFETIME` — `src/kognis/users/_app.py`
+  - `SUPPORTED_LOCALES` — `src/kognis/users/_domain.py`
   - `EmailTakenError` — `src/kognis/users/_domain.py`
   - `InvalidCredentialsError` — `src/kognis/users/_domain.py`
   - `LoginBlockedError` — `src/kognis/users/_domain.py`
   - `User` — `src/kognis/users/_domain.py`
   - `UserService` — `src/kognis/users/_app.py`
+  - `pick_locale` — `src/kognis/users/_domain.py`
 - Тесты: `tests/integration/test_postgres.py`, `tests/security/test_domain_limits.py`, `tests/users/test_users.py`, `tests/web/test_hardening.py`
 
 ## `kognis.web`
@@ -154,7 +158,7 @@
 - Публичный интерфейс:
   - `create_app` — `src/kognis/web/_app.py`
   - `main` — `src/kognis/web/__init__.py`
-- Тесты: `tests/analysis/test_analysis.py`, `tests/analysis/test_crisis_detector_off.py`, `tests/e2e/test_ui.py`, `tests/security/test_body_limit.py`, `tests/security/test_errors.py`, `tests/security/test_idor.py`, `tests/web/test_crisis_review.py`, `tests/web/test_day_reviews.py`, `tests/web/test_error_codes.py`, `tests/web/test_gameplay.py`, `tests/web/test_hardening.py`, `tests/web/test_http.py`, `tests/web/test_locked.py`, `tests/web/test_operations.py`, `tests/web/test_private.py`, `tests/web/test_quests.py`, `tests/web/test_timezone.py`
+- Тесты: `tests/analysis/test_analysis.py`, `tests/analysis/test_crisis_detector_off.py`, `tests/e2e/test_ui.py`, `tests/security/test_body_limit.py`, `tests/security/test_errors.py`, `tests/security/test_idor.py`, `tests/security/test_locale_access.py`, `tests/users/test_locale.py`, `tests/web/test_crisis_review.py`, `tests/web/test_day_reviews.py`, `tests/web/test_error_codes.py`, `tests/web/test_gameplay.py`, `tests/web/test_hardening.py`, `tests/web/test_http.py`, `tests/web/test_locked.py`, `tests/web/test_operations.py`, `tests/web/test_private.py`, `tests/web/test_quests.py`, `tests/web/test_timezone.py`
 
 ## Точки входа
 

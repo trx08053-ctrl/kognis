@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 
 from ._domain import (
+    DEFAULT_LOCALE,
     DEFAULT_TIMEZONE,
     LOGIN_MAX_FAILURES_PER_EMAIL,
     LOGIN_MAX_FAILURES_PER_IP,
@@ -17,6 +18,7 @@ from ._domain import (
     attempt_key,
     hash_token,
     normalize_email,
+    validate_locale,
     validate_password,
     validate_timezone,
 )
@@ -39,11 +41,18 @@ class UserService:
         self._sessions = SessionRepository(session)
         self._attempts = LoginAttemptRepository(session)
 
-    def register(self, raw_email: str, password: str, timezone: str | None = None) -> User:
+    def register(
+        self,
+        raw_email: str,
+        password: str,
+        timezone: str | None = None,
+        locale: str | None = None,
+    ) -> User:
         email = normalize_email(raw_email)
         validate_password(password)
         zone = validate_timezone(timezone) if timezone is not None else DEFAULT_TIMEZONE
-        return self._users.add(email, hash_password(password), zone)
+        language = validate_locale(locale) if locale is not None else DEFAULT_LOCALE
+        return self._users.add(email, hash_password(password), zone, language)
 
     def authenticate(self, raw_email: str, password: str) -> User:
         try:
@@ -95,6 +104,10 @@ class UserService:
     def set_timezone(self, user_id: int, timezone: str) -> None:
         """Сохранить часовой пояс профиля (IANA); неизвестный — ValueError."""
         self._users.set_timezone(user_id, validate_timezone(timezone))
+
+    def set_locale(self, user_id: int, locale: str) -> None:
+        """Сохранить язык профиля; неподдерживаемый код — CodedValueError."""
+        self._users.set_locale(user_id, validate_locale(locale))
 
     def start_session(self, user_id: int) -> str:
         """Новая сессия; возвращает токен для cookie (в БД лежит только его хэш)."""

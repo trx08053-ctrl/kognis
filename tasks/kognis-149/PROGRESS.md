@@ -11,4 +11,4 @@
 Один прогон sync-main показал ещё и FAIL tests; повтор `just check tests` прошёл (366 passed) — вероятно флейк.
 
 ## Следующий шаг
-После решения по планке фронтенда: `just verify`, ревью subagent `reviewer` → `tasks/kognis-149/REVIEW.md`, `just task-done kognis-149`.
+Блокер снят техответственным (45abca8: часы в тестах фиксированы, покрытие 93.25/84.22 ≥ планки). Дальше: `just verify`, ревью subagent `reviewer` → `tasks/kognis-149/REVIEW.md`, `just task-done kognis-149`.

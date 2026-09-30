@@ -38,7 +38,7 @@ def test_five_failures_block_login_with_clear_message(registered: TestClient) ->
         "/api/auth/login", json={"email": "ann@example.com", "password": VALID_PW}
     )
     assert blocked.status_code == 429
-    assert "слишком много попыток" in blocked.json()["detail"]
+    assert blocked.json()["detail"]["code"] == "user.login_blocked"
     assert 1 <= int(blocked.headers["retry-after"]) <= 15 * 60
     # блокировка действует и на другой регистр записи email
     assert login(registered, " ANN@example.com ", VALID_PW) == 429

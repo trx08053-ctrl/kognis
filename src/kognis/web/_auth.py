@@ -4,7 +4,7 @@ import datetime as dt
 from collections.abc import Callable
 from typing import Annotated
 
-from fastapi import APIRouter, Cookie, HTTPException, Request, Response
+from fastapi import APIRouter, Cookie, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.engine import Engine
 
@@ -20,6 +20,7 @@ from kognis.users import (
 )
 
 from ._deps import COOKIE, Authed
+from ._errors import http_error
 
 
 class Credentials(BaseModel):
@@ -69,9 +70,9 @@ def auth_router(db: Engine, secure_cookie: bool, today: Callable[[User], dt.date
                     payload.email, payload.password, payload.timezone
                 )
         except EmailTakenError as err:
-            raise HTTPException(status_code=409, detail=str(err)) from err
+            raise http_error(409, err) from err
         except ValueError as err:
-            raise HTTPException(status_code=422, detail=str(err)) from err
+            raise http_error(422, err) from err
         open_session(response, user)
         return user_out(user, today(user))
 
@@ -86,14 +87,12 @@ def auth_router(db: Engine, secure_cookie: bool, today: Callable[[User], dt.date
                 service.ensure_login_allowed(payload.email, ip)
                 service.record_login_failure(payload.email, ip)
         except LoginBlockedError as err:
-            raise HTTPException(
-                status_code=429, detail=str(err), headers={"Retry-After": str(err.retry_after)}
-            ) from err
+            raise http_error(429, err, {"Retry-After": str(err.retry_after)}) from err
         try:
             with transaction(db) as session:
                 user = UserService(session).authenticate(payload.email, payload.password)
         except InvalidCredentialsError as err:
-            raise HTTPException(status_code=401, detail=str(err)) from err
+            raise http_error(401, err) from err
         with transaction(db) as session:
             UserService(session).clear_login_failures(payload.email)
         open_session(response, user)

@@ -94,7 +94,7 @@ class UserRepository:
             with self._session.begin_nested():
                 user_id = self._session.execute(stmt).scalar_one()
         except IntegrityError as err:
-            raise EmailTakenError("email уже зарегистрирован") from err
+            raise EmailTakenError("user.email_taken") from err
         return User(id=int(user_id), email=email, timezone=timezone)
 
     def get(self, user_id: int) -> User | None:

@@ -84,7 +84,7 @@ def test_entry_validation(client: TestClient) -> None:
     signup(client, "ann@example.com")
     response = client.post("/api/entries", json={"text": "   "})
     assert response.status_code == 422
-    assert "пуст" in response.json()["detail"]
+    assert response.json()["detail"] == {"code": "diary.text_empty", "params": {}}
 
 
 def test_unknown_api_path_is_404_not_spa(client: TestClient) -> None:

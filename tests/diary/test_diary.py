@@ -34,13 +34,13 @@ def test_owner_isolation_in_service(engine: Engine) -> None:
 
 
 def test_blank_text_rejected(engine: Engine) -> None:
-    with pytest.raises(ValueError, match="пуст"), transaction(engine) as session:
+    with pytest.raises(ValueError, match=r"diary\.text_empty"), transaction(engine) as session:
         DiaryService(session).create_entry(1, "   ", [], [])
 
 
 def test_too_many_labels_rejected() -> None:
-    with pytest.raises(ValueError, match="не больше"):
-        normalize_labels([str(i) for i in range(30)], "теги")
+    with pytest.raises(ValueError, match=r"diary\.tags_many"):
+        normalize_labels([str(i) for i in range(30)], "tags")
 
 
 @given(st.lists(st.text(alphabet="abcXYZ ", max_size=10), max_size=15))
@@ -65,5 +65,8 @@ def test_day_review_upsert_is_per_owner_and_date(engine: Engine) -> None:
 
 @pytest.mark.parametrize(("wellbeing", "mood"), [(0, 5), (5, 0), (11, 5), (5, 11)])
 def test_day_review_scale_bounds(engine: Engine, wellbeing: int, mood: int) -> None:
-    with pytest.raises(ValueError, match="от 1 до 10"), transaction(engine) as session:
+    with (
+        pytest.raises(ValueError, match=r"diary\.(wellbeing|mood)_range"),
+        transaction(engine) as session,
+    ):
         DiaryService(session).save_day_review(1, date(2026, 9, 1), wellbeing, mood, "")

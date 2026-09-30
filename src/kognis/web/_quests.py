@@ -3,7 +3,7 @@
 import datetime as dt
 from collections.abc import Callable
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from pydantic import BaseModel, Field
 from sqlalchemy.engine import Engine
 
@@ -23,6 +23,7 @@ from kognis.users import (
 )
 
 from ._deps import Authed
+from ._errors import http_error
 
 
 class QuestStepOut(BaseModel):
@@ -110,9 +111,9 @@ def quests_router(db: Engine, today: Callable[[User], dt.date], provider: AiProv
                     user.id, payload.template, today(user)
                 )
         except AlreadyAcceptedError as err:
-            raise HTTPException(status_code=409, detail=str(err)) from err
+            raise http_error(409, err) from err
         except ValueError as err:
-            raise HTTPException(status_code=422, detail=str(err)) from err
+            raise http_error(422, err) from err
         return quest_out(quest)
 
     @router.post("/from-analysis", status_code=201)
@@ -122,17 +123,17 @@ def quests_router(db: Engine, today: Callable[[User], dt.date], provider: AiProv
             with transaction(db) as session:
                 found = AnalysisService(session, provider).get(user.id, payload.analysis_id)
                 if found is None:  # чужой анализ неотличим от несуществующего
-                    raise HTTPException(status_code=404, detail="анализ не найден")
+                    raise http_error(404, "analysis.not_found")
                 ideas = found.result.quest_ideas if found.result else []
                 if payload.idea >= len(ideas):
-                    raise HTTPException(status_code=422, detail="нет такой идеи")
+                    raise http_error(422, "gameplay.idea_unknown")
                 quest = QuestService(session).accept_idea(
                     user.id, found.id, payload.idea, ideas[payload.idea], today(user)
                 )
         except AlreadyAcceptedError as err:
-            raise HTTPException(status_code=409, detail=str(err)) from err
+            raise http_error(409, err) from err
         except ValueError as err:
-            raise HTTPException(status_code=422, detail=str(err)) from err
+            raise http_error(422, err) from err
         return quest_out(quest)
 
     @router.post("/{quest_id}/steps/{idx}/done")
@@ -141,11 +142,11 @@ def quests_router(db: Engine, today: Callable[[User], dt.date], provider: AiProv
             with transaction(db) as session:
                 outcome = QuestService(session).complete_step(user.id, quest_id, idx, today(user))
         except StepUnavailableError as err:
-            raise HTTPException(status_code=409, detail=str(err)) from err
+            raise http_error(409, err) from err
         except ValueError as err:
-            raise HTTPException(status_code=422, detail=str(err)) from err
+            raise http_error(422, err) from err
         if outcome is None:  # чужой квест неотличим от несуществующего
-            raise HTTPException(status_code=404, detail="квест не найден")
+            raise http_error(404, "gameplay.quest_not_found")
         return StepDoneOut(quest=quest_out(outcome.quest), xp=outcome.xp)
 
     return router

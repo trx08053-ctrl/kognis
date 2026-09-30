@@ -17,7 +17,6 @@ from ._domain import AiError, AiTimeoutError, Message
 log = logging.getLogger(__name__)
 
 RETRY_STATUSES = frozenset({429, 500, 502, 503, 504})
-BAD_FORMAT = "Провайдер ИИ вернул ответ в неожиданном формате"
 MAX_CAUSE_DEPTH = 10
 DNS_MARKERS = ("name or service not known", "nodename nor servname", "name resolution")
 
@@ -33,19 +32,19 @@ def _is_dns_failure(err: BaseException | None) -> bool:
     return False
 
 
-def http_failure(status: int) -> str:
-    """Категория причины по коду ответа; тело ответа в текст не попадает."""
+def http_failure(status: int) -> AiError:
+    """Категория причины по коду ответа; тело ответа в ошибку не попадает."""
     if status in (HTTPStatus.UNAUTHORIZED, HTTPStatus.FORBIDDEN):
-        reason = "ключ доступа отклонён"
+        code = "ai.http_auth"
     elif status == HTTPStatus.NOT_FOUND:
-        reason = "адрес или модель не найдены"
+        code = "ai.http_not_found"
     elif status == HTTPStatus.TOO_MANY_REQUESTS:
-        reason = "превышен лимит запросов"
+        code = "ai.http_rate_limit"
     elif status >= HTTPStatus.INTERNAL_SERVER_ERROR:
-        reason = "сбой на стороне провайдера"
+        code = "ai.http_server"
     else:
-        reason = "запрос отклонён"
-    return f"Провайдер ИИ вернул ошибку {status}: {reason}"
+        code = "ai.http_rejected"
+    return AiError(code, status=status)
 
 
 class FakeProvider:
@@ -110,18 +109,18 @@ class OpenAICompatibleProvider:
         try:
             content = response.json()["choices"][0]["message"]["content"]
         except (ValueError, KeyError, IndexError, TypeError):
-            raise AiError(BAD_FORMAT) from None
+            raise AiError("ai.bad_format") from None
         if not isinstance(content, str):
-            raise AiError(BAD_FORMAT)
+            raise AiError("ai.bad_format")
         return content
 
-    def _network_failure(self, err: httpx.HTTPError) -> str:
+    def _network_failure(self, err: httpx.HTTPError) -> AiError:
         host = httpx.URL(self._url).host
         if _is_dns_failure(err):
-            return f"Не удалось связаться с провайдером ИИ: адрес {host} не найден (DNS)"
+            return AiError("ai.network_dns", host=host)
         if isinstance(err, httpx.ConnectError):
-            return f"Не удалось связаться с провайдером ИИ: {host} не принимает соединение"
-        return "Не удалось связаться с провайдером ИИ: сетевая ошибка"
+            return AiError("ai.network_connect", host=host)
+        return AiError("ai.network")
 
     def _post(self, body: dict[str, Any]) -> httpx.Response:
         cfg = self._settings
@@ -131,15 +130,14 @@ class OpenAICompatibleProvider:
                 try:
                     response = client.post(self._url, json=body, headers=self._headers)
                 except httpx.TimeoutException:
-                    msg = f"Провайдер ИИ не ответил за {cfg.timeout:g} с (таймаут)"
-                    raise AiTimeoutError(msg) from None
+                    raise AiTimeoutError("ai.timeout", seconds=cfg.timeout) from None
                 except httpx.HTTPError as err:
-                    raise AiError(self._network_failure(err)) from None
+                    raise self._network_failure(err) from None
                 status = response.status_code
                 if response.is_success:
                     return response
                 if status not in RETRY_STATUSES or attempt >= cfg.max_retries:
-                    raise AiError(http_failure(status))
+                    raise http_failure(status)
                 log.warning("ai provider returned %s, retry %s", status, attempt + 1)
                 cfg.sleep(cfg.backoff * 2**attempt)
                 attempt += 1

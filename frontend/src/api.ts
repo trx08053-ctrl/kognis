@@ -19,23 +19,33 @@ export type HelpBlock = Schemas["HelpOut"];
 export type Entry = Refine<Schemas["EntryOut"], { crisis: boolean; cipher?: Envelope | null }>;
 export type NewEntry = Refine<Schemas["EntryIn"], { cipher?: Envelope }>;
 
+// Ошибка API: сервер отдаёт код и параметры, текст по коду берёт интерфейс (docs/I18N.md, errors.ts)
 export class ApiError extends Error {
   constructor(
-    message: string,
+    readonly code: string | null,
     readonly status: number,
+    readonly params: Record<string, string | number> = {},
   ) {
-    super(message);
+    super(code ?? `http ${status}`);
   }
+}
+
+// detail списком — ошибка формы от валидатора (пустое или нечисловое поле)
+const VALIDATION_CODE = "request.validation";
+
+function errorFrom(status: number, detail: unknown): ApiError {
+  if (Array.isArray(detail)) return new ApiError(VALIDATION_CODE, status);
+  if (typeof detail === "object" && detail !== null && "code" in detail) {
+    const { code, params } = detail as { code: unknown; params?: Record<string, string | number> };
+    if (typeof code === "string") return new ApiError(code, status, params ?? {});
+  }
+  return new ApiError(null, status);
 }
 
 async function parse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const body = (await response.json().catch(() => ({}))) as { detail?: unknown };
-    // detail списком — ошибка формы от валидатора (пустое или нечисловое поле)
-    let detail = `ошибка ${response.status}`;
-    if (typeof body.detail === "string") detail = body.detail;
-    else if (Array.isArray(body.detail)) detail = "Проверьте поля формы: значения указаны неверно";
-    throw new ApiError(detail, response.status);
+    throw errorFrom(response.status, body.detail);
   }
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;

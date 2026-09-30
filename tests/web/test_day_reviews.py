@@ -57,7 +57,9 @@ def test_out_of_range_scale_rejected_with_readable_error(
     signup(client, "ann@example.com")
     response = client.put("/api/day-reviews/2026-09-01", json=payload)
     assert response.status_code == 422
-    assert "от 1 до 10" in response.json()["detail"]
+    detail = response.json()["detail"]
+    assert detail["code"] in {"diary.wellbeing_range", "diary.mood_range"}
+    assert detail["params"] == {"min": 1, "max": 10}
     assert client.get("/api/day-reviews").json() == []
 
 

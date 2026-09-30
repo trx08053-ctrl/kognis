@@ -10,6 +10,8 @@ from argon2.exceptions import InvalidHashError, VerificationError
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
+from kognis.errors import CodedError, CodedValueError
+
 FORMAT_VERSION = 1
 MIN_LOCK_PASSWORD = 8
 MAX_LOCK_PASSWORD = 256
@@ -19,15 +21,15 @@ NONCE_LENGTH = 12
 _hasher = PasswordHasher()  # argon2id по умолчанию
 
 
-class DataKeyError(Exception):
+class DataKeyError(CodedError):
     """Ключ данных сервера (KOGNIS_DATA_KEY) не задан или некорректен."""
 
 
-class WrongLockPasswordError(Exception):
+class WrongLockPasswordError(CodedError):
     """Неверный пароль замка."""
 
 
-class EntryUnreadableError(Exception):
+class EntryUnreadableError(CodedError):
     """Запись не расшифровывается: ключ данных сервера сменился или данные повреждены."""
 
 
@@ -42,19 +44,19 @@ class Sealed:
 def parse_data_key(raw: str | bytes | None) -> bytes:
     """KOGNIS_DATA_KEY — base64 от 32 байт."""
     if not raw:
-        raise DataKeyError("ключ данных сервера не задан: записи «под замком» недоступны")
+        raise DataKeyError("data_key.missing")
     try:
         key = base64.b64decode(raw, validate=True)
     except (binascii.Error, ValueError) as err:
-        raise DataKeyError("ключ данных сервера некорректен") from err
+        raise DataKeyError("data_key.invalid") from err
     if len(key) != KEY_LENGTH:
-        raise DataKeyError("ключ данных сервера некорректен: нужно 32 байта в base64")
+        raise DataKeyError("data_key.invalid")
     return key
 
 
 def validate_lock_password(password: str) -> str:
     if not MIN_LOCK_PASSWORD <= len(password) <= MAX_LOCK_PASSWORD:
-        raise ValueError(f"пароль замка: от {MIN_LOCK_PASSWORD} символов")
+        raise CodedValueError("lock.password_short", min=MIN_LOCK_PASSWORD)
     return password
 
 
@@ -73,10 +75,8 @@ def open_sealed(key: bytes, owner_id: int, sealed: Sealed, password: str) -> str
     try:
         _hasher.verify(sealed.lock_hash, password)
     except (VerificationError, InvalidHashError) as err:
-        raise WrongLockPasswordError("неверный пароль замка") from err
+        raise WrongLockPasswordError("lock.password_wrong") from err
     try:
         return AESGCM(key).decrypt(sealed.nonce, sealed.cipher, _aad(owner_id)).decode()
     except (InvalidTag, UnicodeDecodeError) as err:
-        raise EntryUnreadableError(
-            "запись не удаётся расшифровать: ключ данных сервера изменился"
-        ) from err
+        raise EntryUnreadableError("entry.unreadable") from err

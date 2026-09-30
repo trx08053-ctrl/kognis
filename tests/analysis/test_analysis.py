@@ -228,19 +228,19 @@ def test_invalid_answers_give_clear_error_and_app_lives(engine: Engine, bad: str
     add_entry(client)
     r = analyze(client)
     assert r.status_code == 502
-    assert "ещё раз" in r.json()["detail"]
+    assert r.json()["detail"] == {"code": "analysis.bad_answer", "params": {}}
     assert client.get("/api/analyses").json() == []
     assert client.get("/api/me").status_code == 200
 
 
 @pytest.mark.acceptance("kognis-kai", "AC3")
 def test_provider_error_gives_clear_message(engine: Engine) -> None:
-    provider = ScriptedProvider(AiError("Провайдер ИИ вернул ошибку 500"))
+    provider = ScriptedProvider(AiError("ai.http_server", status=500))
     client = make(engine, provider)
     add_entry(client)
     r = analyze(client)
     assert r.status_code == 502
-    assert r.json()["detail"] == "Провайдер ИИ вернул ошибку 500"
+    assert r.json()["detail"] == {"code": "ai.http_server", "params": {"status": 500}}
 
 
 @pytest.mark.acceptance("kognis-kai", "AC4")
@@ -438,7 +438,7 @@ def test_two_invalid_answers_give_clear_error(engine: Engine) -> None:
     add_entry(client)
     r = analyze(client)
     assert r.status_code == 502
-    assert "ещё раз" in r.json()["detail"]
+    assert r.json()["detail"]["code"] == "analysis.bad_answer"
     assert len(provider.calls) == 2
     assert client.get("/api/analyses").json() == []
 

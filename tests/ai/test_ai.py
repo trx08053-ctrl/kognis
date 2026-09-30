@@ -102,8 +102,9 @@ def test_gives_up_after_retries_and_does_not_retry_client_errors() -> None:
         calls.append(1)
         return httpx.Response(500)
 
-    with pytest.raises(AiError, match="500"):
+    with pytest.raises(AiError, match=r"ai\.http_server") as failed:
         make(server_error).complete("s", MESSAGES)
+    assert failed.value.params == {"status": 500}
     assert len(calls) == 3
 
     calls.clear()
@@ -112,8 +113,9 @@ def test_gives_up_after_retries_and_does_not_retry_client_errors() -> None:
         calls.append(1)
         return httpx.Response(400)
 
-    with pytest.raises(AiError, match="400"):
+    with pytest.raises(AiError, match=r"ai\.http_rejected") as rejected:
         make(bad_request).complete("s", MESSAGES)
+    assert rejected.value.params == {"status": 400}
     assert len(calls) == 1
 
 
@@ -122,7 +124,7 @@ def test_timeout_gives_clear_error() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         raise httpx.ReadTimeout("slow", request=request)
 
-    with pytest.raises(AiTimeoutError, match="не ответил"):
+    with pytest.raises(AiTimeoutError, match=r"ai\.timeout"):
         make(handler, timeout=5).complete("s", MESSAGES)
 
 
@@ -131,7 +133,7 @@ def test_malformed_response_is_an_error() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json={"oops": 1})
 
-    with pytest.raises(AiError, match="формате"):
+    with pytest.raises(AiError, match=r"ai\.bad_format"):
         make(handler).complete("s", MESSAGES)
 
 
@@ -185,19 +187,19 @@ def test_error_names_the_failure_category_without_key() -> None:
         return lambda request: httpx.Response(code, text="echo " + request.headers["authorization"])
 
     cases = [
-        (dns, "не найден"),
-        (refused, "не принимает соединение"),
-        (slow, "таймаут"),
-        (reset, "сетевая ошибка"),
-        (status(401), "401: ключ доступа отклонён"),
-        (status(404), "404: адрес или модель не найдены"),
-        (status(429), "429: превышен лимит"),
-        (status(503), "503: сбой на стороне провайдера"),
-        (status(400), "400: запрос отклонён"),
+        (dns, "ai.network_dns"),
+        (refused, "ai.network_connect"),
+        (slow, "ai.timeout"),
+        (reset, "ai.network"),
+        (status(401), "ai.http_auth"),
+        (status(404), "ai.http_not_found"),
+        (status(429), "ai.http_rate_limit"),
+        (status(503), "ai.http_server"),
+        (status(400), "ai.http_rejected"),
     ]
     for handler, expected in cases:
         err = _failure(handler)
-        assert expected in str(err)
+        assert err.code == expected
         assert KEY not in str(err)
         assert KEY not in repr(err)
     assert isinstance(_failure(slow), AiTimeoutError)

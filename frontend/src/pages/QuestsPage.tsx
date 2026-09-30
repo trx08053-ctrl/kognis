@@ -12,20 +12,14 @@ import {
   type QuizResult,
   submitQuiz,
 } from "../api";
+import { ErrorMessage } from "../components/ErrorMessage";
 
 const inputClass = "input";
 const buttonClass = "btn";
 
 const KIND_TEXT = { quest: "Квест", challenge: "Челлендж" } as const;
 
-function Problem({ error }: { error: Error | null }) {
-  if (!error) return null;
-  return (
-    <p className="mt-2 font-semibold text-[var(--danger-text)]" role="alert">
-      {error.message}
-    </p>
-  );
-}
+const Problem = ErrorMessage;
 
 function ActiveQuest({ quest }: { quest: Quest }) {
   const client = useQueryClient();

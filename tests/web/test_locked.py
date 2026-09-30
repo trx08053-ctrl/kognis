@@ -79,7 +79,7 @@ def test_wrong_password_never_reveals_text(api: TestClient) -> None:
     entry_id = create_locked(api)["id"]
     bad = api.post(f"/api/entries/{entry_id}/open", json={"password": "неверный-пароль"})
     assert bad.status_code == 403
-    assert "пароль" in bad.json()["detail"]
+    assert bad.json()["detail"]["code"] == "lock.password_wrong"
     assert PRIVATE_TEXT not in bad.text
     good = api.post(f"/api/entries/{entry_id}/open", json={"password": LOCK_PW})
     assert good.status_code == 200
@@ -97,7 +97,7 @@ def test_changed_data_key_makes_entry_unreadable_but_app_lives(
     other = make_client(engine, key=KEY_B)
     response = other.post(f"/api/entries/{entry_id}/open", json={"password": LOCK_PW})
     assert response.status_code == 409
-    assert "ключ данных" in response.json()["detail"]
+    assert response.json()["detail"]["code"] == "entry.unreadable"
     assert PRIVATE_TEXT not in response.text
     # приложение живо: список, обычные записи и новые замки со своим ключом работают
     listed = other.get("/api/entries").json()
@@ -202,4 +202,4 @@ def test_invalid_data_key_is_clear_error(engine: Engine, bad_key: str) -> None:
         "/api/entries", json={"text": "x", "protection": "locked", "lock_password": LOCK_PW}
     )
     assert response.status_code == 503
-    assert "ключ данных" in response.json()["detail"]
+    assert response.json()["detail"]["code"] in {"data_key.missing", "data_key.invalid"}

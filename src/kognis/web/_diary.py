@@ -32,6 +32,7 @@ from kognis.users import (
 )
 
 from ._deps import NEXT_CURSOR_HEADER, Authed, HelpOut, Label, help_out
+from ._errors import http_error
 from ._limits import AttemptLimiter
 
 
@@ -87,24 +88,22 @@ def lock_errors() -> Generator[None]:
     try:
         yield
     except WrongLockPasswordError as err:
-        raise HTTPException(status_code=403, detail=str(err)) from err
+        raise http_error(403, err) from err
     except EntryUnreadableError as err:
-        raise HTTPException(status_code=409, detail=str(err)) from err
+        raise http_error(409, err) from err
     except DataKeyError as err:
-        raise HTTPException(status_code=503, detail=str(err)) from err
+        raise http_error(503, err) from err
 
 
 def check_protection_fields(payload: EntryIn) -> None:
     """Поля режима защиты согласованы: `private` — только шифртекст, `locked` — с паролем замка."""
     if payload.protection == "private":
         if payload.cipher is None or payload.text or payload.lock_password:
-            raise HTTPException(
-                status_code=422, detail="приватная запись передаётся только шифртекстом"
-            )
+            raise http_error(422, "diary.private_cipher_only")
     elif payload.cipher is not None:
-        raise HTTPException(status_code=422, detail="шифртекст только у приватной записи")
+        raise http_error(422, "diary.cipher_only_private")
     if payload.protection == "locked" and not payload.lock_password:
-        raise HTTPException(status_code=422, detail="для записи «под замком» нужен пароль замка")
+        raise http_error(422, "lock.password_required")
 
 
 def store_entry(diary: DiaryService, owner_id: int, payload: EntryIn, day: dt.date) -> Entry:
@@ -146,7 +145,7 @@ def add_entry_pages(router: APIRouter, db: Engine) -> None:
                     user.id, limit=q.limit, cursor=q.cursor, where=where
                 )
         except InvalidCursorError as err:
-            raise HTTPException(status_code=422, detail=str(err)) from err
+            raise http_error(422, err) from err
         if page.next_cursor:
             response.headers[NEXT_CURSOR_HEADER] = page.next_cursor
         return [entry_out(e) for e in page.items]
@@ -180,7 +179,7 @@ def diary_router(db: Engine, today: Callable[[User], dt.date], data_key: str | N
             raise
         limiter.reset(key)
         if entry is None:  # чужая запись неотличима от несуществующей
-            raise HTTPException(status_code=404, detail="запись не найдена")
+            raise http_error(404, "diary.entry_not_found")
         return entry_out(entry)
 
     @router.post("/{entry_id}/open")
@@ -197,7 +196,7 @@ def diary_router(db: Engine, today: Callable[[User], dt.date], data_key: str | N
         try:
             return entry_action(user, entry_id, payload.password, "lock_entry", response)
         except ValueError as err:
-            raise HTTPException(status_code=422, detail=str(err)) from err
+            raise http_error(422, err) from err
 
     @router.post("/{entry_id}/unlock")
     def unlock_entry(
@@ -226,7 +225,7 @@ def diary_router(db: Engine, today: Callable[[User], dt.date], data_key: str | N
                         user.id, entry.id, entry.entry_date, today(user)
                     )
         except ValueError as err:
-            raise HTTPException(status_code=422, detail=str(err)) from err
+            raise http_error(422, err) from err
         return entry_out(entry, block)
 
     add_entry_pages(router, db)  # до «/{entry_id}»: «/labels» — не id
@@ -236,7 +235,7 @@ def diary_router(db: Engine, today: Callable[[User], dt.date], data_key: str | N
         with transaction(db) as session:
             entry = DiaryService(session).get_entry(user.id, entry_id)
         if entry is None:  # чужая запись неотличима от несуществующей
-            raise HTTPException(status_code=404, detail="запись не найдена")
+            raise http_error(404, "diary.entry_not_found")
         return entry_out(entry)
 
     return router

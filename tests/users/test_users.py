@@ -24,7 +24,7 @@ def test_wrong_password_and_unknown_email_look_the_same(engine: Engine) -> None:
     for email, password in [("ann@example.com", "wrong password"), ("bob@example.com", VALID_PW)]:
         with pytest.raises(InvalidCredentialsError) as info, transaction(engine) as session:
             UserService(session).authenticate(email, password)
-        assert str(info.value) == "неверный email или пароль"
+        assert info.value.code == "user.credentials_invalid"
 
 
 def test_duplicate_email_rejected(engine: Engine) -> None:
@@ -37,9 +37,9 @@ def test_duplicate_email_rejected(engine: Engine) -> None:
 @pytest.mark.parametrize(
     ("email", "password", "message"),
     [
-        ("no-at-sign", VALID_PW, "email"),
-        ("a@b", VALID_PW, "email"),
-        ("ann@example.com", "short", "пароль"),
+        ("no-at-sign", VALID_PW, "user.email_invalid"),
+        ("a@b", VALID_PW, "user.email_invalid"),
+        ("ann@example.com", "short", "user.password_short"),
     ],
 )
 def test_invalid_registration_rejected(

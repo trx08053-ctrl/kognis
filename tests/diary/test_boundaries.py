@@ -24,10 +24,10 @@ def test_scale_edges_and_reflection_length_edge(engine: Engine) -> None:
     assert _save(engine, 10, 1) == (10, 1)
     assert _save(engine, 5, 5, "я" * MAX_REFLECTION_LENGTH) == (5, 5)
     for wellbeing, mood in [(0, 5), (11, 5)]:
-        with pytest.raises(ValueError, match=r"^самочувствие: оценка от 1 до 10$"):
+        with pytest.raises(ValueError, match=r"^diary\.wellbeing_range$"):
             _save(engine, wellbeing, mood)
     for wellbeing, mood in [(5, 0), (5, 11)]:
-        with pytest.raises(ValueError, match=r"^настроение: оценка от 1 до 10$"):
+        with pytest.raises(ValueError, match=r"^diary\.mood_range$"):
             _save(engine, wellbeing, mood)
-    with pytest.raises(ValueError, match=r"^рефлексия слишком длинная$"):
+    with pytest.raises(ValueError, match=r"^diary\.reflection_long$"):
         _save(engine, 5, 5, "я" * (MAX_REFLECTION_LENGTH + 1))

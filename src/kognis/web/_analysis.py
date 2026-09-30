@@ -2,7 +2,7 @@
 
 import datetime as dt
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from sqlalchemy.engine import Engine
 
@@ -22,6 +22,7 @@ from kognis.db import transaction
 from kognis.safety import HelpBlock
 
 from ._deps import Answer, Authed, HelpOut, help_out
+from ._errors import http_error
 
 
 class DirectionOut(BaseModel):
@@ -110,7 +111,7 @@ def mood_out(mood: MoodDynamics) -> MoodOut:
 def require_ai_analysis(user: Authed) -> None:
     """Функция ИИ-анализа доступна не всем тарифам (D9)."""
     if not can_use(user.id, Feature.AI_ANALYSIS):
-        raise HTTPException(status_code=403, detail="функция недоступна")
+        raise http_error(403, "access.feature_unavailable")
 
 
 def analysis_router(db: Engine, provider: AiProvider) -> APIRouter:
@@ -127,7 +128,7 @@ def analysis_router(db: Engine, provider: AiProvider) -> APIRouter:
             with transaction(db) as session:
                 return mood_out(AnalysisService(session, provider).mood(user.id, start, end))
         except ValueError as err:
-            raise HTTPException(status_code=422, detail=str(err)) from err
+            raise http_error(422, err) from err
 
     @router.post("", status_code=201, dependencies=gate)
     def analyze(payload: AnalyzeIn, user: Authed) -> AnalysisOut:
@@ -137,13 +138,13 @@ def analysis_router(db: Engine, provider: AiProvider) -> APIRouter:
                     user.id, payload.direction, payload.start, payload.end, consent=payload.consent
                 )
         except ConsentRequiredError as err:
-            raise HTTPException(status_code=403, detail=str(err)) from err
+            raise http_error(403, err) from err
         except NoDataError as err:
-            raise HTTPException(status_code=422, detail=str(err)) from err
+            raise http_error(422, err) from err
         except AnalysisFailedError as err:
-            raise HTTPException(status_code=502, detail=str(err)) from err
+            raise http_error(502, err) from err
         except ValueError as err:
-            raise HTTPException(status_code=422, detail=str(err)) from err
+            raise http_error(422, err) from err
         return outcome_out(outcome)
 
     @router.post("/{analysis_id}/answers", status_code=201, dependencies=gate)
@@ -154,13 +155,13 @@ def analysis_router(db: Engine, provider: AiProvider) -> APIRouter:
                     user.id, analysis_id, payload.answers, consent=payload.consent
                 )
         except ConsentRequiredError as err:
-            raise HTTPException(status_code=403, detail=str(err)) from err
+            raise http_error(403, err) from err
         except AnalysisFailedError as err:
-            raise HTTPException(status_code=502, detail=str(err)) from err
+            raise http_error(502, err) from err
         except ValueError as err:
-            raise HTTPException(status_code=422, detail=str(err)) from err
+            raise http_error(422, err) from err
         if outcome is None:  # чужой анализ неотличим от несуществующего
-            raise HTTPException(status_code=404, detail="анализ не найден")
+            raise http_error(404, "analysis.not_found")
         return outcome_out(outcome)
 
     @router.get("")
@@ -173,7 +174,7 @@ def analysis_router(db: Engine, provider: AiProvider) -> APIRouter:
         with transaction(db) as session:
             found = AnalysisService(session, provider).get(user.id, analysis_id)
         if found is None:
-            raise HTTPException(status_code=404, detail="анализ не найден")
+            raise http_error(404, "analysis.not_found")
         return analysis_out(found)
 
     return router

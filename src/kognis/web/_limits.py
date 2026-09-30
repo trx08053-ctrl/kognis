@@ -3,12 +3,13 @@
 import json
 import time
 
-from fastapi import HTTPException
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
+
+from ._errors import error_detail, http_error
 
 # Самое большое законное тело — конверт приватной записи (~160 КБ шифртекста в base64)
 MAX_BODY_BYTES = 512 * 1024
-TOO_LARGE = json.dumps({"detail": "слишком большой запрос"}, ensure_ascii=False).encode()
+TOO_LARGE = json.dumps({"detail": error_detail("http.body_too_large")}).encode()
 
 LOCK_ATTEMPTS = 5  # неверных паролей замка на запись за окно, затем 429
 LOCK_ATTEMPT_WINDOW = 300.0
@@ -69,7 +70,7 @@ class AttemptLimiter:
 
     def check(self, key: tuple[int, int]) -> None:
         if len(self._recent(key)) >= LOCK_ATTEMPTS:
-            raise HTTPException(status_code=429, detail="слишком много попыток, попробуйте позже")
+            raise http_error(429, "lock.too_many_attempts")
 
     def fail(self, key: tuple[int, int]) -> None:
         self._failures[key] = [*self._recent(key), time.monotonic()]

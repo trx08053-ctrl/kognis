@@ -12,7 +12,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException, Request, Response
+from fastapi import Depends, FastAPI, Request, Response
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
@@ -26,6 +26,7 @@ from ._analysis import analysis_router
 from ._auth import auth_router
 from ._deps import require_json, today_in
 from ._diary import diary_router
+from ._errors import error_detail, http_error
 from ._limits import BodyLimitMiddleware
 from ._progress import progress_router
 from ._quests import quests_router
@@ -91,7 +92,9 @@ def create_app(
     async def internal_error(request: Request, exc: Exception) -> JSONResponse:
         # ASVS V7: наружу — только общий текст, без трассировки и деталей исключения
         return JSONResponse(
-            {"detail": "внутренняя ошибка"}, status_code=500, headers=SECURITY_HEADERS
+            {"detail": error_detail("server.internal")},
+            status_code=500,
+            headers=SECURITY_HEADERS,
         )
 
     @app.middleware("http")
@@ -111,7 +114,7 @@ def create_app(
             with db.connect() as conn:
                 conn.execute(text("SELECT 1"))
         except Exception as exc:
-            logging.getLogger(__name__).error("health: БД недоступна (%s)", type(exc).__name__)
+            logging.getLogger(__name__).error("health: db unavailable (%s)", type(exc).__name__)
             return JSONResponse({"status": "unavailable"}, status_code=503)
         return JSONResponse({"status": "ok"})
 
@@ -130,11 +133,11 @@ def create_app(
     def index(path: str) -> Response:
         """Любой путь вне /api — страница SPA (маршруты разбирает React Router)."""
         if path.startswith("api/") or (not is_dev and path in DOC_PATHS):
-            raise HTTPException(status_code=404, detail="не найдено")
+            raise http_error(404, "http.not_found")
         page = dist / "index.html"
         if not page.exists():
             return PlainTextResponse(
-                "интерфейс не собран: pnpm --dir frontend build", status_code=503
+                "frontend is not built: pnpm --dir frontend build", status_code=503
             )
         return FileResponse(page)
 

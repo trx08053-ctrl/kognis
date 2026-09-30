@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import { getMood } from "../api";
 import { shiftDay, useToday } from "../dates";
+import { describeError } from "../errors";
 import { useI18n } from "../i18n";
 
 const MOOD_COLOR = "#6366f1";
@@ -26,7 +27,7 @@ export function MoodChart() {
   if (mood.isError)
     return (
       <p role="alert">
-        {t("chart.load_error")} {mood.error.message}
+        {t("chart.load_error")} {describeError(t, mood.error)}
       </p>
     );
   if (!mood.data) return null;

@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from kognis.ai import AiError, AiProvider, Message
 from kognis.diary import DayReview, DiaryService, Entry
+from kognis.errors import CodedError, CodedValueError
 from kognis.safety import HelpBlock, check_text, help_block
 
 from ._domain import (
@@ -61,16 +62,16 @@ SYSTEM_PROMPT = (
 FOLLOW_UP_HINT = " Это продолжение: учти ответы пользователя на твои вопросы и уточни анализ."
 
 
-class ConsentRequiredError(Exception):
+class ConsentRequiredError(CodedError):
     """Нет согласия пользователя на передачу записей провайдеру ИИ."""
 
 
-class NoDataError(ValueError):
+class NoDataError(CodedValueError):
     """За период нет записей, которые можно проанализировать."""
 
 
-class AnalysisFailedError(Exception):
-    """ИИ недоступен или дважды вернул ответ не по формату; текст безопасен для показа."""
+class AnalysisFailedError(CodedError):
+    """ИИ недоступен или дважды вернул ответ не по формату; код и параметры безопасны для показа."""
 
 
 @dataclass(frozen=True)
@@ -140,9 +141,9 @@ class AnalysisService:
             )
             return AnalysisOutcome(saved, block or help_block())
         if not consent:
-            raise ConsentRequiredError("нужно согласие на передачу записей для анализа")
+            raise ConsentRequiredError("analysis.consent_required")
         if not entries and not reviews:
-            raise NoDataError("за период нет записей и итогов дня")
+            raise NoDataError("analysis.no_data")
         entries = sorted(entries, key=lambda e: (e.entry_date, e.id))[-MAX_ENTRIES:]
         data = {
             "entries": [_entry_payload(e) for e in entries],
@@ -166,14 +167,14 @@ class AnalysisService:
         if parent is None:
             return None
         if parent.status != "done" or parent.result is None:
-            raise ValueError("продолжить можно только завершённый анализ")
+            raise CodedValueError("analysis.not_finished")
         cleaned = normalize_answers(answers)
         base = (owner_id, parent.id, parent.direction, parent.start, parent.end)
         block = _crisis_block(list(cleaned))
         if block is not None:
             return AnalysisOutcome(self._repo.add(Analysis(0, *base, "crisis", None, ())), block)
         if not consent:
-            raise ConsentRequiredError("нужно согласие на передачу ответов для анализа")
+            raise ConsentRequiredError("analysis.consent_answers_required")
         focus = direction_by_code(parent.direction)
         context = {"previous_result": parent.result.model_dump(), "answers": list(cleaned)}
         result = self._ask(
@@ -199,7 +200,7 @@ class AnalysisService:
             try:
                 raw = self._provider.complete(system, convo, schema)
             except AiError as err:
-                raise AnalysisFailedError(str(err)) from err
+                raise AnalysisFailedError(err.code, **err.params) from err
             try:
                 return parse_result(raw, known_ids)
             except InvalidModelAnswerError as err:
@@ -209,7 +210,7 @@ class AnalysisService:
                     Message("assistant", raw[:MAX_ECHO_CHARS]),
                     Message("user", _fix_request(err.problems)),
                 ]
-        raise AnalysisFailedError("Не удалось разобрать ответ ИИ. Попробуйте ещё раз чуть позже.")
+        raise AnalysisFailedError("analysis.bad_answer")
 
 
 def _fix_request(problems: Sequence[str]) -> str:

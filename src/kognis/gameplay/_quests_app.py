@@ -5,6 +5,8 @@ from datetime import date
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from kognis.errors import CodedValueError
+
 from ._infra import ProgressRepository
 from ._quests import (
     KIND_QUEST,
@@ -68,7 +70,7 @@ class QuestService:
         """Квест из предложения анализа; из одной идеи — один квест."""
         title = idea.strip()
         if not title:
-            raise ValueError("пустая идея")
+            raise CodedValueError("gameplay.idea_empty")
         new = NewQuest(
             source=SOURCE_ANALYSIS,
             source_ref=f"{analysis_id}:{idea_no}",
@@ -94,11 +96,11 @@ class QuestService:
         if quest is None:
             return None
         if not 0 <= idx < len(quest.steps):
-            raise ValueError("нет такого шага")
+            raise CodedValueError("gameplay.step_unknown")
         if quest.steps[idx].done_on is not None:
             return StepOutcome(quest, 0)
         if quest.kind == TYPE_CHALLENGE and any(s.done_on == today for s in quest.steps):
-            raise StepUnavailableError("шаг челленджа — не чаще одного раза в день")
+            raise StepUnavailableError("gameplay.step_unavailable")
         try:
             with self._session.begin_nested():
                 self._quests.mark_step(quest_id, idx, today)
@@ -128,19 +130,19 @@ class QuestService:
         quiz = quiz_by_code(code)
         answers = normalize_quiz_answers(quiz, raw_answers)
         if code in self._quizzes.done_codes(owner_id, today):
-            raise QuizDoneTodayError("этот квиз сегодня уже пройден")
+            raise QuizDoneTodayError("gameplay.quiz_done_today")
         ref = f"{code}:{today.isoformat()}"
         try:
             with self._session.begin_nested():
                 self._quizzes.add(owner_id, code, today, answers)
                 xp = self._grant(owner_id, KIND_QUIZ, ref, today, QUIZ_XP) if reward else 0
         except IntegrityError:  # параллельный запрос успел раньше (уникальность держит БД)
-            raise QuizDoneTodayError("этот квиз сегодня уже пройден") from None
+            raise QuizDoneTodayError("gameplay.quiz_done_today") from None
         return QuizOutcome(xp, QuizAnswers(code, today, answers))
 
     def _accept(self, owner_id: int, new: NewQuest, today: date) -> Quest:
         if self._quests.has_open(owner_id, new.source, new.source_ref):
-            raise AlreadyAcceptedError("квест уже принят")
+            raise AlreadyAcceptedError("gameplay.quest_accepted")
         return self._quests.add_quest(owner_id, new, today)
 
     def _grant(self, owner_id: int, kind: str, ref: str, today: date, xp: int) -> int:

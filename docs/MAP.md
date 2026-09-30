@@ -4,21 +4,22 @@
 > актуальность. Архитектурные правила — [ARCHITECTURE.md](ARCHITECTURE.md),
 > границы — `.importlinter`.
 
-Корневой пакет: `kognis` · компонентов: 9
+Корневой пакет: `kognis` · компонентов: 10
 
 ## Компоненты
 
 | Компонент | Назначение | Зависит от | Файлов | Карточка |
 |---|---|---|---|---|
 | `kognis.access` | Модуль access: решает, доступна ли пользователю функция (D9); сейчас — всегда да. | — | 4 | [access](modules/access.md) |
-| `kognis.ai` | Модуль ai: единый интерфейс к языковой модели; провайдер выбирается настройкой. | — | 4 | [ai](modules/ai.md) |
-| `kognis.analysis` | Модуль analysis: ИИ-анализ периода по направлениям и динамика настроения; владеет `analyses`. | `ai`, `db`, `diary`, `safety` | 5 | [analysis](modules/analysis.md) |
+| `kognis.ai` | Модуль ai: единый интерфейс к языковой модели; провайдер выбирается настройкой. | `errors` | 4 | [ai](modules/ai.md) |
+| `kognis.analysis` | Модуль analysis: ИИ-анализ периода по направлениям и динамика настроения; владеет `analyses`. | `ai`, `db`, `diary`, `errors`, `safety` | 5 | [analysis](modules/analysis.md) |
 | `kognis.db` | Платформа данных: подключение, метаданные таблиц, транзакции. | — | 1 | [db](modules/db.md) |
-| `kognis.diary` | Модуль diary: записи дневника и итоги дня; владеет `entries` и `day_reviews`. | `db` | 5 | [diary](modules/diary.md) |
-| `kognis.gameplay` | Модуль gameplay: опыт, уровни, серия, достижения, квесты, квизы (D8). | `db` | 7 | [gameplay](modules/gameplay.md) |
+| `kognis.diary` | Модуль diary: записи дневника и итоги дня; владеет `entries` и `day_reviews`. | `db`, `errors` | 5 | [diary](modules/diary.md) |
+| `kognis.errors` | Ошибки для показа человеку: код и параметры вместо фразы (docs/I18N.md, правило 2). | — | 1 | [errors](modules/errors.md) |
+| `kognis.gameplay` | Модуль gameplay: опыт, уровни, серия, достижения, квесты, квизы (D8). | `db`, `errors` | 7 | [gameplay](modules/gameplay.md) |
 | `kognis.safety` | Модуль safety: кризисные сигналы в тексте (локально, без ИИ) и контакты помощи. | — | 4 | [safety](modules/safety.md) |
-| `kognis.users` | Модуль users: регистрация, вход, сессии. Владеет данными пользователей и сессий. | `db` | 4 | [users](modules/users.md) |
-| `kognis.web` | Модуль web: HTTP-вход приложения — страницы, JSON API, /health. Бизнес-логики не содержит. | `access`, `ai`, `analysis`, `db`, `diary`, `gameplay`, `safety`, `users` | 12 | [web](modules/web.md) |
+| `kognis.users` | Модуль users: регистрация, вход, сессии. Владеет данными пользователей и сессий. | `db`, `errors` | 4 | [users](modules/users.md) |
+| `kognis.web` | Модуль web: HTTP-вход приложения — страницы, JSON API, /health. Бизнес-логики не содержит. | `access`, `ai`, `analysis`, `db`, `diary`, `errors`, `gameplay`, `safety`, `users` | 13 | [web](modules/web.md) |
 
 ## `kognis.access`
 
@@ -89,6 +90,14 @@
   - `WrongLockPasswordError` — `src/kognis/diary/_crypto.py`
 - Тесты: `tests/diary/test_boundaries.py`, `tests/diary/test_diary.py`, `tests/diary/test_label_filter_sql.py`, `tests/diary/test_period.py`, `tests/integration/test_postgres.py`, `tests/security/test_domain_limits.py`, `tests/web/test_day_reviews.py`
 
+## `kognis.errors`
+
+- Код: `src/kognis/errors.py`
+- Публичный интерфейс:
+  - `CodedError` — `src/kognis/errors.py`
+  - `CodedValueError` — `src/kognis/errors.py`
+- Тесты: **нет**
+
 ## `kognis.gameplay`
 
 - Код: `src/kognis/gameplay`
@@ -145,7 +154,7 @@
 - Публичный интерфейс:
   - `create_app` — `src/kognis/web/_app.py`
   - `main` — `src/kognis/web/__init__.py`
-- Тесты: `tests/analysis/test_analysis.py`, `tests/analysis/test_crisis_detector_off.py`, `tests/e2e/test_ui.py`, `tests/security/test_body_limit.py`, `tests/security/test_errors.py`, `tests/security/test_idor.py`, `tests/web/test_crisis_review.py`, `tests/web/test_day_reviews.py`, `tests/web/test_gameplay.py`, `tests/web/test_hardening.py`, `tests/web/test_http.py`, `tests/web/test_locked.py`, `tests/web/test_operations.py`, `tests/web/test_private.py`, `tests/web/test_quests.py`, `tests/web/test_timezone.py`
+- Тесты: `tests/analysis/test_analysis.py`, `tests/analysis/test_crisis_detector_off.py`, `tests/e2e/test_ui.py`, `tests/security/test_body_limit.py`, `tests/security/test_errors.py`, `tests/security/test_idor.py`, `tests/web/test_crisis_review.py`, `tests/web/test_day_reviews.py`, `tests/web/test_error_codes.py`, `tests/web/test_gameplay.py`, `tests/web/test_hardening.py`, `tests/web/test_http.py`, `tests/web/test_locked.py`, `tests/web/test_operations.py`, `tests/web/test_private.py`, `tests/web/test_quests.py`, `tests/web/test_timezone.py`
 
 ## Точки входа
 

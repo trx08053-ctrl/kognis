@@ -98,14 +98,16 @@ test("показывает ошибку входа", async () => {
     "fetch",
     vi
       .fn<typeof fetch>()
-      .mockResolvedValueOnce(reply(401, { detail: "нужен вход" }))
-      .mockResolvedValueOnce(reply(401, { detail: "неверный email или пароль" })),
+      .mockResolvedValueOnce(reply(401, { detail: { code: "auth.required", params: {} } }))
+      .mockResolvedValueOnce(
+        reply(401, { detail: { code: "user.credentials_invalid", params: {} } }),
+      ),
   );
   renderApp();
   fireEvent.change(await screen.findByLabelText("Email"), { target: { value: "ann@example.com" } });
   fireEvent.change(screen.getByLabelText("Пароль"), { target: { value: "wrong wrong" } });
   fireEvent.click(screen.getByTestId("auth-submit"));
-  expect((await screen.findByRole("alert")).textContent).toContain("неверный");
+  expect((await screen.findByRole("alert")).textContent).toContain("Неверный email или пароль");
 });
 
 test("запись с кризисным сигналом показывает блок помощи с контактами", async () => {
@@ -173,7 +175,7 @@ test("запись под замком: заглушка, ошибка неве�
             crisis: false,
             help: null,
           })
-        : reply(403, { detail: "неверный пароль замка" });
+        : reply(403, { detail: { code: "lock.password_wrong", params: {} } });
     },
   });
   renderApp();
@@ -182,7 +184,7 @@ test("запись под замком: заглушка, ошибка неве�
   expect(screen.queryByText("Тайная мысль")).toBeNull();
   fireEvent.change(screen.getByLabelText("Пароль замка"), { target: { value: "неверный-пароль" } });
   fireEvent.click(screen.getByRole("button", { name: "Открыть" }));
-  expect((await screen.findByRole("alert")).textContent).toContain("неверный пароль замка");
+  expect((await screen.findByRole("alert")).textContent).toContain("Неверный пароль замка");
   expect(screen.queryByText("Тайная мысль")).toBeNull();
 
   fireEvent.change(screen.getByLabelText("Пароль замка"), {
@@ -460,7 +462,8 @@ test("регистрация повторяется без пояса, если 
     "POST /api/auth/register": (init) => {
       const body = JSON.parse(String(init?.body));
       bodies.push(body);
-      if (body.timezone) return reply(422, { detail: "неизвестный часовой пояс" });
+      if (body.timezone)
+        return reply(422, { detail: { code: "user.timezone_unknown", params: {} } });
       loggedIn = true;
       return reply(201, ME);
     },

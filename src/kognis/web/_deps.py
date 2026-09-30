@@ -4,12 +4,14 @@ import datetime as dt
 from typing import Annotated
 from zoneinfo import ZoneInfo
 
-from fastapi import Cookie, Depends, HTTPException, Request
+from fastapi import Cookie, Depends, Request
 from pydantic import BaseModel, Field
 
 from kognis.db import transaction
 from kognis.safety import HelpBlock
 from kognis.users import User, UserService
+
+from ._errors import http_error
 
 COOKIE = "kognis_session"
 
@@ -49,7 +51,7 @@ def require_json(request: Request) -> None:
     if request.method not in {"GET", "HEAD", "OPTIONS"} and not request.headers.get(
         "content-type", ""
     ).startswith("application/json"):
-        raise HTTPException(status_code=415, detail="нужен Content-Type: application/json")
+        raise http_error(415, "http.json_required")
 
 
 def current_user(
@@ -60,7 +62,7 @@ def current_user(
             user = UserService(session).user_for_token(token)
         if user:
             return user
-    raise HTTPException(status_code=401, detail="нужен вход")
+    raise http_error(401, "auth.required")
 
 
 Authed = Annotated[User, Depends(current_user)]

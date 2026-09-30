@@ -117,7 +117,7 @@ def test_wrong_password_shows_error(page: Page) -> None:
     page.get_by_label("Email").fill("nobody@example.com")
     page.get_by_label("Пароль").fill("wrong password")
     page.get_by_test_id("auth-submit").click()
-    expect(page.get_by_role("alert")).to_contain_text("неверный")
+    expect(page.get_by_role("alert")).to_contain_text("Неверный email или пароль")
 
 
 @pytest.mark.e2e
@@ -202,7 +202,7 @@ def test_locked_entry_flow_and_accessibility(page: Page) -> None:
 
     page.get_by_label("Пароль замка", exact=True).fill("неверный-пароль")
     page.get_by_role("button", name="Открыть").click()
-    expect(entries.get_by_role("alert")).to_contain_text("неверный пароль замка")
+    expect(entries.get_by_role("alert")).to_contain_text("Неверный пароль замка")
     expect(entries).not_to_contain_text("Личное под замком")
     page.get_by_label("Пароль замка", exact=True).fill("замок-12345")
     page.get_by_role("button", name="Открыть").click()

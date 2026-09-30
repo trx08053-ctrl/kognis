@@ -4,6 +4,8 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date
 
+from kognis.errors import CodedError, CodedValueError
+
 QUEST_STEP_XP = 15
 QUEST_XP = 50
 QUIZ_XP = 10
@@ -157,14 +159,14 @@ def template_by_code(code: str) -> QuestTemplate:
     for template in QUESTS:
         if template.code == code:
             return template
-    raise ValueError("неизвестный квест")
+    raise CodedValueError("gameplay.quest_unknown")
 
 
 def quiz_by_code(code: str) -> QuizDef:
     for quiz in QUIZZES:
         if quiz.code == code:
             return quiz
-    raise ValueError("неизвестный квиз")
+    raise CodedValueError("gameplay.quiz_unknown")
 
 
 def custom_quest_steps(idea: str) -> tuple[str, ...]:
@@ -180,21 +182,21 @@ def normalize_quiz_answers(quiz: QuizDef, raw: Sequence[str]) -> tuple[str, ...]
     """Ответы — по одному на вопрос, каждый непустой."""
     answers = tuple(a.strip() for a in raw)
     if len(answers) != len(quiz.questions) or not all(answers):
-        raise ValueError("нужен непустой ответ на каждый вопрос")
+        raise CodedValueError("gameplay.answers_incomplete")
     if any(len(a) > MAX_ANSWER_LENGTH for a in answers):
-        raise ValueError("ответ слишком длинный")
+        raise CodedValueError("gameplay.answer_long")
     return answers
 
 
-class AlreadyAcceptedError(Exception):
+class AlreadyAcceptedError(CodedError):
     """Такой квест уже принят и не завершён."""
 
 
-class StepUnavailableError(Exception):
+class StepUnavailableError(CodedError):
     """Шаг сейчас отметить нельзя (например, второй шаг челленджа за день)."""
 
 
-class QuizDoneTodayError(Exception):
+class QuizDoneTodayError(CodedError):
     """Квиз уже пройден сегодня."""
 
 

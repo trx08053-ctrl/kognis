@@ -13,6 +13,11 @@ function reply(status: number, body: unknown): Response {
   });
 }
 
+// тело ошибки API: код и параметры вместо фразы
+function err(code: string, params: Record<string, string | number> = {}) {
+  return { detail: { code, params } };
+}
+
 const ME = {
   id: 1,
   email: "ann@example.com",
@@ -68,15 +73,17 @@ afterEach(() => {
 test("главная: ошибки загрузки графика и записей показываются, а не молчат", async () => {
   stubApi({
     "GET /api/me": () => reply(200, ADVANCED),
-    "GET /api/progress": () => reply(500, { detail: "прогресс недоступен" }),
-    "GET /api/day-reviews": () => reply(500, { detail: "итоги недоступны" }),
-    "GET /api/analyses/mood": () => reply(500, { detail: "график недоступен" }),
-    "GET /api/entries": () => reply(500, { detail: "записи недоступны" }),
+    "GET /api/progress": () => reply(500, err("server.internal")),
+    "GET /api/day-reviews": () => reply(500, err("diary.entry_not_found")),
+    "GET /api/analyses/mood": () => reply(500, err("analysis.no_data")),
+    "GET /api/entries": () => reply(500, err("auth.required")),
   });
   renderAt("/");
-  expect(await screen.findByText(/Не удалось загрузить график: график недоступен/)).toBeTruthy();
-  expect(await screen.findByText("записи недоступны")).toBeTruthy();
-  expect(await screen.findByText("итоги недоступны")).toBeTruthy();
+  expect(
+    await screen.findByText(/Не удалось загрузить график: За период нет записей и итогов дня/),
+  ).toBeTruthy();
+  expect(await screen.findByText("Нужен вход")).toBeTruthy();
+  expect(await screen.findByText("Запись не найдена")).toBeTruthy();
 });
 
 test("главная, Advanced: пустой график и пустой список записей", async () => {
@@ -170,7 +177,7 @@ test("итог дня: история, пустая история и ошибк
     "GET /api/me": () => reply(200, ME),
     "GET /api/progress": () => reply(200, PROGRESS),
     "GET /api/day-reviews": () => reply(200, []),
-    "PUT /api/day-reviews/": () => reply(422, { detail: "оценка от 1 до 10" }),
+    "PUT /api/day-reviews/": () => reply(422, err("diary.mood_range", { min: 1, max: 10 })),
   });
   renderAt("/day");
   expect(await screen.findByText("Пока нет итогов дня.")).toBeTruthy();
@@ -178,7 +185,7 @@ test("итог дня: история, пустая история и ошибк
     target: { value: "7" },
   });
   fireEvent.click(screen.getByTestId("save-review"));
-  expect(await screen.findByText("оценка от 1 до 10")).toBeTruthy();
+  expect(await screen.findByText("Настроение: оценка от 1 до 10")).toBeTruthy();
   expect(fetchMock).toHaveBeenCalledWith(
     expect.stringContaining("/api/day-reviews/"),
     expect.objectContaining({ method: "PUT" }),
@@ -245,7 +252,7 @@ test("разбор: без согласия кнопка выключена; р�
       "POST /api/analyses/1/answers": () =>
         reply(200, { ...DONE, id: 2, parent_id: 1, questions: [], quest_ideas: [] }),
       "POST /api/analyses": () => reply(200, DONE),
-      "POST /api/quests/from-analysis": () => reply(500, { detail: "квест не создан" }),
+      "POST /api/quests/from-analysis": () => reply(500, err("gameplay.idea_unknown")),
     }),
   );
   renderAt("/analysis");
@@ -258,7 +265,7 @@ test("разбор: без согласия кнопка выключена; р�
   expect(screen.getByText("Итог недели")).toBeTruthy();
 
   fireEvent.click(screen.getByRole("button", { name: "Принять квест: Прогулка" }));
-  expect(await screen.findByText("квест не создан")).toBeTruthy();
+  expect(await screen.findByText("Нет такой идеи")).toBeTruthy();
 
   fireEvent.change(screen.getByLabelText("Что помогло?"), { target: { value: "сон" } });
   fireEvent.click(screen.getByRole("button", { name: "Уточнить разбор" }));
@@ -271,7 +278,7 @@ test("разбор: принятая идея ведёт в квесты; кри
     analysisRoutes({
       "POST /api/analyses": () => {
         call += 1;
-        if (call === 1) return reply(500, { detail: "ИИ недоступен" });
+        if (call === 1) return reply(500, err("ai.http_server", { status: 500 }));
         if (call === 2) return reply(200, DONE);
         return reply(200, {
           ...DONE,
@@ -290,7 +297,9 @@ test("разбор: принятая идея ведёт в квесты; кри
   fireEvent.click(await screen.findByLabelText(/Согласен/));
   const run = screen.getByTestId("run-analysis");
   fireEvent.click(run);
-  expect(await screen.findByText("ИИ недоступен")).toBeTruthy();
+  expect(
+    await screen.findByText("Провайдер ИИ вернул ошибку 500: сбой на стороне провайдера"),
+  ).toBeTruthy();
   fireEvent.click(run);
   fireEvent.click(await screen.findByRole("button", { name: "Принять квест: Прогулка" }));
   expect(await screen.findByText(/Квест принят/)).toBeTruthy();
@@ -304,9 +313,9 @@ test("разбор: пустая динамика настроения и оши
   renderAt("/analysis");
   expect(await screen.findByText("За период нет итогов дня.")).toBeTruthy();
   cleanup();
-  stubApi(analysisRoutes({ "GET /api/analyses/mood": () => reply(500, { detail: "нет данных" }) }));
+  stubApi(analysisRoutes({ "GET /api/analyses/mood": () => reply(500, err("analysis.no_data")) }));
   renderAt("/analysis");
-  expect(await screen.findByText("нет данных")).toBeTruthy();
+  expect(await screen.findByText(/За период нет записей и итогов дня/)).toBeTruthy();
 });
 
 test("профиль: переключатель Advanced возвращается при ошибке сервера, часовой пояс сохраняется", async () => {
@@ -328,14 +337,14 @@ test("профиль: переключатель Advanced возвращаетс
       const body = JSON.parse(String(init?.body)) as { advanced?: boolean };
       return body.advanced === undefined
         ? reply(200, { ...ME, timezone: "UTC" })
-        : reply(500, { detail: "настройки недоступны" });
+        : reply(500, err("settings.empty"));
     },
   });
   renderAt("/profile");
   const toggle = (await screen.findByTestId("advanced-toggle")) as HTMLInputElement;
   expect(await screen.findByText("Первая запись")).toBeTruthy();
   fireEvent.click(toggle);
-  expect(await screen.findByText("настройки недоступны")).toBeTruthy();
+  expect(await screen.findByText("Нечего сохранять")).toBeTruthy();
   await waitFor(() => expect(toggle.checked).toBe(false));
 
   const zone = screen.getByTestId("timezone-select") as HTMLSelectElement;
@@ -373,9 +382,9 @@ test("оболочка: смена темы и выход", async () => {
 });
 
 test("не 401 при загрузке профиля: показывается ошибка, а не форма входа", async () => {
-  stubApi({ "GET /api/me": () => reply(500, { detail: "сервер недоступен" }) });
+  stubApi({ "GET /api/me": () => reply(500, err("server.internal")) });
   renderAt("/");
-  expect(await screen.findByText("сервер недоступен")).toBeTruthy();
+  expect(await screen.findByText("Внутренняя ошибка")).toBeTruthy();
   expect(screen.queryByTestId("auth-submit")).toBeNull();
 });
 

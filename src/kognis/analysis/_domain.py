@@ -8,6 +8,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from kognis.errors import CodedValueError
+
 MAX_PERIOD_DAYS = 92
 MAX_ENTRIES = 100
 MAX_ANSWERS = 10
@@ -56,7 +58,7 @@ def direction_by_code(code: str) -> Direction:
     for direction in DIRECTIONS:
         if direction.code == code:
             return direction
-    raise ValueError("неизвестное направление")
+    raise CodedValueError("analysis.direction_unknown")
 
 
 class Pattern(BaseModel):
@@ -90,25 +92,25 @@ class InvalidModelAnswerError(ValueError):
 def _problems(err: ValidationError) -> list[str]:
     """Ошибки валидации без входных значений: в них могут быть тексты записей."""
     return [
-        f"{'.'.join(str(part) for part in e['loc']) or '(корень)'}: {e['msg']}"[:200]
+        f"{'.'.join(str(part) for part in e['loc']) or '(root)'}: {e['msg']}"[:200]
         for e in err.errors(include_url=False, include_input=False, include_context=False)
     ]
 
 
 def parse_result(raw: str, known_entry_ids: frozenset[int]) -> AnalysisResult:
     """Разбор ответа модели; опоры обязаны ссылаться на переданные записи."""
-    fmt = "ответ модели не соответствует формату"
+    fmt = "model answer does not match the format"
     try:
         result = AnalysisResult.model_validate(json.loads(raw))
     except ValidationError as err:
         raise InvalidModelAnswerError(fmt, _problems(err)) from None
     except ValueError:
-        raise InvalidModelAnswerError(fmt, ["(корень): ответ не является JSON"]) from None
+        raise InvalidModelAnswerError(fmt, ["(root): answer is not JSON"]) from None
     for i, pattern in enumerate(result.patterns):
         if not set(pattern.entry_ids) <= known_entry_ids:
             raise InvalidModelAnswerError(
-                "паттерн ссылается на неизвестную запись",
-                [f"patterns.{i}.entry_ids: есть id, которых нет в переданных записях"],
+                "pattern references an unknown entry",
+                [f"patterns.{i}.entry_ids: ids not present in the given entries"],
             )
     return result
 
@@ -128,17 +130,17 @@ class Analysis:
 
 def validate_period(start: date, end: date) -> None:
     if end < start:
-        raise ValueError("конец периода раньше начала")
+        raise CodedValueError("analysis.period_reversed")
     if (end - start).days + 1 > MAX_PERIOD_DAYS:
-        raise ValueError(f"период не длиннее {MAX_PERIOD_DAYS} дней")
+        raise CodedValueError("analysis.period_long", max=MAX_PERIOD_DAYS)
 
 
 def normalize_answers(raw: Sequence[str]) -> tuple[str, ...]:
     answers = tuple(a.strip() for a in raw if a.strip())
     if not answers:
-        raise ValueError("нужен хотя бы один ответ")
+        raise CodedValueError("analysis.answers_empty")
     if len(answers) > MAX_ANSWERS or any(len(a) > MAX_ANSWER_LENGTH for a in answers):
-        raise ValueError("ответы слишком длинные или их слишком много")
+        raise CodedValueError("analysis.answers_long")
     return answers
 
 

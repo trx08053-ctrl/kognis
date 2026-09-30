@@ -4,7 +4,7 @@ import datetime as dt
 from collections.abc import Callable
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query, Response
+from fastapi import APIRouter, Query, Response
 from pydantic import BaseModel, Field, StrictInt
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
@@ -26,6 +26,7 @@ from kognis.users import (
 )
 
 from ._deps import NEXT_CURSOR_HEADER, Authed, HelpOut, help_out
+from ._errors import http_error
 
 
 class DayReviewIn(BaseModel):
@@ -79,7 +80,7 @@ def day_review_router(db: Engine, today: Callable[[User], dt.date]) -> APIRouter
                 # повторяет и обновляет уже существующий итог
                 review = save()
         except ValueError as err:
-            raise HTTPException(status_code=422, detail=str(err)) from err
+            raise http_error(422, err) from err
         return review_out(review, block)
 
     @router.get("")
@@ -94,7 +95,7 @@ def day_review_router(db: Engine, today: Callable[[User], dt.date]) -> APIRouter
             with transaction(db) as session:
                 page = DiaryService(session).list_day_reviews(user.id, limit=limit, cursor=cursor)
         except InvalidCursorError as err:
-            raise HTTPException(status_code=422, detail=str(err)) from err
+            raise http_error(422, err) from err
         if page.next_cursor:
             response.headers[NEXT_CURSOR_HEADER] = page.next_cursor
         return [review_out(r) for r in page.items]

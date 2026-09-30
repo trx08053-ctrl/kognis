@@ -4,6 +4,8 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any, Protocol
 
+from kognis.errors import CodedError
+
 
 @dataclass(frozen=True)
 class Message:
@@ -11,8 +13,8 @@ class Message:
     content: str
 
 
-class AiError(Exception):
-    """Провайдер ИИ недоступен или ответил неверно; текст безопасен для показа и логов."""
+class AiError(CodedError):
+    """Провайдер ИИ недоступен или ответил неверно; код и параметры безопасны для показа и логов."""
 
 
 class AiTimeoutError(AiError):

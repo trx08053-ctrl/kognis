@@ -49,15 +49,15 @@ class UserService:
         try:
             email = normalize_email(raw_email)
         except ValueError as err:
-            raise InvalidCredentialsError("неверный email или пароль") from err
+            raise InvalidCredentialsError("user.credentials_invalid") from err
         found = self._users.find_with_hash(email)
         if found is None:
             # выравниваем время ответа, чтобы не раскрывать существование email
             verify_password(_DUMMY_HASH, password)
-            raise InvalidCredentialsError("неверный email или пароль")
+            raise InvalidCredentialsError("user.credentials_invalid")
         user, password_hash = found
         if not verify_password(password_hash, password):
-            raise InvalidCredentialsError("неверный email или пароль")
+            raise InvalidCredentialsError("user.credentials_invalid")
         return user
 
     def ensure_login_allowed(self, raw_email: str, ip: str, now: datetime | None = None) -> None:

@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Any
 
+from kognis.errors import CodedValueError
+
 DEFAULT_PAGE_SIZE = 30
 MAX_PAGE_SIZE = 100
 MAX_TEXT_LENGTH = 20_000
@@ -51,23 +53,23 @@ class DayReview:
 
 def validate_scale(value: int, what: str) -> int:
     if not SCALE_MIN <= value <= SCALE_MAX:
-        raise ValueError(f"{what}: оценка от {SCALE_MIN} до {SCALE_MAX}")
+        raise CodedValueError(f"diary.{what}_range", min=SCALE_MIN, max=SCALE_MAX)
     return value
 
 
 def normalize_reflection(raw: str) -> str:
     text = raw.strip()
     if len(text) > MAX_REFLECTION_LENGTH:
-        raise ValueError("рефлексия слишком длинная")
+        raise CodedValueError("diary.reflection_long", max=MAX_REFLECTION_LENGTH)
     return text
 
 
 def normalize_text(raw: str) -> str:
     text = raw.strip()
     if not text:
-        raise ValueError("текст записи не может быть пустым")
+        raise CodedValueError("diary.text_empty")
     if len(text) > MAX_TEXT_LENGTH:
-        raise ValueError("запись слишком длинная")
+        raise CodedValueError("diary.text_long", max=MAX_TEXT_LENGTH)
     return text
 
 
@@ -79,10 +81,10 @@ def normalize_labels(raw: list[str], what: str) -> tuple[str, ...]:
         if not label:
             continue
         if len(label) > MAX_LABEL_LENGTH:
-            raise ValueError(f"{what}: слишком длинное значение")
+            raise CodedValueError(f"diary.{what}_item_long", max=MAX_LABEL_LENGTH)
         seen[label] = None
     if len(seen) > MAX_LABELS:
-        raise ValueError(f"{what}: не больше {MAX_LABELS}")
+        raise CodedValueError(f"diary.{what}_many", max=MAX_LABELS)
     return tuple(seen)
 
 
@@ -97,41 +99,41 @@ ENVELOPE_MIN_CIPHER = 16  # AES-GCM: минимум — тег аутентиф�
 MAX_ENVELOPE_CIPHER = 4 * MAX_TEXT_LENGTH * 2  # base64 шифртекста (UTF-8 до 4 байт на символ)
 
 
-def _b64_len(value: object, what: str) -> int:
+def _b64_len(value: object) -> int:
     if not isinstance(value, str):
-        raise ValueError(f"шифртекст: {what} должно быть строкой base64")
+        raise CodedValueError("diary.envelope_invalid")
     try:
         return len(base64.b64decode(value, validate=True))
     except (binascii.Error, ValueError) as err:
-        raise ValueError(f"шифртекст: {what} — некорректный base64") from err
+        raise CodedValueError("diary.envelope_invalid") from err
 
 
 def validate_envelope(raw: dict[str, Any]) -> dict[str, Any]:
     """Проверить только форму конверта `private`; содержимое сервер прочитать не может."""
     if raw.get("v") != ENVELOPE_VERSION:
-        raise ValueError("шифртекст: неизвестная версия формата")
+        raise CodedValueError("diary.envelope_invalid")
     if raw.get("kdf") != ENVELOPE_KDF:
-        raise ValueError("шифртекст: неизвестная функция вывода ключа")
+        raise CodedValueError("diary.envelope_invalid")
     iterations = raw.get("iter")
     if (
         not isinstance(iterations, int)
         or isinstance(iterations, bool)
         or not ENVELOPE_MIN_ITERATIONS <= iterations <= ENVELOPE_MAX_ITERATIONS
     ):
-        raise ValueError("шифртекст: слишком мало итераций вывода ключа")
-    salt_size = _b64_len(raw.get("salt"), "соль")
+        raise CodedValueError("diary.envelope_invalid")
+    salt_size = _b64_len(raw.get("salt"))
     if (
         not ENVELOPE_MIN_SALT <= salt_size <= ENVELOPE_MAX_SALT
-        or _b64_len(raw.get("iv"), "iv") != ENVELOPE_IV_SIZE
+        or _b64_len(raw.get("iv")) != ENVELOPE_IV_SIZE
     ):
-        raise ValueError("шифртекст: некорректные соль или iv")
+        raise CodedValueError("diary.envelope_invalid")
     cipher = raw.get("ct")
-    if _b64_len(cipher, "данные") < ENVELOPE_MIN_CIPHER or len(str(cipher)) > MAX_ENVELOPE_CIPHER:
-        raise ValueError("шифртекст: некорректный размер данных")
+    if _b64_len(cipher) < ENVELOPE_MIN_CIPHER or len(str(cipher)) > MAX_ENVELOPE_CIPHER:
+        raise CodedValueError("diary.envelope_invalid")
     return {k: raw[k] for k in ("v", "kdf", "iter", "salt", "iv", "ct")}
 
 
-class InvalidCursorError(ValueError):
+class InvalidCursorError(CodedValueError):
     """Курсор страницы повреждён или чужого формата."""
 
 
@@ -146,9 +148,9 @@ def decode_cursor(raw: str, *, with_id: bool) -> tuple[date, int]:
         day = date.fromisoformat(day_part)
         entry_id = int(id_part) if with_id else 0
     except ValueError as err:
-        raise InvalidCursorError("некорректный курсор страницы") from err
+        raise InvalidCursorError("diary.cursor_invalid") from err
     if with_id != bool(id_part) or not 0 <= entry_id <= 2**62:
-        raise InvalidCursorError("некорректный курсор страницы")
+        raise InvalidCursorError("diary.cursor_invalid")
     return day, entry_id
 
 

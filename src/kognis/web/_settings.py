@@ -4,7 +4,7 @@ import datetime as dt
 from collections.abc import Callable
 from dataclasses import replace
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from pydantic import BaseModel, Field
 from sqlalchemy.engine import Engine
 
@@ -16,6 +16,7 @@ from kognis.users import (
 
 from ._auth import UserOut, user_out
 from ._deps import Authed
+from ._errors import http_error
 
 
 class SettingsIn(BaseModel):
@@ -29,7 +30,7 @@ def settings_router(db: Engine, today: Callable[[User], dt.date]) -> APIRouter:
     @router.put("")
     def save_settings(payload: SettingsIn, user: Authed) -> UserOut:
         if payload.advanced is None and payload.timezone is None:
-            raise HTTPException(status_code=422, detail="нечего сохранять")
+            raise http_error(422, "settings.empty")
         try:
             with transaction(db) as session:
                 service = UserService(session)
@@ -40,7 +41,7 @@ def settings_router(db: Engine, today: Callable[[User], dt.date]) -> APIRouter:
                     service.set_timezone(user.id, payload.timezone)
                     user = replace(user, timezone=payload.timezone)
         except ValueError as err:
-            raise HTTPException(status_code=422, detail=str(err)) from err
+            raise http_error(422, err) from err
         return user_out(user, today(user))
 
     return router

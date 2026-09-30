@@ -59,8 +59,8 @@ class DiaryService:
             owner_id,
             entry_date or datetime.now(UTC).date(),
             "",
-            normalize_labels(tags, "теги"),
-            normalize_labels(emotions, "эмоции"),
+            normalize_labels(tags, "tags"),
+            normalize_labels(emotions, "emotions"),
             envelope=validate_envelope(envelope),
         )
         return self._repo.add(entry)
@@ -73,8 +73,8 @@ class DiaryService:
             owner_id,
             draft.entry_date or datetime.now(UTC).date(),
             clean,
-            normalize_labels(draft.tags, "теги"),
-            normalize_labels(draft.emotions, "эмоции"),
+            normalize_labels(draft.tags, "tags"),
+            normalize_labels(draft.emotions, "emotions"),
         )
         return self._repo.add(entry, sealed)
 
@@ -145,8 +145,8 @@ class DiaryService:
         return self._reviews.upsert(
             owner_id,
             review_date,
-            validate_scale(wellbeing, "самочувствие"),
-            validate_scale(mood, "настроение"),
+            validate_scale(wellbeing, "wellbeing"),
+            validate_scale(mood, "mood"),
             normalize_reflection(reflection),
         )
 

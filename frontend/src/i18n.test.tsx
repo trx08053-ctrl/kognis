@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, expect, test, vi } from "vitest";
+import { ApiError } from "./api";
 import { ErrorMessage } from "./components/ErrorMessage";
 import { LanguageSwitcher } from "./components/LanguageSwitcher";
 import { Shell } from "./components/Shell";
@@ -144,12 +145,15 @@ test("переключатель языка виден при двух язык�
   expect(screen.queryByTestId("language-select")).toBeNull();
 });
 
-test("ErrorMessage переводит ключ словаря и оставляет готовый текст как есть", () => {
+test("ErrorMessage переводит ключ словаря и код сервера, текст клиента оставляет как есть", () => {
   render(<ErrorMessage error={new Error("error.private.wrong_password")} />);
   expect(screen.getByRole("alert").textContent).toContain("Неверный пароль");
   cleanup();
-  render(<ErrorMessage error={new Error("Готовый текст сервера")} />);
-  expect(screen.getByRole("alert").textContent).toBe("Готовый текст сервера");
+  render(<ErrorMessage error={new ApiError("user.email_taken", 409)} />);
+  expect(screen.getByRole("alert").textContent).toBe("Email уже зарегистрирован");
+  cleanup();
+  render(<ErrorMessage error={new Error("Готовый текст клиента")} />);
+  expect(screen.getByRole("alert").textContent).toBe("Готовый текст клиента");
   cleanup();
   render(<ErrorMessage error={null} />);
   expect(screen.queryByRole("alert")).toBeNull();

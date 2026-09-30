@@ -25,6 +25,7 @@ from kognis.users import User
 
 from ._analysis import analysis_router
 from ._auth import auth_router
+from ._companion import companion_router
 from ._deps import require_json, today_in
 from ._diary import diary_router
 from ._errors import error_detail, http_error
@@ -133,6 +134,7 @@ def create_app(
     app.include_router(diary_router(db, user_today, data_key))
     app.include_router(day_review_router(db, user_today))
     app.include_router(progress_router(db, user_today))
+    app.include_router(companion_router(db, user_today))
     provider = ai_provider or get_provider()
     app.include_router(analysis_router(db, provider, user_today))
     app.include_router(quests_router(db, user_today, provider))

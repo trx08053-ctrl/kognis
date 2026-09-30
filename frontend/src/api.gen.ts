@@ -42,6 +42,24 @@ export interface components {
       "next_target": number | null;
       "levels": (components["schemas"]["LevelOut"])[];
     };
+    CompanionIn: {
+      "appearance": string;
+      "name": string;
+      "address": string;
+    };
+    CompanionOut: {
+      "chosen": boolean;
+      "appearance": string | null;
+      "name": string | null;
+      "address": string | null;
+      "stage": number;
+      "days_total": number;
+      "days_to_next": number | null;
+      "resting": boolean;
+      "line": components["schemas"]["LineOut"] | null;
+      "postcard": components["schemas"]["PostcardOut"] | null;
+      "mentors": (components["schemas"]["MentorOut"])[];
+    };
     ContactOut: {
       "name": string;
       "phone": string;
@@ -115,12 +133,21 @@ export interface components {
       "target": number;
       "earned_on": string | null;
     };
+    LineOut: {
+      "hero": string;
+      "situation": string;
+    };
     LockPassword: {
       "password": string;
     };
     MemoryOut: {
       "digest": string;
       "updated_at": string | null;
+    };
+    MentorOut: {
+      "code": string;
+      "direction": string;
+      "unlocked": boolean;
     };
     MoodOut: {
       "points": (components["schemas"]["MoodPointOut"])[];
@@ -145,6 +172,10 @@ export interface components {
       "active": boolean;
       "truncated": boolean;
       "last_analysis_id": number | null;
+    };
+    PostcardOut: {
+      "code": string;
+      "for_day": string;
     };
     ProgressOut: {
       "xp": number;

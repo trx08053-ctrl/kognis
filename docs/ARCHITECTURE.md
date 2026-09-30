@@ -54,7 +54,7 @@ flowchart TB
 | [safety](modules/safety.md) | детектор кризисных сигналов (по умолчанию выключен), контакты помощи | — | `check_text`, `help_block` | — |
 | [ai](modules/ai.md) | адаптер провайдера ИИ (фейк для тестов; OpenAI-совместимый) | — | `AiProvider`, `get_provider` | — |
 | [analysis](modules/analysis.md) | ИИ-анализ периода, направления психологии, согласие, динамика настроения, память между разборами | `analyses`, `analysis_memory` | `AnalysisService` | `diary`, `ai`, `safety`, `db` |
-| [gameplay](modules/gameplay.md) | XP, уровни, streaks, достижения, квесты, опросники | `xp_events`, `achievements`, `quests`, `quest_steps`, `quiz_answers`, `gameplay_settings`, `streak_recoveries` | `GameplayService`, `QuestService` | `db` |
+| [gameplay](modules/gameplay.md) | XP, уровни, streaks, достижения, квесты, опросники | `xp_events`, `achievements`, `quests`, `quest_steps`, `quiz_answers`, `gameplay_settings`, `streak_recoveries`, `companions`, `companion_postcards` | `GameplayService`, `QuestService` | `db` |
 | [access](modules/access.md) | `can_use(user, feature)` — доступ по плану (сейчас всё разрешено) | `plans` (позже) | `can_use` | — |
 | [db](modules/db.md) | подключение, `metadata`, транзакции | — | `make_engine`, `transaction`, `metadata` | — |
 
@@ -74,7 +74,7 @@ flowchart TB
 Одна таблица — один владелец. Чужие данные читаются через API владельца. «Приватные» записи хранятся как
 непрозрачный шифртекст: сервер и `analysis` их не читают.
 Таблицы: `users`, `sessions`, `login_attempts` — `users`; `entries`, `day_reviews` — `diary`; `analyses`, `analysis_memory` — `analysis`;
-`xp_events`, `achievements`, `quests`, `quest_steps`, `quiz_answers`, `gameplay_settings`, `streak_recoveries` — `gameplay`. «Под замком» — шифртекст ключом сервера; расшифровка и
+`xp_events`, `achievements`, `quests`, `quest_steps`, `quiz_answers`, `gameplay_settings`, `streak_recoveries`, `companions`, `companion_postcards` — `gameplay`. «Под замком» — шифртекст ключом сервера; расшифровка и
 передача ИИ только по явному разрешению пользователя на конкретный анализ.
 
 ## 5. Внешние интеграции

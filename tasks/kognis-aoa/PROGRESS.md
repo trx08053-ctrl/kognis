@@ -7,4 +7,4 @@
 - Доказательство: `just verify` OK, tree 003033ae1c02.
 
 ## Следующий шаг
-Ревью (subagent `reviewer`) → `tasks/kognis-aoa/REVIEW.md`, затем `python3 scripts/task.py done kognis-aoa`.
+Ревью пройдено (VERDICT: approve, REVIEW.md), осталось `python3 scripts/task.py done kognis-aoa`.

@@ -179,7 +179,9 @@ class AnalysisService:
             [ENTRY_CHAR_LIMIT] * len(entries) + [REFLECTION_CHAR_LIMIT] * len(reviews),
         )
         data: dict[str, object] = {
-            "entries": [_entry_payload(e, t) for e, t in zip(entries, texts, strict=False)],
+            "entries": [
+                _entry_payload(e, t) for e, t in zip(entries, texts[: len(entries)], strict=True)
+            ],
             "day_reviews": [
                 _review_payload(r, t) for r, t in zip(reviews, texts[len(entries) :], strict=True)
             ],

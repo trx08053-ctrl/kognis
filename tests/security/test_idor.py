@@ -92,6 +92,8 @@ GET_URLS = [
     "/api/analyses",
     "/api/analyses/directions",
     "/api/analyses/mood?start=2026-09-01&end=2026-09-07",
+    "/api/analyses/period",
+    "/api/analyses/memory",
     "/api/quests",
     "/api/quests/library",
     "/api/quizzes",
@@ -294,6 +296,24 @@ def test_responses_have_no_hashes_ciphertext_or_foreign_data(
         body = eve.get(url).text
         assert PRIVATE_TEXT not in body, url
         assert "ann@example.com" not in body, url
+
+
+@pytest.mark.acceptance("kognis-sky", "AC5")
+@pytest.mark.security("idor", "GET /api/analyses/memory")
+@pytest.mark.security("idor", "DELETE /api/analyses/memory")
+def test_ai_memory_is_private(ann_eve: tuple[TestClient, TestClient], engine: Engine) -> None:
+    """Память ИИ привязана к владельцу: чужая не читается и не очищается (маршруты без id)."""
+    ann, eve = ann_eve
+    ann_id = ann.get("/api/me").json()["id"]
+    with engine.begin() as conn:
+        conn.execute(
+            sql("INSERT INTO analysis_memory (owner_id, digest, updated_at) VALUES (:o, :d, :t)"),
+            {"o": ann_id, "d": PRIVATE_TEXT, "t": "2026-09-01 10:00:00"},
+        )
+    assert ann.get("/api/analyses/memory").json()["digest"] == PRIVATE_TEXT
+    assert eve.get("/api/analyses/memory").json() == {"digest": "", "updated_at": None}
+    assert eve.request("DELETE", "/api/analyses/memory", json={}).status_code == 204
+    assert ann.get("/api/analyses/memory").json()["digest"] == PRIVATE_TEXT  # у владельца цела
 
 
 @pytest.mark.acceptance("kognis-d5p", "AC3")

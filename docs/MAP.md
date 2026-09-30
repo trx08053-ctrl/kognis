@@ -123,7 +123,7 @@
   - `assess` — `src/kognis/safety/_domain.py`
   - `check_text` — `src/kognis/safety/_app.py`
   - `help_block` — `src/kognis/safety/_app.py`
-- Тесты: `tests/ai/test_ai_eval.py`, `tests/safety/test_safety.py`
+- Тесты: `tests/ai/test_ai_eval.py`, `tests/analysis/test_analysis.py`, `tests/safety/test_safety.py`
 
 ## `kognis.users`
 

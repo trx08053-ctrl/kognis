@@ -80,18 +80,36 @@ class AnalysisResult(BaseModel):
 
 
 class InvalidModelAnswerError(ValueError):
-    """Ответ модели не соответствует формату."""
+    """Ответ модели не соответствует формату; `problems` — путь поля и суть, без текстов записей."""
+
+    def __init__(self, message: str, problems: Sequence[str] = ()) -> None:
+        super().__init__(message)
+        self.problems = tuple(problems)
+
+
+def _problems(err: ValidationError) -> list[str]:
+    """Ошибки валидации без входных значений: в них могут быть тексты записей."""
+    return [
+        f"{'.'.join(str(part) for part in e['loc']) or '(корень)'}: {e['msg']}"
+        for e in err.errors(include_url=False, include_input=False, include_context=False)
+    ]
 
 
 def parse_result(raw: str, known_entry_ids: frozenset[int]) -> AnalysisResult:
     """Разбор ответа модели; опоры обязаны ссылаться на переданные записи."""
+    fmt = "ответ модели не соответствует формату"
     try:
         result = AnalysisResult.model_validate(json.loads(raw))
-    except (ValueError, ValidationError):
-        raise InvalidModelAnswerError("ответ модели не соответствует формату") from None
-    for pattern in result.patterns:
+    except ValidationError as err:
+        raise InvalidModelAnswerError(fmt, _problems(err)) from None
+    except ValueError:
+        raise InvalidModelAnswerError(fmt, ["(корень): ответ не является JSON"]) from None
+    for i, pattern in enumerate(result.patterns):
         if not set(pattern.entry_ids) <= known_entry_ids:
-            raise InvalidModelAnswerError("паттерн ссылается на неизвестную запись")
+            raise InvalidModelAnswerError(
+                "паттерн ссылается на неизвестную запись",
+                [f"patterns.{i}.entry_ids: есть id, которых нет в переданных записях"],
+            )
     return result
 
 

@@ -12,8 +12,9 @@ from sqlalchemy.engine import Engine
 
 from kognis.access import Feature, can_use
 from kognis.ai import AiError, Message
-from kognis.analysis import MoodPoint
+from kognis.analysis import AnalysisResult, MoodPoint
 from kognis.analysis._domain import mood_dynamics
+from kognis.safety import DISCLAIMER
 from kognis.web import create_app
 
 PW = "correct horse"
@@ -363,3 +364,88 @@ def test_mood_rejects_bad_period(engine: Engine) -> None:
     client = make(engine, ScriptedProvider())
     r = client.get("/api/analyses/mood", params={"start": "2026-09-07", "end": "2026-09-01"})
     assert r.status_code == 422
+
+
+def _example_from_prompt(prompt: str) -> Any:
+    start = prompt.index("{", prompt.index("образец"))
+    example, _ = json.JSONDecoder().raw_decode(prompt[start:])
+    return example
+
+
+def _schema_keys(schema: dict[str, Any], node: dict[str, Any]) -> Any:
+    """Дерево ключей по JSON-схеме: словарь для объектов, список из одного элемента для массивов."""
+    if "$ref" in node:
+        return _schema_keys(schema, schema["$defs"][node["$ref"].split("/")[-1]])
+    if node.get("type") == "array":
+        return [_schema_keys(schema, node["items"])]
+    if node.get("type") == "object":
+        props: dict[str, dict[str, Any]] = node["properties"]
+        return {k: _schema_keys(schema, v) for k, v in props.items()}
+    return node["type"]
+
+
+def _example_keys(node: Any) -> Any:
+    if isinstance(node, dict):
+        return {k: _example_keys(v) for k, v in node.items()}
+    if isinstance(node, list):
+        return [_example_keys(node[0])]
+    return "integer" if isinstance(node, int) else "string"
+
+
+@pytest.mark.acceptance("kognis-149", "AC1")
+def test_prompt_example_matches_schema(engine: Engine) -> None:
+    provider = ScriptedProvider()
+    client = make(engine, provider)
+    provider.replies.append(good([add_entry(client)]))
+    assert analyze(client).status_code == 201
+    example = _example_from_prompt(provider.calls[0][0])
+    AnalysisResult.model_validate(example)
+    schema = AnalysisResult.model_json_schema()
+    assert _example_keys(example) == _schema_keys(schema, schema)
+    assert "не объекты" in provider.calls[0][0]
+
+
+@pytest.mark.acceptance("kognis-149", "AC2")
+def test_retry_sends_errors_and_previous_answer(engine: Engine) -> None:
+    provider = ScriptedProvider()
+    client = make(engine, provider)
+    eid = add_entry(client)
+    pattern = {"name": "x", "entry_ids": [eid], "quotes": [{"entry_id": eid, "quote": ENTRY_TEXT}]}
+    bad = json.dumps({"summary": "s", "patterns": [pattern], "questions": []})
+    provider.replies += [bad, good([eid])]
+    r = analyze(client)
+    assert r.status_code == 201
+    assert r.json()["patterns"][0]["title"] == "Избегание"
+    assert len(provider.calls) == 2
+    second = provider.calls[1][1]
+    assert second[0] == provider.calls[0][1][0]
+    assert (second[1].role, second[1].content) == ("assistant", bad)
+    fix = second[2].content
+    assert second[2].role == "user"
+    for path in ("patterns.0.title", "patterns.0.description", "patterns.0.name"):
+        assert path in fix
+    assert ENTRY_TEXT not in fix
+    assert len(client.get("/api/analyses").json()) == 1
+
+
+@pytest.mark.acceptance("kognis-149", "AC3")
+def test_two_invalid_answers_give_clear_error(engine: Engine) -> None:
+    provider = ScriptedProvider("не JSON", json.dumps({"summary": "x"}))
+    client = make(engine, provider)
+    add_entry(client)
+    r = analyze(client)
+    assert r.status_code == 502
+    assert "ещё раз" in r.json()["detail"]
+    assert len(provider.calls) == 2
+    assert client.get("/api/analyses").json() == []
+
+
+@pytest.mark.acceptance("kognis-149", "AC4")
+def test_prompt_does_not_ask_for_disclaimer(engine: Engine) -> None:
+    provider = ScriptedProvider()
+    client = make(engine, provider)
+    provider.replies.append(good([add_entry(client)]))
+    r = analyze(client)
+    assert r.status_code == 201
+    assert DISCLAIMER not in provider.calls[0][0]
+    assert DISCLAIMER not in r.json()["summary"]

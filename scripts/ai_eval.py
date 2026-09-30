@@ -149,7 +149,7 @@ class EvalFakeProvider:
         del system, schema  # ответ строится только по данным пользователя
         if self._defect == "invalid-json":
             return "Вот ваш разбор: всё хорошо."
-        data = json.loads(messages[-1].content)
+        data = json.loads(messages[0].content)  # при повторе дальше идут ответ и просьба исправить
         entries: list[dict[str, Any]] = data.get("entries", [])
         first = entries[0] if entries else {"id": 0, "text": ""}
         text = str(first["text"])

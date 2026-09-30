@@ -10,5 +10,7 @@
 - ADR 0006 принять; метрики удержания измеряются после выпуска.
 - Герои, баланс XP, достижения по уровням — задачи kognis-0a8 и далее.
 
+- Ревью: раунд 1 — major (гонка бонуса недели) устранён в b82547c, раунд 2 — `VERDICT: approve` (`REVIEW.md`). `just verify` зелёный (покрытие добрано тестами гонок в `tests/gameplay/test_service.py`).
+
 ## Следующий шаг
-Дождаться зелёного `just verify`, закоммитить, запустить subagent `reviewer` → `tasks/kognis-3r1/REVIEW.md`, затем `python3 scripts/task.py done kognis-3r1`.
+`python3 scripts/task.py done kognis-3r1`; человеку — принять ADR 0006.

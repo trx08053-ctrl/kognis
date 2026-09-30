@@ -14,7 +14,7 @@
 - **Затрагиваемые модули:** `gameplay` (`docs/modules/gameplay.md`), `web`, frontend.
 
 ## 2a. Область влияния
-- **Модули:** `src/kognis/gameplay`, `src/kognis/web/_progress.py`, `frontend/src/components/Progress.tsx`, `Shell.tsx`, `api.ts`, `i18n/ru.ts`.
+- **Модули:** `src/kognis/gameplay`, `src/kognis/web/_progress.py`, `frontend/src/components/Motivation.tsx`, `pages/ProfilePage.tsx`, `Shell.tsx`, `api.ts`, `i18n/ru.ts`.
 - **Публичные интерфейсы:** `ProgressOut` + поля (`days_30`, `days_total`, `best_streak`, `freezes`, `recovery`, `weekly_goal`, `weekend_days`); новые `PUT /api/progress/settings`, `POST /api/progress/recovery`.
 - **Данные:** `gameplay_settings(owner_id PK, weekend_days, weekly_goal, rules_from)`, `streak_recoveries(owner_id, broken_on, note, created_at)`; XP-события вида `weekly_goal`.
 - **Что может сломаться:** серии существующих пользователей; тесты заморозки одной на ISO-неделю; достижения по серии.

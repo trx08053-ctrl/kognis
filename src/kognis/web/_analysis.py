@@ -1,6 +1,7 @@
 """Анализ периода и динамика настроения."""
 
 import datetime as dt
+from collections.abc import Callable
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Response
@@ -18,11 +19,13 @@ from kognis.analysis import (
     AnalysisOutcome,
     AnalysisService,
     ConsentRequiredError,
+    DuplicateAnalysisError,
     MoodDynamics,
     NoDataError,
 )
 from kognis.db import transaction
 from kognis.safety import HelpBlock
+from kognis.users import User
 
 from ._deps import NEXT_CURSOR_HEADER, Answer, Authed, HelpOut, help_out
 from ._errors import http_error
@@ -65,9 +68,23 @@ class AnalysisOut(BaseModel):
     patterns: list[PatternOut]
     questions: list[str]
     quest_ideas: list[str]
+    changes: list[str]
     answers: list[str]
     created_at: dt.datetime | None
     help: HelpOut | None = None
+
+
+class PeriodOut(BaseModel):
+    start: dt.date
+    end: dt.date
+    active: bool
+    truncated: bool
+    last_analysis_id: int | None
+
+
+class MemoryOut(BaseModel):
+    digest: str
+    updated_at: dt.datetime | None
 
 
 class MoodPointOut(BaseModel):
@@ -96,6 +113,7 @@ def analysis_out(analysis: Analysis, block: HelpBlock | None = None) -> Analysis
         patterns=[PatternOut(**p.model_dump()) for p in result.patterns] if result else [],
         questions=result.questions if result else [],
         quest_ideas=result.quest_ideas if result else [],
+        changes=result.changes if result else [],
         answers=list(analysis.answers),
         created_at=analysis.created_at.replace(tzinfo=dt.UTC) if analysis.created_at else None,
         help=help_out(block),
@@ -121,9 +139,12 @@ def require_ai_analysis(user: Authed) -> None:
         raise http_error(403, "access.feature_unavailable")
 
 
-def analysis_router(db: Engine, provider: AiProvider) -> APIRouter:
-    router = APIRouter(prefix="/api/analyses")
-    gate = [Depends(require_ai_analysis)]
+def continuity_routes(
+    router: APIRouter, db: Engine, provider: AiProvider, today: Callable[[User], dt.date]
+) -> None:
+    """Статические маршруты: направления, настроение, период по умолчанию, память ИИ.
+
+    Регистрируются раньше маршрутов с `/{analysis_id}`, чтобы те их не перехватывали."""
 
     @router.get("/directions")
     def directions(user: Authed) -> list[DirectionOut]:
@@ -137,6 +158,41 @@ def analysis_router(db: Engine, provider: AiProvider) -> APIRouter:
         except ValueError as err:
             raise http_error(422, err) from err
 
+    @router.get("/period")
+    def period(user: Authed) -> PeriodOut:
+        """Период по умолчанию: от конца последнего разбора до сегодня (пояс профиля)."""
+        with transaction(db) as session:
+            p = AnalysisService(session, provider).default_period(user.id, today(user))
+        return PeriodOut(
+            start=p.start,
+            end=p.end,
+            active=p.active,
+            truncated=p.truncated,
+            last_analysis_id=p.last_analysis_id,
+        )
+
+    @router.get("/memory")
+    def memory(user: Authed) -> MemoryOut:
+        """«Что ИИ помнит обо мне»: только своя память."""
+        with transaction(db) as session:
+            found = AnalysisService(session, provider).memory(user.id)
+        if found is None:
+            return MemoryOut(digest="", updated_at=None)
+        return MemoryOut(digest=found[0], updated_at=found[1].replace(tzinfo=dt.UTC))
+
+    @router.delete("/memory", status_code=204)
+    def clear_memory(user: Authed) -> None:
+        with transaction(db) as session:
+            AnalysisService(session, provider).clear_memory(user.id)
+
+
+def analysis_router(
+    db: Engine, provider: AiProvider, today: Callable[[User], dt.date]
+) -> APIRouter:
+    router = APIRouter(prefix="/api/analyses")
+    gate = [Depends(require_ai_analysis)]
+    continuity_routes(router, db, provider, today)
+
     @router.post("", status_code=201, dependencies=gate)
     def analyze(payload: AnalyzeIn, user: Authed) -> AnalysisOut:
         try:
@@ -146,6 +202,8 @@ def analysis_router(db: Engine, provider: AiProvider) -> APIRouter:
                 )
         except ConsentRequiredError as err:
             raise http_error(403, err) from err
+        except DuplicateAnalysisError as err:
+            raise http_error(409, err) from err
         except NoDataError as err:
             raise http_error(422, err) from err
         except AnalysisFailedError as err:

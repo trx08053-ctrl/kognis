@@ -134,7 +134,8 @@ def test_protected_entries_never_sent(engine: Engine) -> None:
     # кризисный флаг защищённой записи всё равно даёт поддержку, а не анализ
     with engine.begin() as conn:
         conn.execute(text("UPDATE entries SET crisis = 1 WHERE id = :i"), {"i": secret_id})
-    assert analyze(client).json()["status"] == "crisis"
+    # другое направление: тот же период с тем же направлением — дубль (kognis-sky)
+    assert analyze(client, direction="act").json()["status"] == "crisis"
     assert len(provider.calls) == 1
 
 

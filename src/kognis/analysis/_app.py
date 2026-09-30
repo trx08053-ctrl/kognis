@@ -3,7 +3,7 @@
 import json
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 
 from sqlalchemy.orm import Session
 
@@ -14,21 +14,27 @@ from kognis.safety import HelpBlock, check_text, help_block
 
 from ._domain import (
     DEFAULT_PAGE_SIZE,
+    ENTRY_CHAR_LIMIT,
     MAX_ENTRIES,
     MAX_PAGE_SIZE,
+    REFLECTION_CHAR_LIMIT,
     Analysis,
     AnalysisResult,
     InvalidModelAnswerError,
     MoodDynamics,
     MoodPoint,
+    PeriodSuggestion,
     direction_by_code,
+    fit_texts,
     mood_dynamics,
     normalize_answers,
     parse_result,
+    previous_summary,
+    suggest_period,
     validate_period,
 )
 from ._infra import AnalysisRepository
-from ._prompts_i18n import SAFETY_CLAUSE
+from ._prompts_i18n import CONTINUITY_HINT, EXAMPLE_CHANGE, EXAMPLE_MEMORY, SAFETY_CLAUSE
 
 ATTEMPTS = 2
 MAX_ECHO_CHARS = 8000  # сколько символов прежнего ответа модели возвращаем в повторном запросе
@@ -45,7 +51,10 @@ ANSWER_EXAMPLE = {
     ],
     "questions": ["Уточняющий вопрос пользователю?"],
     "quest_ideas": ["Небольшая идея для практики"],
+    "changes": [EXAMPLE_CHANGE],
+    "memory": EXAMPLE_MEMORY,
 }
+_CONTEXT_KEYS = {"memory", "previous_analysis"}
 SYSTEM_PROMPT = (
     "Ты помогаешь человеку взглянуть на свои дневниковые записи через призму направления "
     "«%s»: %s. Это самопомощь, а не диагностика и не лечение. "
@@ -58,6 +67,10 @@ SYSTEM_PROMPT = (
     "(строка), description (строка), entry_ids (непустой список целых id записей из данных, "
     "не более 20) и quotes (список строк, не более 5: дословные фрагменты текстов этих записей, "
     "не объекты). questions — список строк, не более 5. quest_ideas — список строк, не более 5. "
+    "changes — список строк, не более 5, что изменилось с прошлого разбора (пустой, если прошлого "
+    "разбора нет). memory — строка не длиннее 2000 символов: обновлённый дайджест о человеке "
+    "(устойчивые паттерны, прогресс, что пробовал, открытые вопросы) без цитат записей и без "
+    "диагнозов. "
     "Пиши только сам разбор: не включай в ответ напоминания о том, что это не медицинская "
     "помощь, — приложение показывает их само. " + SAFETY_CLAUSE
 )
@@ -70,6 +83,10 @@ class ConsentRequiredError(CodedError):
 
 class NoDataError(CodedValueError):
     """За период нет записей, которые можно проанализировать."""
+
+
+class DuplicateAnalysisError(CodedError):
+    """Такой разбор (направление и период) уже есть; `existing_id` — его id."""
 
 
 class AnalysisFailedError(CodedError):
@@ -88,22 +105,22 @@ class AnalysisPage:
     next_offset: int | None  # смещение следующей страницы; `None` — это последняя
 
 
-def _entry_payload(entry: Entry) -> dict[str, object]:
+def _entry_payload(entry: Entry, text: str) -> dict[str, object]:
     return {
         "id": entry.id,
         "date": entry.entry_date.isoformat(),
-        "text": entry.text,
+        "text": text,
         "tags": list(entry.tags),
         "emotions": list(entry.emotions),
     }
 
 
-def _review_payload(review: DayReview) -> dict[str, object]:
+def _review_payload(review: DayReview, reflection: str) -> dict[str, object]:
     return {
         "date": review.review_date.isoformat(),
         "mood": review.mood,
         "wellbeing": review.wellbeing,
-        "reflection": review.reflection,
+        "reflection": reflection,
     }
 
 
@@ -148,24 +165,77 @@ class AnalysisService:
                 Analysis(0, owner_id, None, direction, start, end, "crisis", None, ())
             )
             return AnalysisOutcome(saved, block or help_block())
+        # дубль проверяем после кризисного сигнала: поддержка важнее экономии токенов
+        duplicate = self._repo.exists_done(owner_id, direction, start, end)
+        if duplicate is not None:
+            raise DuplicateAnalysisError("analysis.duplicate", existing_id=duplicate)
         if not consent:
             raise ConsentRequiredError("analysis.consent_required")
         if not entries and not reviews:
             raise NoDataError("analysis.no_data")
         entries = sorted(entries, key=lambda e: (e.entry_date, e.id))[-MAX_ENTRIES:]
-        data = {
-            "entries": [_entry_payload(e) for e in entries],
-            "day_reviews": [_review_payload(r) for r in reviews],
+        texts = fit_texts(
+            [e.text for e in entries] + [r.reflection for r in reviews],
+            [ENTRY_CHAR_LIMIT] * len(entries) + [REFLECTION_CHAR_LIMIT] * len(reviews),
+        )
+        data: dict[str, object] = {
+            "entries": [_entry_payload(e, t) for e, t in zip(entries, texts, strict=False)],
+            "day_reviews": [
+                _review_payload(r, t) for r, t in zip(reviews, texts[len(entries) :], strict=True)
+            ],
         }
+        memory = self._repo.get_memory(owner_id)
+        if memory:
+            data["memory"] = memory[0]
+        previous = self._repo.last_done(owner_id, direction=direction)
+        if previous is not None and previous.result is not None:
+            data["previous_analysis"] = previous_summary(previous.result, previous.answers)
         result = self._ask(
-            SYSTEM_PROMPT % (focus.title, focus.focus),
+            SYSTEM_PROMPT % (focus.title, focus.focus)
+            + (CONTINUITY_HINT if data.keys() & _CONTEXT_KEYS else ""),
             [Message("user", json.dumps(data, ensure_ascii=False))],
             frozenset(e.id for e in entries),
         )
         saved = self._repo.add(
-            Analysis(0, owner_id, None, direction, start, end, "done", result, ())
+            Analysis(
+                0,
+                owner_id,
+                None,
+                direction,
+                start,
+                end,
+                "done",
+                self._keep_memory(owner_id, result),
+                (),
+            )
         )
         return AnalysisOutcome(saved)
+
+    def _keep_memory(self, owner_id: int, result: AnalysisResult) -> AnalysisResult:
+        """Дайджест — в `analysis_memory` (виден и очищается пользователем), не в самом разборе."""
+        if result.memory.strip():
+            self._repo.set_memory(owner_id, result.memory.strip())
+        return result.model_copy(update={"memory": ""})
+
+    def default_period(self, owner_id: int, today: date) -> PeriodSuggestion:
+        """Период по умолчанию от конца последнего разбора (любого направления) до `today`."""
+        last = self._repo.last_done(owner_id)
+
+        def has_data(start: date, end: date) -> bool:
+            return bool(
+                self._diary.list_entries_between(owner_id, start, end)
+                or self._diary.list_day_reviews_between(owner_id, start, end)
+            )
+
+        return suggest_period(
+            today, last.end if last else None, last.id if last else None, has_data
+        )
+
+    def memory(self, owner_id: int) -> tuple[str, datetime] | None:
+        return self._repo.get_memory(owner_id)
+
+    def clear_memory(self, owner_id: int) -> None:
+        self._repo.clear_memory(owner_id)
 
     def answer(
         self, owner_id: int, analysis_id: int, answers: list[str], *, consent: bool
@@ -190,7 +260,8 @@ class AnalysisService:
             [Message("user", json.dumps(context, ensure_ascii=False))],
             frozenset(i for p in parent.result.patterns for i in p.entry_ids),
         )
-        return AnalysisOutcome(self._repo.add(Analysis(0, *base, "done", result, cleaned)))
+        kept = self._keep_memory(owner_id, result)
+        return AnalysisOutcome(self._repo.add(Analysis(0, *base, "done", kept, cleaned)))
 
     def get(self, owner_id: int, analysis_id: int) -> Analysis | None:
         return self._repo.get(owner_id, analysis_id)
@@ -206,7 +277,12 @@ class AnalysisService:
 
     def delete(self, owner_id: int, analysis_id: int) -> bool:
         """Удалить свой анализ; чужой неотличим от несуществующего (`False`)."""
-        return self._repo.delete(owner_id, analysis_id)
+        deleted = self._repo.delete(owner_id, analysis_id)
+        if deleted and not self._repo.has_any(owner_id):
+            self._repo.clear_memory(
+                owner_id
+            )  # разборов не осталось — память без основания не храним
+        return deleted
 
     def _ask(
         self, system: str, messages: list[Message], known_ids: frozenset[int]

@@ -21,6 +21,7 @@ export interface components {
       "patterns": (components["schemas"]["PatternOut"])[];
       "questions": (string)[];
       "quest_ideas": (string)[];
+      "changes": (string)[];
       "answers": (string)[];
       "created_at": string | null;
       "help"?: components["schemas"]["HelpOut"] | null;
@@ -99,6 +100,10 @@ export interface components {
     LockPassword: {
       "password": string;
     };
+    MemoryOut: {
+      "digest": string;
+      "updated_at": string | null;
+    };
     MoodOut: {
       "points": (components["schemas"]["MoodPointOut"])[];
       "average_mood": number | null;
@@ -115,6 +120,13 @@ export interface components {
       "description": string;
       "entry_ids": (number)[];
       "quotes": (string)[];
+    };
+    PeriodOut: {
+      "start": string;
+      "end": string;
+      "active": boolean;
+      "truncated": boolean;
+      "last_analysis_id": number | null;
     };
     ProgressOut: {
       "xp": number;

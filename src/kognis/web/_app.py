@@ -134,7 +134,7 @@ def create_app(
     app.include_router(day_review_router(db, user_today))
     app.include_router(progress_router(db, user_today))
     provider = ai_provider or get_provider()
-    app.include_router(analysis_router(db, provider))
+    app.include_router(analysis_router(db, provider, user_today))
     app.include_router(quests_router(db, user_today, provider))
     app.include_router(quizzes_router(db, user_today))
     app.mount("/assets", StaticFiles(directory=dist / "assets", check_dir=False), name="assets")

@@ -2,7 +2,7 @@
 
 import base64
 from collections.abc import Callable
-from datetime import date
+from datetime import date, timedelta
 from typing import Any
 
 import pytest
@@ -146,11 +146,13 @@ def test_analysis_codes() -> None:
         {},
     )
     start = date(2026, 1, 1)
-    assert raised(validate_period, start, date(2026, 4, 3)) == (
+    assert raised(validate_period, start, start + timedelta(days=MAX_PERIOD_DAYS)) == (
         "analysis.period_long",
         {"max": MAX_PERIOD_DAYS},
     )
-    validate_period(start, date(2026, 4, 2))  # ровно MAX_PERIOD_DAYS суток
+    validate_period(
+        start, start + timedelta(days=MAX_PERIOD_DAYS - 1)
+    )  # ровно MAX_PERIOD_DAYS суток
     assert raised(normalize_answers, [" "]) == ("analysis.answers_empty", {})
     assert raised(normalize_answers, ["a"] * (MAX_ANSWERS + 1)) == ("analysis.answers_long", {})
     assert raised(normalize_answers, ["a" * (MAX_ANSWER_LENGTH + 1)]) == (

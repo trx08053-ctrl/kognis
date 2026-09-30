@@ -6,6 +6,7 @@ from ._app import (
     AnalysisPage,
     AnalysisService,
     ConsentRequiredError,
+    DuplicateAnalysisError,
     NoDataError,
 )
 from ._domain import (
@@ -18,6 +19,7 @@ from ._domain import (
     MoodDynamics,
     MoodPoint,
     Pattern,
+    PeriodSuggestion,
 )
 
 __all__ = [
@@ -32,8 +34,10 @@ __all__ = [
     "AnalysisService",
     "ConsentRequiredError",
     "Direction",
+    "DuplicateAnalysisError",
     "MoodDynamics",
     "MoodPoint",
     "NoDataError",
     "Pattern",
+    "PeriodSuggestion",
 ]

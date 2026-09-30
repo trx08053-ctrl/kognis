@@ -1,5 +1,7 @@
 """История разборов: постраничный список и удаление (kognis-qkh AC2, AC4) через HTTP API."""
 
+import datetime as dt
+import itertools
 import json
 from collections.abc import Sequence
 from typing import Any
@@ -53,8 +55,15 @@ def signed_in(engine: Engine, email: str) -> TestClient:
     return client
 
 
+_periods = itertools.count()
+
+
 def analyze(client: TestClient) -> dict[str, Any]:
-    r = client.post("/api/analyses", json={"direction": "cbt", "consent": True, **PERIOD})
+    # повтор направления и периода — 409 (kognis-sky), поэтому конец периода каждый раз новый
+    end = dt.date.fromisoformat(PERIOD["end"]) + dt.timedelta(days=next(_periods))
+    r = client.post(
+        "/api/analyses", json={"direction": "cbt", "consent": True, **PERIOD, "end": str(end)}
+    )
     assert r.status_code == 201, r.text
     body: dict[str, Any] = r.json()
     return body
@@ -91,15 +100,17 @@ def test_history_is_paged_newest_first(ann: TestClient) -> None:
 
 @pytest.mark.acceptance("kognis-qkh", "AC2")
 def test_history_items_have_date_period_direction_status(ann: TestClient) -> None:
-    analyze(ann)
+    made = analyze(ann)
     item = ann.get("/api/analyses").json()[0]
     assert item["created_at"].endswith("Z") or "+00:00" in item["created_at"]
+    # конец периода в analyze() сдвигается (дубли — 409), начало и направление — как в запросе
     assert (item["start"], item["end"], item["direction"], item["status"]) == (
-        "2026-09-01",
-        "2026-09-07",
+        PERIOD["start"],
+        made["end"],
         "cbt",
         "done",
     )
+    assert item["end"] >= PERIOD["end"]
 
 
 @pytest.mark.acceptance("kognis-qkh", "AC2")

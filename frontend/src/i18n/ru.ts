@@ -57,6 +57,7 @@ export const ru = {
   "error.analysis.answers_empty": "Нужен хотя бы один ответ",
   "error.analysis.answers_long": "Ответы слишком длинные или их слишком много",
   "error.analysis.not_found": "Анализ не найден",
+  "error.analysis.duplicate": "Такой разбор за этот период уже есть",
   "error.gameplay.idea_empty": "Пустая идея",
   "error.gameplay.idea_unknown": "Нет такой идеи",
   "error.gameplay.step_unknown": "Нет такого шага",

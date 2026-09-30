@@ -57,9 +57,15 @@ export function Shell({ user, children }: { user: User; children: ReactNode }) {
                 </span>
                 <span className="badge">
                   <FlameIcon />
-                  <span data-testid="streak">
-                    {t("shell.streak", { days: progress.data.streak })}
-                  </span>
+                  {progress.data.streak > 0 ? (
+                    <span data-testid="streak">
+                      {t("shell.streak", { days: progress.data.streak })}
+                    </span>
+                  ) : (
+                    <span data-testid="days-30-badge">
+                      {t("shell.days_30", { count: progress.data.days_30 })}
+                    </span>
+                  )}
                 </span>
               </p>
             )}

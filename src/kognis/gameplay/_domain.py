@@ -65,7 +65,7 @@ def level_start(level: int) -> int:
     return LEVEL_THRESHOLDS[listed - 1] + (level - listed) * EXTRA_LEVEL_STEP
 
 
-def _week(day: date) -> tuple[int, int]:
+def iso_week(day: date) -> tuple[int, int]:
     iso = day.isocalendar()
     return (iso.year, iso.week)
 
@@ -85,7 +85,7 @@ def streak_length(active_days: Iterable[date], today: date) -> int:
     streak = 1
     for prev, cur in pairwise(days):
         gap = (cur - prev).days
-        missed = _week(prev + timedelta(days=1))
+        missed = iso_week(prev + timedelta(days=1))
         if gap == 1:
             streak += 1
         elif gap == ONE_MISSED_DAY and missed not in used:
@@ -96,7 +96,7 @@ def streak_length(active_days: Iterable[date], today: date) -> int:
     idle = (today - days[-1]).days
     if idle <= 1:
         return streak
-    if idle == ONE_MISSED_DAY and _week(days[-1] + timedelta(days=1)) not in used:
+    if idle == ONE_MISSED_DAY and iso_week(days[-1] + timedelta(days=1)) not in used:
         return streak
     return 0
 
@@ -124,6 +124,15 @@ class EarnedAchievement:
 
 
 @dataclass(frozen=True)
+class RecoveryOffer:
+    """Обрыв серии, который можно вернуть записью «что помешало» до `expires_on` включительно."""
+
+    streak_before: int
+    broken_on: date
+    expires_on: date
+
+
+@dataclass(frozen=True)
 class Progress:
     xp: int
     level: int
@@ -131,3 +140,11 @@ class Progress:
     next_level_xp: int
     streak: int
     achievements: tuple[EarnedAchievement, ...]
+    best_streak: int = 0
+    freezes: int = 0
+    days_30: int = 0  # дней с дневником за последние 30 — главный показатель
+    days_total: int = 0
+    weekly_goal: int = 3
+    week_days: int = 0  # активных дней в текущей ISO-неделе
+    weekend_days: tuple[int, ...] = ()
+    recovery: RecoveryOffer | None = None

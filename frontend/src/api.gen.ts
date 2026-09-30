@@ -134,6 +134,14 @@ export interface components {
       "level_start_xp": number;
       "next_level_xp": number;
       "streak": number;
+      "best_streak": number;
+      "freezes": number;
+      "days_30": number;
+      "days_total": number;
+      "weekly_goal": number;
+      "week_days": number;
+      "weekend_days": (number)[];
+      "recovery": components["schemas"]["RecoveryOfferOut"] | null;
       "achievements": (components["schemas"]["AchievementOut"])[];
     };
     QuestOut: {
@@ -178,15 +186,18 @@ export interface components {
       "saved": components["schemas"]["QuizAnswersOut"];
       "help"?: components["schemas"]["HelpOut"] | null;
     };
+    RecoveryIn: {
+      "note": string;
+    };
+    RecoveryOfferOut: {
+      "streak_before": number;
+      "broken_on": string;
+      "expires_on": string;
+    };
     RegisterIn: {
       "email": string;
       "password": string;
       "timezone"?: string | null;
-    };
-    SettingsIn: {
-      "advanced"?: boolean | null;
-      "timezone"?: string | null;
-      "locale"?: string | null;
     };
     StepDoneOut: {
       "quest": components["schemas"]["QuestOut"];
@@ -206,6 +217,15 @@ export interface components {
       "type": string;
       "input"?: unknown;
       "ctx"?: Record<string, unknown>;
+    };
+    kognis__web___progress__SettingsIn: {
+      "weekend_days": (number)[];
+      "weekly_goal": number;
+    };
+    kognis__web___settings__SettingsIn: {
+      "advanced"?: boolean | null;
+      "timezone"?: string | null;
+      "locale"?: string | null;
     };
   };
 }

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { saveSettings, type User } from "../api";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { LanguageSwitcher } from "../components/LanguageSwitcher";
+import { MotivationPanel } from "../components/Motivation";
 import { Achievements } from "../components/Progress";
 import { timeZoneNames } from "../dates";
 
@@ -81,6 +82,7 @@ export function ProfilePage({ user }: { user: User }) {
         <TimezoneField user={user} />
         <LanguageSwitcher />
       </section>
+      <MotivationPanel />
       <Achievements />
     </div>
   );

@@ -9,10 +9,12 @@ from sqlalchemy import (
     Integer,
     String,
     Table,
+    Text,
     UniqueConstraint,
     func,
     insert,
     select,
+    update,
 )
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -45,6 +47,27 @@ achievements_table = Table(
     Column("earned_on", Date, nullable=False),
     Column("created_at", DateTime, nullable=False),
     UniqueConstraint("owner_id", "code", name="uq_achievements_owner_code"),
+)
+
+gameplay_settings_table = Table(
+    "gameplay_settings",
+    metadata,
+    Column("owner_id", Integer, primary_key=True, autoincrement=False),
+    Column("weekend_days", String(16), nullable=False, default=""),  # «5,6» — дни недели, 0 — пн
+    Column("weekly_goal", Integer, nullable=False, default=3),
+    Column("rules_from", Date, nullable=True),  # до этой даты — прежнее правило заморозки
+)
+
+streak_recoveries_table = Table(
+    "streak_recoveries",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("owner_id", Integer, nullable=False),
+    Column("after_day", Date, nullable=False),  # последняя активность перед восстановленным обрывом
+    Column("broken_on", Date, nullable=False),
+    Column("note", Text, nullable=False),  # «что помешало» — видит только владелец
+    Column("created_at", DateTime, nullable=False),
+    UniqueConstraint("owner_id", "after_day", name="uq_streak_recoveries_owner_after"),
 )
 
 
@@ -107,3 +130,52 @@ class ProgressRepository:
                 )
         except IntegrityError:
             return
+
+    def settings(self, owner_id: int) -> tuple[frozenset[int], int, date | None] | None:
+        """(выходные дни, недельная цель, `rules_from`) или None, если настроек ещё нет."""
+        t = gameplay_settings_table
+        stmt = select(t.c.weekend_days, t.c.weekly_goal, t.c.rules_from).where(
+            t.c.owner_id == owner_id
+        )
+        row = self._session.execute(stmt).first()
+        if row is None:
+            return None
+        weekend = frozenset(int(x) for x in row.weekend_days.split(",") if x)
+        return weekend, row.weekly_goal, row.rules_from
+
+    def save_settings(self, owner_id: int, weekend_days: frozenset[int], weekly_goal: int) -> None:
+        """Сохранить выбор пользователя; `rules_from` (переход на новые правила) не трогаем."""
+        t = gameplay_settings_table
+        csv = ",".join(str(d) for d in sorted(weekend_days))
+        if self.settings(owner_id) is None:
+            self._session.execute(
+                insert(t).values(owner_id=owner_id, weekend_days=csv, weekly_goal=weekly_goal)
+            )
+        else:
+            self._session.execute(
+                update(t)
+                .where(t.c.owner_id == owner_id)
+                .values(weekend_days=csv, weekly_goal=weekly_goal)
+            )
+
+    def recovered_after_days(self, owner_id: int) -> frozenset[date]:
+        t = streak_recoveries_table
+        rows = self._session.execute(select(t.c.after_day).where(t.c.owner_id == owner_id)).all()
+        return frozenset(r.after_day for r in rows)
+
+    def add_recovery(self, owner_id: int, after_day: date, broken_on: date, note: str) -> bool:
+        """Записать восстановление; False, если этот обрыв уже восстановлен (одно на обрыв)."""
+        try:
+            with self._session.begin_nested():
+                self._session.execute(
+                    insert(streak_recoveries_table).values(
+                        owner_id=owner_id,
+                        after_day=after_day,
+                        broken_on=broken_on,
+                        note=note,
+                        created_at=_now(),
+                    )
+                )
+        except IntegrityError:
+            return False
+        return True

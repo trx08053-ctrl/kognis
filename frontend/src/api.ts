@@ -101,6 +101,17 @@ export type Progress = Schemas["ProgressOut"];
 
 export const getProgress = (): Promise<Progress> =>
   fetch("/api/progress").then((r) => parse<Progress>(r));
+export const saveProgressSettings = (settings: {
+  weekend_days: number[];
+  weekly_goal: number;
+}): Promise<Progress> =>
+  fetch("/api/progress/settings", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(settings),
+  }).then((r) => parse<Progress>(r));
+export const recoverStreak = (note: string): Promise<Progress> =>
+  post<Progress>("/api/progress/recovery", { note });
 
 export const listDayReviews = (
   query: { limit?: number; cursor?: string | null } = {},

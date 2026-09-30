@@ -33,6 +33,14 @@ const PROGRESS = {
   level_start_xp: 0,
   next_level_xp: 50,
   streak: 1,
+  best_streak: 1,
+  freezes: 2,
+  days_30: 1,
+  days_total: 1,
+  weekly_goal: 3,
+  week_days: 1,
+  weekend_days: [],
+  recovery: null,
   achievements: [],
 };
 

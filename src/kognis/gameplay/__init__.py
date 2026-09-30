@@ -1,7 +1,7 @@
 """Модуль gameplay: опыт, уровни, серия, достижения, квесты, квизы (D8)."""
 
-from ._app import GameplayService
-from ._domain import ACHIEVEMENTS, AchievementDef, EarnedAchievement, Progress
+from ._app import GameplayService, RecoveryUnavailableError
+from ._domain import ACHIEVEMENTS, AchievementDef, EarnedAchievement, Progress, RecoveryOffer
 from ._quests import (
     AlreadyAcceptedError,
     Quest,
@@ -33,6 +33,8 @@ __all__ = [
     "QuizDoneTodayError",
     "QuizOutcome",
     "QuizStatus",
+    "RecoveryOffer",
+    "RecoveryUnavailableError",
     "StepOutcome",
     "StepUnavailableError",
 ]

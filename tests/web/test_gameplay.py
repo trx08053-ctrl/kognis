@@ -79,6 +79,15 @@ def test_new_user_starts_at_level_one(api: TestClient) -> None:
         "next_level_xp": 50,
         "streak": 0,
         "achievements": [],
+        # мотивация 2.0 (kognis-3r1): запас заморозок, цель недели и показатели дней
+        "best_streak": 0,
+        "freezes": 2,
+        "days_30": 0,
+        "days_total": 0,
+        "weekly_goal": 3,
+        "week_days": 0,
+        "weekend_days": [],
+        "recovery": None,
     }
 
 
@@ -136,23 +145,23 @@ def test_streak_counts_consecutive_days_and_resets_on_gap(api: TestClient, clock
 
 
 @pytest.mark.acceptance("kognis-50k", "AC2")
-def test_one_freeze_per_week_bridges_single_missed_day(api: TestClient, clock: Clock) -> None:
+def test_freeze_stock_bridges_missed_days_until_it_runs_out(api: TestClient, clock: Clock) -> None:
+    # правило заменено в kognis-3r1: вместо одной заморозки на ISO-неделю — запас из двух заморозок
     signup(api)
-    # 2026-09-07 — понедельник. Пн, вт, (ср пропуск), чт: заморозка недели гасит пропуск
+    # 2026-09-07 — понедельник. Пн, вт, (ср пропуск), чт: заморозка гасит пропуск
     for day in ("2026-09-07", "2026-09-08", "2026-09-10"):
         write(api, day)
     clock.day = dt.date(2026, 9, 10)
     assert progress(api)["streak"] == 3
 
-    write(api, "2026-09-12")  # пт пропущен: вторая заморозка в той же неделе невозможна
+    write(api, "2026-09-12")  # пт пропущен: вторая заморозка из запаса, серия продолжается
     clock.day = dt.date(2026, 9, 12)
-    assert progress(api)["streak"] == 1
+    state = progress(api)
+    assert (state["streak"], state["freezes"]) == (4, 0)
 
-    # в новой неделе заморозка снова есть: пн 14, (вт пропуск), ср 16
-    for day in ("2026-09-14", "2026-09-16"):
-        write(api, day)
-    clock.day = dt.date(2026, 9, 16)
-    assert progress(api)["streak"] == 2
+    write(api, "2026-09-15")  # вс и пн пропущены, запас пуст: серия начинается заново
+    clock.day = dt.date(2026, 9, 15)
+    assert progress(api)["streak"] == 1
 
 
 @pytest.mark.acceptance("kognis-50k", "AC2")

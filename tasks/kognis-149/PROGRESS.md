@@ -26,5 +26,5 @@
 ## Сессия 4
 - Сделано: minor из ревью — `raw` в повторном запросе ≤ 8000 символов (`MAX_ECHO_CHARS`), текст каждой ошибки ≤ 200 символов (коммит b65460a).
 - Доказательство: `just verify` зелёный, tree c6e5aed235a8 (evidence `.evidence/c6e5aed235a802a0d03903996e14ba8a6d4b4646.json`).
-- Повторное ревью `reviewer` запущено, ответ ещё не получен.
-- **Следующий шаг:** записать ответ reviewer в `tasks/kognis-149/REVIEW.md`; при `VERDICT: approve` — `just task-done kognis-149`; иначе устранить blocker/major и повторить ревью.
+- Ревью 2: VERDICT approve (blocker/major нет), записано в `REVIEW.md`; minor закрыт тестом (коммит 0ca4a22), `just verify` зелёный, tree 66c5c89a9476.
+- **Следующий шаг:** `just task-done kognis-149` (сам перезапустит verify); после закрытия — замер `just ai-eval --provider env --direction all` техответственным.

@@ -22,6 +22,7 @@ PW = "correct horse"
 # (метод, путь, тело, нужен вход, статус, код) — известные ошибки для человека
 CASES: list[tuple[str, str, dict[str, Any] | None, bool, int, str]] = [
     ("GET", "/api/me", None, False, 401, "auth.required"),
+    ("POST", "/api/auth/register", {}, False, 422, "request.validation"),
     ("GET", "/api/nothing-here", None, False, 404, "http.not_found"),
     (
         "POST",

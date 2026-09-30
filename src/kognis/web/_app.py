@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import Depends, FastAPI, Request, Response
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
@@ -87,6 +88,15 @@ def create_app(
     )
     app.state.db = db
     app.add_middleware(BodyLimitMiddleware)
+
+    @app.exception_handler(RequestValidationError)
+    async def invalid_request(request: Request, exc: RequestValidationError) -> JSONResponse:
+        # схема тела/параметров нарушена: код вместо английских сообщений и эха введённых значений
+        return JSONResponse(
+            {"detail": error_detail("request.validation")},
+            status_code=422,
+            headers=SECURITY_HEADERS,
+        )
 
     @app.exception_handler(Exception)
     async def internal_error(request: Request, exc: Exception) -> JSONResponse:

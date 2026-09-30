@@ -73,3 +73,9 @@ def test_switching_language_updates_shell_texts_and_html_lang() -> None:
 @pytest.mark.acceptance("kognis-i7j", "AC3")
 def test_dates_and_numbers_follow_language() -> None:
     run_vitest("src/i18n.test.tsx")
+
+
+@pytest.mark.source
+@pytest.mark.acceptance("kognis-aoa", "AC3")
+def test_signed_in_landing_has_no_auth_forms() -> None:
+    run_vitest("src/pages.test.tsx")

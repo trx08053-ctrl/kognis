@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
-import { Navigate, Route, Routes } from "react-router";
+import { Navigate, Route, Routes, useLocation } from "react-router";
 import { ApiError, getMe } from "./api";
 import { ErrorMessage } from "./components/ErrorMessage";
 import { Shell } from "./components/Shell";
@@ -20,6 +20,7 @@ export function App() {
     retry: false,
   });
   const user = me.data;
+  const { pathname } = useLocation();
   // язык из профиля после входа: он важнее языка браузера (docs/I18N.md, правило 5)
   const profileLocale = user?.locale;
   // применяется один раз на значение профиля: ручной выбор языка потом не перебивается
@@ -32,6 +33,10 @@ export function App() {
   const anonymous = me.error instanceof ApiError && me.error.status === 401;
 
   let body = <p>{t("app.loading")}</p>;
+  if (user && pathname === "/welcome") {
+    // главная страница сайта для вошедшего: свой макет, без форм входа, с переходом в дневник
+    return <LandingPage signedIn />;
+  }
   if (user) {
     body = (
       <Routes>

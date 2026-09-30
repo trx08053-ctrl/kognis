@@ -400,3 +400,16 @@ test("приветствие зависит от часа: утро, день, �
     "Доброй ночи",
   ]);
 });
+
+test("лендинг для вошедшего на /welcome: нет форм входа, есть «Открыть дневник»", async () => {
+  stubApi({
+    "GET /api/me": () => reply(200, ME),
+    "GET /api/progress": () => reply(200, PROGRESS),
+  });
+  renderAt("/welcome");
+  const open = await screen.findAllByRole("link", { name: "Открыть дневник" });
+  expect(open.length).toBeGreaterThan(0);
+  expect(screen.queryByTestId("auth-submit")).toBeNull();
+  expect(screen.queryByLabelText("Пароль")).toBeNull();
+  expect(screen.queryByTestId("cta-header")).toBeNull();
+});

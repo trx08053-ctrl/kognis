@@ -1,15 +1,19 @@
 // Лендинг для гостя: что такое Kognis и зачем он, с формой входа/регистрации на первом экране.
 import { useState } from "react";
+import { Link } from "react-router";
 import calm from "../assets/landing/calm.webp";
 import hero from "../assets/landing/hero.webp";
 import { ArrowIcon, FlameIcon, MoonIcon, ShieldIcon, SparkIcon, SunIcon } from "../Icons";
+import { useI18n } from "../i18n";
 import { useTheme } from "../theme";
 import { type AuthMode, AuthPage } from "./AuthPage";
 import { Articles, Faq, Stories } from "./landing/Library";
 import { Features, HowItWorks, Results, Stats } from "./landing/Sections";
 import "./landing/landing.css";
 
-export function LandingPage() {
+// signedIn: вошедший видит те же разделы, но вместо форм и кнопок входа — переход в дневник
+export function LandingPage({ signedIn = false }: { signedIn?: boolean }) {
+  const { t } = useI18n();
   const [mode, setMode] = useState<AuthMode>("login");
   const [theme, toggleTheme] = useTheme();
 
@@ -55,21 +59,29 @@ export function LandingPage() {
             >
               {theme === "dark" ? <SunIcon /> : <MoonIcon />}
             </button>
-            <button
-              type="button"
-              className="btn-ghost max-sm:hidden"
-              onClick={() => openAuth("login")}
-            >
-              Войти
-            </button>
-            <button
-              type="button"
-              className="btn lp-btn"
-              data-testid="cta-header"
-              onClick={() => openAuth("register")}
-            >
-              Начать
-            </button>
+            {signedIn ? (
+              <Link className="btn lp-btn" data-testid="open-diary-header" to="/">
+                {t("landing.open_diary")}
+              </Link>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className="btn-ghost max-sm:hidden"
+                  onClick={() => openAuth("login")}
+                >
+                  Войти
+                </button>
+                <button
+                  type="button"
+                  className="btn lp-btn"
+                  data-testid="cta-header"
+                  onClick={() => openAuth("register")}
+                >
+                  Начать
+                </button>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -91,14 +103,20 @@ export function LandingPage() {
                 подходов психологии и превращать заботу о себе в маленькие ежедневные шаги.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  className="btn lp-btn lp-btn-lg"
-                  data-testid="cta-hero"
-                  onClick={() => openAuth("register")}
-                >
-                  Начать вести дневник <ArrowIcon />
-                </button>
+                {signedIn ? (
+                  <Link className="btn lp-btn lp-btn-lg" data-testid="open-diary-hero" to="/">
+                    {t("landing.open_diary")} <ArrowIcon />
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn lp-btn lp-btn-lg"
+                    data-testid="cta-hero"
+                    onClick={() => openAuth("register")}
+                  >
+                    Начать вести дневник <ArrowIcon />
+                  </button>
+                )}
                 <a href="#how" className="btn-ghost lp-btn-lg">
                   Как это работает
                 </a>
@@ -140,9 +158,11 @@ export function LandingPage() {
                   <p className="text-sm font-semibold">«Прогноз — ещё не факт»</p>
                 </div>
               </div>
-              <div className="lp-auth">
-                <AuthPage mode={mode} onModeChange={setMode} />
-              </div>
+              {!signedIn && (
+                <div className="lp-auth">
+                  <AuthPage mode={mode} onModeChange={setMode} />
+                </div>
+              )}
             </div>
           </div>
         </section>
@@ -165,14 +185,20 @@ export function LandingPage() {
               <p className="mt-4 max-w-xl text-lg text-white/90">
                 Пара строк о том, что вы чувствуете, — и завтра станет чуть понятнее, чем вчера.
               </p>
-              <button
-                type="button"
-                className="lp-btn-light mt-8"
-                data-testid="cta-final"
-                onClick={() => openAuth("register")}
-              >
-                Создать аккаунт <ArrowIcon />
-              </button>
+              {signedIn ? (
+                <Link className="lp-btn-light mt-8" data-testid="open-diary-final" to="/">
+                  {t("landing.open_diary")} <ArrowIcon />
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  className="lp-btn-light mt-8"
+                  data-testid="cta-final"
+                  onClick={() => openAuth("register")}
+                >
+                  Создать аккаунт <ArrowIcon />
+                </button>
+              )}
             </div>
           </div>
         </section>

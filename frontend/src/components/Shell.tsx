@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { NavLink } from "react-router";
+import { Link, NavLink } from "react-router";
 import { logout, type User } from "../api";
 import {
   BookIcon,
@@ -12,7 +12,7 @@ import {
   SunIcon,
   UserIcon,
 } from "../Icons";
-import { type Key, useI18n } from "../i18n";
+import { APP_NAME, type Key, useI18n } from "../i18n";
 import { useTheme } from "../theme";
 import { ProgressWidget, useProgress } from "./Progress";
 
@@ -31,6 +31,14 @@ export function Shell({ user, children }: { user: User; children: ReactNode }) {
   return (
     <div className="space-y-6">
       <header className="card flex flex-wrap items-center justify-between gap-3">
+        <Link
+          to="/welcome"
+          data-testid="logo"
+          aria-label={t("shell.logo")}
+          className="text-xl font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+        >
+          {APP_NAME}
+        </Link>
         <div className="flex min-w-0 items-center gap-3">
           <span
             aria-hidden="true"

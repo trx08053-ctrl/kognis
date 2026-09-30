@@ -285,6 +285,17 @@ def test_crisis_quiz_answers_saved_without_xp(
     assert xp(client) == 0
 
 
+def test_crisis_phrase_in_quiz_is_ordinary_when_detector_off(engine: Engine, clock: Clock) -> None:
+    client = make(engine, clock)
+    r = client.post(
+        "/api/quizzes/evening/answers", json={"answers": ["Не хочу жить", "Ничего", "Ничего"]}
+    )
+    body = r.json()
+    assert r.status_code == 201
+    assert body["xp"] > 0
+    assert body["help"] is None
+
+
 def test_endpoints_require_login(engine: Engine, clock: Clock) -> None:
     anon = TestClient(create_app(engine, clock=clock))
     assert anon.get("/api/quests").status_code == 401

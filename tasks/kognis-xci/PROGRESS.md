@@ -9,5 +9,5 @@
 - Доказательство: `just verify` зелёный, tree d1ee5666b031.
 
 ## Следующий шаг
-Ревью subagent `reviewer` → `tasks/kognis-xci/REVIEW.md`, затем `python3 scripts/task.py done kognis-xci`.
+Ревью 1: approve после правок (REVIEW.md), verify зелёный, tree acbfd23b44e7. Осталось: `python3 scripts/task.py done kognis-xci`.
 Реальный прогон `just ai-eval --provider env --direction all` (support_advice на модели) — техответственный.

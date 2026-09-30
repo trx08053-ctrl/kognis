@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { MemoryRouter } from "react-router";
 import { afterEach, expect, test, vi } from "vitest";
 import { App } from "./App";
+import { greeting } from "./pages/HomePage";
 
 function reply(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -376,4 +377,17 @@ test("не 401 при загрузке профиля: показывается 
   renderAt("/");
   expect(await screen.findByText("сервер недоступен")).toBeTruthy();
   expect(screen.queryByTestId("auth-submit")).toBeNull();
+});
+
+test("приветствие зависит от часа: утро, день, вечер, ночь", () => {
+  expect([4, 5, 11, 12, 17, 18, 22, 23].map(greeting)).toEqual([
+    "Доброй ночи",
+    "Доброе утро",
+    "Доброе утро",
+    "Добрый день",
+    "Добрый день",
+    "Добрый вечер",
+    "Добрый вечер",
+    "Доброй ночи",
+  ]);
 });

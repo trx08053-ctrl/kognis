@@ -10,11 +10,12 @@ export default defineConfig({
   server: { proxy: { "/api": "http://127.0.0.1:8000" } },
   test: {
     environment: "happy-dom",
+    setupFiles: ["src/vitest.setup.ts"],
     // покрытие фронтенда: абсолютный минимум здесь, рост фиксирует храповик (.quality-baseline.json)
     coverage: {
       provider: "v8",
       include: ["src/**"],
-      exclude: ["src/api.gen.ts", "src/main.tsx", "src/**/*.test.*"],
+      exclude: ["src/api.gen.ts", "src/main.tsx", "src/vitest.setup.ts", "src/**/*.test.*"],
       reporter: ["text-summary", "json-summary"],
       thresholds: { lines: 70, branches: 60 },
     },

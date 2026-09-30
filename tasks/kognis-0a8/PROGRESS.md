@@ -14,6 +14,10 @@
   (`test_gameplay.py`, `test_crisis_review.py`), ответ `/api/progress` получил `categories`/`hidden`,
   `test_migration_0016.py` поднимается до `head` вместо `0016` (сервис теперь требует колонку `marks`),
   фикстуры прогресса во фронтенд-тестах дополнены новыми полями.
+- Мутации (`just mutate kognis-0a8`, AC4): порог 80% пройден. Выжили мутанты на аргументах `has_event`
+  (идемпотентность начислений по owner/kind/ref) — кандидат на доп. тест отдельной задачей.
+- `just map` → docs/MAP.md, `just verify` OK, tree 92a4452838f1,
+  evidence `.evidence/92a4452838f18f834da9c75fcd13ba479574ea94.json`.
 
 ## Не сделано / для человека
 - Достижения «Исследователя» у существующих пользователей начинаются с нуля: прошлые разборы по направлениям
@@ -23,5 +27,5 @@
 - ADR 0006 (Proposed) — принять человеку.
 
 ## Следующий шаг
-Мутационное тестирование (`just mutate kognis-0a8`, AC4) → `just verify` → ревью reviewer → `python3
-scripts/task.py done kognis-0a8`.
+Ревью reviewer запущено (результат → `tasks/kognis-0a8/REVIEW.md`). Если VERDICT: approve — `python3
+scripts/task.py done kognis-0a8`; blocker/major — устранить, `just verify`, повторить ревью.

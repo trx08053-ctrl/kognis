@@ -27,5 +27,5 @@
 - ADR 0006 (Proposed) — принять человеку.
 
 ## Следующий шаг
-Ревью reviewer запущено (результат → `tasks/kognis-0a8/REVIEW.md`). Если VERDICT: approve — `python3
-scripts/task.py done kognis-0a8`; blocker/major — устранить, `just verify`, повторить ревью.
+Ревью approve (`REVIEW.md`, major записан как TD-11), AC4 подтверждён тестами в `test_mutants.py`, verify OK
+(tree 84b5ca11eba8). Остаётся `python3 scripts/task.py done kognis-0a8`.

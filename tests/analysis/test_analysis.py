@@ -467,3 +467,37 @@ def test_retry_limits_echo_and_error_lengths(engine: Engine) -> None:
     lines = [ln for ln in second[2].content.splitlines() if ln.startswith("- ")]
     assert 0 < len(lines) <= 20
     assert all(len(ln) <= 202 for ln in lines)
+
+
+def test_error_codes_of_analysis_service(engine: Engine, crisis_on: None) -> None:
+    provider = ScriptedProvider()
+    client = make(engine, provider)
+
+    def detail(response: Any) -> dict[str, Any]:
+        return cast(dict[str, Any], response.json()["detail"])
+
+    assert detail(analyze(client)) == {"code": "analysis.no_data", "params": {}}
+    add_entry(client)
+    no_consent = analyze(client, consent=False)
+    assert detail(no_consent) == {"code": "analysis.consent_required", "params": {}}
+    first = first_analysis(client, provider)
+    url = f"/api/analyses/{first['id']}/answers"
+    r = client.post(url, json={"answers": ["страшно"]})
+    assert detail(r) == {"code": "analysis.consent_answers_required", "params": {}}
+    r = client.post(url, json={"answers": [" "], "consent": True})
+    assert detail(r) == {"code": "analysis.answers_empty", "params": {}}
+    crisis = make(engine, provider, "eve@example.com")
+    add_entry(crisis, "хочу умереть")
+    crisis_id = analyze(crisis).json()["id"]
+    r = crisis.post(f"/api/analyses/{crisis_id}/answers", json={"answers": ["ок"], "consent": True})
+    assert detail(r) == {"code": "analysis.not_finished", "params": {}}
+
+
+def test_provider_receives_entries_and_day_reviews_keys(engine: Engine) -> None:
+    provider = ScriptedProvider()
+    client = make(engine, provider)
+    first_analysis(client, provider)
+    sent = json.loads(provider.calls[0][1][-1].content)
+    assert set(sent) == {"entries", "day_reviews"}
+    assert len(sent["entries"]) == 1
+    assert sent["day_reviews"] == []

@@ -12,5 +12,9 @@
 
 Не проверено ревьюером: фактический diff, `just verify`, e2e, PostgreSQL-миграция.
 
-Раунд 2 (исправления majors автором, без повторного запуска reviewer из-за бюджета): 
+Раунд 2 (subagent reviewer, повторный запуск): blocker/major — нет; VERDICT: approve.
+- minor (устранено): добавлен тест «ручной выбор языка после применения профиля не перебивается»
+  (`frontend/src/profileLocale.test.tsx`).
+Не проверено ревьюером: свежесть `just verify`, e2e, миграция на PostgreSQL, мутационное тестирование.
+
 VERDICT: approve

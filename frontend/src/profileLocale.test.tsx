@@ -1,10 +1,10 @@
 // Язык интерфейса после входа берётся из профиля (/api/me), kognis-b7x.
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, expect, test, vi } from "vitest";
 import { App } from "./App";
-import { type Catalog, I18nProvider } from "./i18n";
+import { type Catalog, I18nProvider, useI18n } from "./i18n";
 import { ru } from "./i18n/ru";
 
 const ME = {
@@ -44,11 +44,21 @@ function stubApi(locale: string) {
   );
 }
 
+function SwitchToRu() {
+  const { setLocale } = useI18n();
+  return (
+    <button type="button" onClick={() => setLocale("ru")}>
+      to-ru
+    </button>
+  );
+}
+
 function renderApp() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={client}>
       <I18nProvider catalogs={CATALOGS} initial="ru">
+        <SwitchToRu />
         <MemoryRouter>
           <App />
         </MemoryRouter>
@@ -69,6 +79,15 @@ test("язык профиля включается после входа", async
   renderApp();
   expect(await screen.findByText("Log out")).toBeTruthy();
   expect(document.documentElement.lang).toBe("en");
+});
+
+test("ручной выбор языка после применения профиля не перебивается", async () => {
+  stubApi("en");
+  renderApp();
+  expect(await screen.findByText("Log out")).toBeTruthy();
+  fireEvent.click(screen.getByText("to-ru"));
+  expect(await screen.findByText("Выйти")).toBeTruthy();
+  expect(document.documentElement.lang).toBe("ru");
 });
 
 test("язык профиля без словаря игнорируется", async () => {

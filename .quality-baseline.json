@@ -1,11 +1,11 @@
 {
-  "coverage": 99.9,
+  "coverage": 99.91,
   "suppressions": [
     "tests/conftest.py: pytest.skip(\"нет Docker: PostgreSQL — в CI\")  # justified: harness-web песочница"
   ],
   "frontend_coverage": {
     "branches": 84.22,
-    "lines": 93.25
+    "lines": 93.28
   },
   "i18n_hardcoded": [
     "frontend/src/App.tsx: let body = <p>Загрузка…</p>;",
@@ -263,8 +263,6 @@
     "frontend/src/pages/landing/content.ts: text: \"Маленькие практики превращаются в квесты с шагами, опытом и сериями. Забота о себе становится привычкой, а не подвигом.\",",
     "frontend/src/pages/landing/content.ts: title: \"Приватность по умолчанию\",",
     "frontend/src/pages/landing/content.ts: text: \"Приватные записи шифруются на вашем устройстве (AES-256). Пароль не покидает браузер — даже мы не можем их прочитать.\",",
-    "frontend/src/pages/landing/content.ts: title: \"Бережная безопасность\",",
-    "frontend/src/pages/landing/content.ts: text: \"Если в записи звучит кризис, Kognis не анализирует, а сразу показывает, куда обратиться за помощью.\",",
     "frontend/src/pages/landing/content.ts: title: \"Запишите, что чувствуете\",",
     "frontend/src/pages/landing/content.ts: text: \"Пара предложений о событии и эмоции из подсказок. Можно сделать запись приватной.\",",
     "frontend/src/pages/landing/content.ts: title: \"Получите бережный разбор\",",
@@ -351,7 +349,6 @@
     "frontend/src/pages/landing/content.ts: q: \"Как работает ИИ-разбор?\",",
     "frontend/src/pages/landing/content.ts: a: \"Вы выбираете период и направление психологии и явно даёте согласие передать записи модели. Разбор показывает паттерны, вопросы и предлагает квест. Без согласия записи никуда не уходят.\",",
     "frontend/src/pages/landing/content.ts: q: \"Что, если мне сейчас очень плохо?\",",
-    "frontend/src/pages/landing/content.ts: a: \"Если в записи звучит кризис, Kognis покажет контакты помощи. В опасной ситуации звоните 112 — не откладывайте.\",",
     "frontend/src/pages/landing/content.ts: q: \"Сколько времени это занимает?\",",
     "frontend/src/pages/landing/content.ts: a: \"Запись — 2–3 минуты, итог дня — полминуты. Регулярность важнее объёма: серия дней помогает сделать это привычкой.\",",
     "frontend/src/privateCrypto.ts: super(\"Неверный пароль или запись повреждена. Пароль восстановить нельзя.\");",

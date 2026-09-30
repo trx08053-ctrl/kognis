@@ -119,6 +119,7 @@ def test_prompt_tells_model_what_to_do_about_threat_to_life(engine: Engine) -> N
     assert "угроза жизни или здоровью" in provider.calls[0][0]
 
 
+@pytest.mark.source
 @pytest.mark.acceptance("kognis-xci", "AC5")
 def test_followup_task_exists_and_architecture_links_the_risk() -> None:
     architecture = (ROOT / "docs" / "ARCHITECTURE.md").read_text(encoding="utf-8")

@@ -18,6 +18,9 @@ from kognis.safety import HelpBlock, help_block
 ROOT = Path(__file__).resolve().parent.parent.parent
 SCRIPT = ROOT / "scripts" / "ai_eval.py"
 
+# скрипт и evals/ не копируются в mutants/ — тесты читают их из репозитория
+pytestmark = pytest.mark.source
+
 
 def load_script() -> ModuleType:
     spec = importlib.util.spec_from_file_location("ai_eval", SCRIPT)

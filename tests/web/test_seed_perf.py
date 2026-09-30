@@ -10,6 +10,9 @@ from fastapi.testclient import TestClient
 
 SCRIPT = Path(__file__).resolve().parents[2] / "scripts" / "seed_perf.py"
 
+# скрипт не копируется в mutants/ — тест читает его из репозитория
+pytestmark = pytest.mark.source
+
 
 def load() -> ModuleType:
     spec = importlib.util.spec_from_file_location("seed_perf", SCRIPT)

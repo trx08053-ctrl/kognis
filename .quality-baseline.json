@@ -4,7 +4,7 @@
     "tests/conftest.py: pytest.skip(\"нет Docker: PostgreSQL — в CI\")  # justified: harness-web песочница"
   ],
   "frontend_coverage": {
-    "branches": 83.38,
-    "lines": 93.1
+    "branches": 84.22,
+    "lines": 93.25
   }
 }

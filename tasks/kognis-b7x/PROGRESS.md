@@ -13,5 +13,9 @@
 
 - Ревью: 2 раунда reviewer, VERDICT: approve (`REVIEW.md`); minor про тест «один раз» устранён.
 
+- Коммит e464137: тесты точных кодов/параметров ошибок доменов и ключей запроса анализа (после evidence tree 4dda371bd5b2,
+  поэтому `task.py done` перезапустит verify). Сессия 2026-09-30: `task.py done` не выполнен — команда требует
+  подтверждения человека, которого не было; код не менялся.
+
 ## Следующий шаг
-`python3 scripts/task.py done kognis-b7x`.
+Разрешить и выполнить `python3 scripts/task.py done kognis-b7x` (перезапустит `just verify`, закроет задачу).

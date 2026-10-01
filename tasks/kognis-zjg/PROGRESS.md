@@ -7,9 +7,10 @@
 | Дата | Шаг | Коммит | Evidence / проверка |
 |---|---|---|---|
 | 2026-10-01 | Домен героев, таблицы `companions`/`companion_postcards` (миграция 0018), сервис, API `/api/companion*` | `47847f8` | `tests/gameplay/test_heroes.py`, `tests/web/test_companion.py` (AC1–AC3) |
-| 2026-10-01 | Интерфейс: SVG-герои, словарь `hero.*`, страницы Home/Analysis/Quests, витест-тесты (AC3, AC4) | (ветка task/kognis-zjg) | `src/heroes.test.tsx` 8 тестов |
+| 2026-10-01 | Интерфейс: SVG-герои, словарь `hero.*`, страницы Home/Analysis/Quests, витест-тесты (AC3, AC4) | `355b907` | `src/heroes.test.tsx` 8 тестов |
 | 2026-10-01 | e2e AC5: скриншоты светлая/тёмная тема + axe без serious/critical | (ветка) | `tests/e2e/test_heroes.py` 2 passed; `.evidence/screens/e2e-heroes-*.png` |
 | 2026-10-01 | Правки после verify: типизация `body` в e2e, покрытие фронтенда (Heroes.tsx 100% строк, ветки 94%) | (ветка) | `just verify` зелёный: tree `9d9f1b8aca44`, evidence `.evidence/9d9f1b8aca449a933788bf36860f8e21b1dd2ed7.json` |
+| 2026-10-01 | Ревью раунд 1 (REVIEW.md): 2 major устранены — plural `hero.days`/`hero.next` базовыми ключами + регресс-тест форм; тест миграции 0018 | (ветка) | `heroes.test.tsx` 9 passed; `test_migration_0018.py` 1 passed; квиз-минор → bd `kognis-wov` |
 
 ## Блокеры и вопросы человеку
 -

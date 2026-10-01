@@ -1,7 +1,7 @@
 # PROGRESS kognis-zjg
 
 ## Следующий шаг
-Ревью `reviewer` → `tasks/kognis-zjg/REVIEW.md`; blocker/major устранить, затем `just task-done kognis-zjg`.
+Ревью раунд 2 (сабагент `reviewer`, diff `main...HEAD` с учётом fixes `f1fca80`, `bf14735`); при `VERDICT: approve` — заполнить раздел 9 TASK.md и `just task-done kognis-zjg`.
 
 ## Сделано
 | Дата | Шаг | Коммит | Evidence / проверка |
@@ -10,7 +10,8 @@
 | 2026-10-01 | Интерфейс: SVG-герои, словарь `hero.*`, страницы Home/Analysis/Quests, витест-тесты (AC3, AC4) | `355b907` | `src/heroes.test.tsx` 8 тестов |
 | 2026-10-01 | e2e AC5: скриншоты светлая/тёмная тема + axe без serious/critical | (ветка) | `tests/e2e/test_heroes.py` 2 passed; `.evidence/screens/e2e-heroes-*.png` |
 | 2026-10-01 | Правки после verify: типизация `body` в e2e, покрытие фронтенда (Heroes.tsx 100% строк, ветки 94%) | (ветка) | `just verify` зелёный: tree `9d9f1b8aca44`, evidence `.evidence/9d9f1b8aca449a933788bf36860f8e21b1dd2ed7.json` |
-| 2026-10-01 | Ревью раунд 1 (REVIEW.md): 2 major устранены — plural `hero.days`/`hero.next` базовыми ключами + регресс-тест форм; тест миграции 0018 | (ветка) | `heroes.test.tsx` 9 passed; `test_migration_0018.py` 1 passed; квиз-минор → bd `kognis-wov` |
+| 2026-10-01 | Ревью раунд 1 (REVIEW.md): 2 major устранены — plural `hero.days`/`hero.next` базовыми ключами + регресс-тест форм; тест миграции 0018 | `f1fca80`, `bf14735` | `heroes.test.tsx` 9 passed; `test_migration_0018.py` 1 passed; квиз-минор → bd `kognis-wov` |
+| 2026-10-01 | Verify после правок + MAP.md | `f0bd195` | `just verify` зелёный: tree `973fed914571`, evidence `.evidence/973fed9145714dab185ef0d98f879db440e5ce13.json` |
 
 ## Блокеры и вопросы человеку
 -

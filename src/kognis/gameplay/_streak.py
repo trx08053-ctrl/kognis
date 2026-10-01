@@ -35,6 +35,8 @@ class StreakRules:
     rules_from: date | None = None
     # дни последней активности перед обрывами, которые пользователь восстановил
     recovered: frozenset[date] = frozenset()
+    # дни покупки дополнительных заморозок (тратятся так же, как заработанные; кап тот же)
+    bought: frozenset[date] = frozenset()
 
 
 @dataclass(frozen=True)
@@ -71,14 +73,24 @@ def _cross(
             used.add(iso_week(first))
             return _Gap(stock)
         return _Gap(stock, first)
+    bought_in_gap = sorted(b for b in rules.bought if first <= b < end)
+    applied = 0
     for offset in range(missed):
         day = first + timedelta(days=offset)
+        # купленная в этот день заморозка пополняет запас прежде, чем день его потратит
+        while applied < len(bought_in_gap) and bought_in_gap[applied] <= day:
+            stock = min(FREEZE_STOCK_MAX, stock + 1)
+            applied += 1
         if day.weekday() in rules.weekend_days:
             continue
         if prev in rules.recovered:
+            # гэп прощён целиком: купленное позже этого гэпа в запасе остаётся
+            stock = min(FREEZE_STOCK_MAX, stock + (len(bought_in_gap) - applied))
             return _Gap(stock)
         if stock == 0:
-            return _Gap(0, day)
+            # обрыв: купленное после дня обрыва достаётся новой серии
+            stock = min(FREEZE_STOCK_MAX, len(bought_in_gap) - applied)
+            return _Gap(stock, day)
         stock -= 1
     return _Gap(stock)
 
@@ -92,7 +104,18 @@ def streak_state(active_days: Iterable[date], today: date, rules: StreakRules) -
     """
     days = sorted({d for d in active_days if d <= today})
     if not days:
-        return StreakState(0, 0, FREEZE_STOCK_START, ())
+        # купленные заморозки не теряются и до первой записи: запас под тем же капом
+        stock = min(
+            FREEZE_STOCK_MAX,
+            FREEZE_STOCK_START + sum(1 for b in rules.bought if b <= today),
+        )
+        return StreakState(0, 0, stock, ())
+
+    def refill(day: date) -> None:
+        """Заморозки, купленные в сам этот день (гэпы закрывает `_cross`)."""
+        nonlocal stock
+        stock = min(FREEZE_STOCK_MAX, stock + sum(1 for b in rules.bought if b == day))
+
     stock, streak, best, earned = FREEZE_STOCK_START, 1, 1, 0
     used: set[tuple[int, int]] = set()
     breaks: list[Break] = []
@@ -104,6 +127,7 @@ def streak_state(active_days: Iterable[date], today: date, rules: StreakRules) -
             if earned % ACTIVE_DAYS_PER_FREEZE == 0:
                 stock = min(FREEZE_STOCK_MAX, stock + 1)
 
+    refill(days[0])
     count_active(days[0])
     for prev, cur in pairwise(days):
         gap = _cross(prev, cur, stock, used, rules)
@@ -114,12 +138,15 @@ def streak_state(active_days: Iterable[date], today: date, rules: StreakRules) -
             breaks.append(Break(prev, gap.broken_on, streak))
             streak = 1
         best = max(best, streak)
+        refill(cur)
         count_active(cur)
     tail = _cross(days[-1], today, stock, set(used), rules)
+    stock = tail.stock
     if tail.broken_on is not None:
         breaks.append(Break(days[-1], tail.broken_on, streak))
         streak = 0
-    return StreakState(streak, best, tail.stock, tuple(breaks))
+    refill(today)  # покупка «сегодня» уже в запасе, даже если день ещё не закрыт
+    return StreakState(streak, best, stock, tuple(breaks))
 
 
 def recoverable_break(state: StreakState, today: date) -> Break | None:

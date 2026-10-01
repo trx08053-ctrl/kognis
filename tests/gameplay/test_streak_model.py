@@ -141,3 +141,52 @@ def test_extra_freeze_days_never_shorten_the_streak(offsets: set[int], weekend_d
     base = streak_state(days, today, NEW).current
     with_weekend = streak_state(days, today, StreakRules(weekend_days=frozenset({weekend_day})))
     assert with_weekend.current >= base  # выходной день ничего не отнимает
+
+
+def test_bought_freeze_covers_the_missed_day_of_purchase() -> None:
+    """Купленная в пропущенный день заморозка закрывает его же и не даёт обрыва."""
+    rules = StreakRules(bought=frozenset({at(1)}))  # вторник пропущен и в нём покупка
+    state = streak_state(d(0, 2), at(2), rules)
+    assert (state.current, state.freezes, state.breaks) == (2, 1, ())  # пн и ср, кап 2
+
+
+def test_bought_freeze_on_active_day_keeps_stock_for_later() -> None:
+    """Покупка в активный день после двух пропусков снова даёт запас к пропущенному дню."""
+    rules = StreakRules(bought=frozenset({at(4)}))  # пн, ср, пт; вт и чт закрыты запасом
+    state = streak_state(d(0, 2, 4), at(5), rules)
+    assert (state.current, state.freezes, state.breaks) == (3, 1, ())
+
+
+def test_bought_freeze_respects_cap() -> None:
+    """Купленное поверх полного запаса не даёт запаса больше двух."""
+    rules = StreakRules(bought=frozenset({at(0), at(2)}))  # обе покупки — активные дни
+    state = streak_state(d(0, 2), at(2), rules)
+    assert state.freezes == 2
+
+
+def test_bought_freeze_after_break_day_belongs_to_new_streak() -> None:
+    """Покупка позже дня обрыва старую серию не спасает, но достаётся новой."""
+    rules = StreakRules(bought=frozenset({at(4)}))  # запас кончился в чт, покупка в пт
+    state = streak_state(d(0, 6), at(6), rules)
+    assert [(b.broken_on, b.streak_before) for b in state.breaks] == [(at(3), 1)]
+    assert state.current == 1
+    assert state.freezes == 1
+
+
+def test_bought_freeze_today_is_in_stock_even_before_activity() -> None:
+    """Покупка «сегодня» уже в запасе, даже если день ещё не закрыт записью."""
+    rules = StreakRules(bought=frozenset({at(3)}))
+    state = streak_state(d(0, 2), at(3), rules)  # вторник закрыт запасом, сегодня — покупка
+    assert state.current == 2
+    assert state.freezes == 2
+
+
+@given(DAY_OFFSETS, st.integers(min_value=0, max_value=30))
+def test_bought_freezes_never_shorten_the_streak(offsets: set[int], idle: int) -> None:
+    """С любыми покупками серия не короче, чем без них (ADR 0006: ничего не отнимается)."""
+    days = [at(n) for n in offsets]
+    today = max(days) + timedelta(days=idle)
+    base = streak_state(days, today, NEW)
+    bought_state = streak_state(days, today, StreakRules(bought=frozenset(days[:3])))
+    assert bought_state.current >= base.current
+    assert bought_state.freezes >= base.freezes

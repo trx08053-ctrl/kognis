@@ -18,10 +18,25 @@ from ._quests import (
     StepUnavailableError,
 )
 from ._quests_app import QuestService
+from ._sparks import (
+    ACHIEVEMENT_SPARKS,
+    SHOP,
+    SPARK_QUEST,
+    SPARK_WEEKLY_GOAL,
+    ShopItem,
+    achievement_sparks,
+    item_by_code,
+    purchase_ref,
+)
+from ._sparks_infra import NotEnoughSparksError, OwnedItemError, SparkRepository
 
 __all__ = [
     "ACHIEVEMENTS",
+    "ACHIEVEMENT_SPARKS",
     "APPEARANCES",
+    "SHOP",
+    "SPARK_QUEST",
+    "SPARK_WEEKLY_GOAL",
     "AchievementDef",
     "AlreadyAcceptedError",
     "CompanionState",
@@ -30,6 +45,8 @@ __all__ = [
     "HeroLine",
     "HeroService",
     "MentorState",
+    "NotEnoughSparksError",
+    "OwnedItemError",
     "Postcard",
     "Progress",
     "Quest",
@@ -43,6 +60,11 @@ __all__ = [
     "QuizStatus",
     "RecoveryOffer",
     "RecoveryUnavailableError",
+    "ShopItem",
+    "SparkRepository",
     "StepOutcome",
     "StepUnavailableError",
+    "achievement_sparks",
+    "item_by_code",
+    "purchase_ref",
 ]

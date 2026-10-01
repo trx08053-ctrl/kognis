@@ -38,6 +38,8 @@ from ._quests import (
     template_by_code,
 )
 from ._quests_infra import NewQuest, QuestRepository, QuizRepository
+from ._sparks import KIND_SPARK_QUEST, SPARK_QUEST
+from ._sparks_infra import SparkRepository
 
 
 class QuestService:
@@ -46,6 +48,7 @@ class QuestService:
         self._quests = QuestRepository(session)
         self._quizzes = QuizRepository(session)
         self._xp = ProgressRepository(session)
+        self._sparks = SparkRepository(session)
 
     @staticmethod
     def library() -> tuple[QuestTemplate, ...]:
@@ -111,6 +114,10 @@ class QuestService:
                 if all(s.done_on is not None or s.idx == idx for s in quest.steps):
                     self._quests.complete(quest_id, today)
                     xp += self._grant(owner_id, KIND_QUEST, str(quest_id), today, QUEST_XP)
+                    # искры за завершённый квест — тем же источником, идемпотентно
+                    self._sparks.add_spark_once(
+                        owner_id, KIND_SPARK_QUEST, str(quest_id), today, SPARK_QUEST
+                    )
         except IntegrityError:
             # параллельная отметка того же шага успела раньше: XP уже начислен ей
             return StepOutcome(self._quests.fetch(quest_id), 0)

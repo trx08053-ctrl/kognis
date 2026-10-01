@@ -33,6 +33,13 @@ from ._domain import (
 )
 from ._infra import ProgressRepository
 from ._quests import KIND_QUEST_STEP, KIND_QUIZ
+from ._sparks import (
+    KIND_SPARK_ACHIEVEMENT,
+    KIND_SPARK_WEEKLY_GOAL,
+    SPARK_WEEKLY_GOAL,
+    achievement_sparks,
+)
+from ._sparks_infra import SparkRepository
 from ._streak import (
     DAYS_IN_WEEK,
     DEFAULT_WEEKLY_GOAL,
@@ -61,6 +68,7 @@ class RecoveryUnavailableError(CodedError):
 class GameplayService:
     def __init__(self, session: Session) -> None:
         self._repo = ProgressRepository(session)
+        self._sparks = SparkRepository(session)
 
     def award_entry(
         self,
@@ -167,7 +175,12 @@ class GameplayService:
     def _state(self, owner_id: int, today: date) -> tuple[StreakState, int, StreakRules]:
         settings = self._repo.settings(owner_id)
         weekend, goal, rules_from = settings or (frozenset[int](), DEFAULT_WEEKLY_GOAL, None)
-        rules = StreakRules(weekend, rules_from, self._repo.recovered_after_days(owner_id))
+        rules = StreakRules(
+            weekend,
+            rules_from,
+            self._repo.recovered_after_days(owner_id),
+            self._sparks.freeze_days(owner_id),
+        )
         return streak_state(self._repo.active_days(owner_id), today, rules), goal, rules
 
     def _grant(self, owner_id: int, today: date) -> Progress:
@@ -176,6 +189,10 @@ class GameplayService:
         ref = week_ref(today)
         if week_done >= goal and not self._repo.has_event(owner_id, KIND_WEEKLY_GOAL, ref):
             self._repo.add_event_once(owner_id, KIND_WEEKLY_GOAL, ref, today, WEEKLY_GOAL_XP)
+            # искры за недельную цель — тем же источником, идемпотентно (ADR 0006: за факт)
+            self._sparks.add_spark_once(
+                owner_id, KIND_SPARK_WEEKLY_GOAL, ref, today, SPARK_WEEKLY_GOAL
+            )
         have = [code for code, _ in self._repo.achievements(owner_id)]
         due = earned_achievements(
             entries=self._repo.count_events(owner_id, KIND_ENTRY),
@@ -185,6 +202,10 @@ class GameplayService:
         ) + achievements_due(self._metrics(owner_id, today), have)
         for code in due:
             self._repo.add_achievement(owner_id, code, today)
+            # искры за уровень достижения (bronze/silver/gold); старые коды — как бронза
+            self._sparks.add_spark_once(
+                owner_id, KIND_SPARK_ACHIEVEMENT, code, today, achievement_sparks(code)
+            )
         return self._snapshot(owner_id, today)
 
     def _snapshot(self, owner_id: int, today: date) -> Progress:

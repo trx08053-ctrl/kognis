@@ -4,6 +4,7 @@ import { Link } from "react-router";
 import { listDayReviews } from "../api";
 import { MoodChart } from "../components/Charts";
 import { ErrorMessage } from "../components/ErrorMessage";
+import { CompanionCard } from "../components/Heroes";
 import { useToday } from "../dates";
 import { PencilIcon } from "../Icons";
 import { EntryForm } from "./home/EntryForm";
@@ -94,6 +95,7 @@ export function greeting(hour: number): string {
 }
 
 export function HomePage({ advanced }: { advanced: boolean }) {
+  const [crisis, setCrisis] = useState(false);
   return (
     <div className="space-y-6">
       <Onboarding />
@@ -101,6 +103,7 @@ export function HomePage({ advanced }: { advanced: boolean }) {
         {greeting(new Date().getHours())}
       </h2>
       <DaySummary />
+      <CompanionCard crisis={crisis} />
       <button
         type="button"
         data-testid="write-cta"
@@ -114,7 +117,7 @@ export function HomePage({ advanced }: { advanced: boolean }) {
         <PencilIcon />
         Записать
       </button>
-      <EntryForm />
+      <EntryForm onCrisis={setCrisis} />
       {advanced && <MoodChart />}
       <section aria-labelledby="entries-title" className="space-y-3">
         <h2 id="entries-title" className="text-xl font-semibold">

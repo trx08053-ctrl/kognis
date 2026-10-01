@@ -113,6 +113,19 @@ export const saveProgressSettings = (settings: {
 export const recoverStreak = (note: string): Promise<Progress> =>
   post<Progress>("/api/progress/recovery", { note });
 
+export type Companion = Schemas["CompanionOut"];
+export type CompanionChoice = Schemas["CompanionIn"];
+
+export const getCompanion = (): Promise<Companion> =>
+  fetch("/api/companion").then((r) => parse<Companion>(r));
+export const saveCompanion = (choice: CompanionChoice): Promise<Companion> =>
+  fetch("/api/companion", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(choice),
+  }).then((r) => parse<Companion>(r));
+export const markStageSeen = (): Promise<Companion> => post<Companion>("/api/companion/seen");
+
 export const listDayReviews = (
   query: { limit?: number; cursor?: string | null } = {},
 ): Promise<Page<DayReview>> => getPage<DayReview>(pageUrl("/api/day-reviews", query));

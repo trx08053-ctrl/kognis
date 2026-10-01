@@ -13,6 +13,7 @@ import {
   submitQuiz,
 } from "../api";
 import { ErrorMessage } from "../components/ErrorMessage";
+import { MentorLine } from "../components/Heroes";
 
 const inputClass = "input";
 const buttonClass = "btn";
@@ -84,15 +85,23 @@ function Library({ active }: { active: Quest[] }) {
   const library = useQuery({ queryKey: ["quest-library"], queryFn: listQuestLibrary });
   const take = useMutation({
     mutationFn: (code: string) => acceptQuest(code),
-    onSuccess: () => client.invalidateQueries({ queryKey: ["quests"] }),
+    onSuccess: () =>
+      Promise.all([
+        client.invalidateQueries({ queryKey: ["quests"] }),
+        client.invalidateQueries({ queryKey: ["companion"] }),
+      ]),
   });
   const open = new Set(active.filter((q) => !q.completed_on).map((q) => q.template_code));
   const items: QuestTemplate[] = library.data ?? [];
+  // одна реплика наставника на экран: по направлению самого свежего принятого квеста из библиотеки
+  const current = active.find((q) => q.template_code && !q.completed_on);
+  const direction = items.find((t) => t.code === current?.template_code)?.direction;
   return (
     <section aria-labelledby="library-title" className="space-y-3">
       <h3 id="library-title" className="text-lg font-semibold">
         Библиотека квестов
       </h3>
+      {direction && <MentorLine direction={direction} />}
       <Problem error={library.error} />
       <ul className="space-y-2" data-testid="library">
         {items.map((t) => (

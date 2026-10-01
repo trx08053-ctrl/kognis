@@ -18,6 +18,7 @@ import {
 } from "../api";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { HelpPanel } from "../components/HelpPanel";
+import { MentorLine } from "../components/Heroes";
 import { shiftDay, useToday } from "../dates";
 import { useI18n } from "../i18n";
 import { AnalysisHistory } from "./analysis/AnalysisHistory";
@@ -79,6 +80,7 @@ function AnalysisView({ analysis, directions }: { analysis: Analysis; directions
       <h3 className="text-lg font-semibold">
         Разбор ({direction}), {analysis.start} — {analysis.end}
       </h3>
+      <MentorLine direction={analysis.direction} />
       <p>{analysis.summary}</p>
       {analysis.changes.length > 0 && (
         <section aria-labelledby={`changes-${analysis.id}`} data-testid="analysis-changes">

@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import { createEntry } from "../../api";
 import { addUnique, ChipToggleGroup, CustomChipInput, splitList } from "../../components/Chips";
 import { ErrorMessage } from "../../components/ErrorMessage";
@@ -38,7 +38,7 @@ const PROTECTION_LABEL: Record<Protection, string> = {
   locked: "Под замком",
   private: "Приватная",
 };
-export function EntryForm() {
+export function EntryForm({ onCrisis }: { onCrisis?: (crisis: boolean) => void }) {
   const client = useQueryClient();
   const [text, setText] = useState("");
   const [tags, setTags] = useState<string[]>([]);
@@ -86,6 +86,10 @@ export function EntryForm() {
       return client.invalidateQueries({ queryKey: ["entries"] });
     },
   });
+
+  // кризисный ответ сервера — героям на этом экране не место
+  const crisis = Boolean(add.data?.help);
+  useEffect(() => onCrisis?.(crisis), [crisis, onCrisis]);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

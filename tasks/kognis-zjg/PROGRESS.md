@@ -1,7 +1,7 @@
 # PROGRESS kognis-zjg
 
 ## Следующий шаг
-Ревью раунд 2 (сабагент `reviewer`, diff `main...HEAD` с учётом fixes `f1fca80`, `bf14735`); при `VERDICT: approve` — заполнить раздел 9 TASK.md и `just task-done kognis-zjg`.
+Ревью approve (раунд 2, REVIEW.md) — `just task-done kognis-zjg`, затем следующая задача серии: kognis-crn (Мотивация 2.0, 4/4).
 
 ## Сделано
 | Дата | Шаг | Коммит | Evidence / проверка |

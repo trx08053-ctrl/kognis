@@ -291,11 +291,11 @@ function Stage({ data }: { data: Companion }) {
         <p className="text-sm muted" data-testid="companion-stage">
           {t("hero.stage.label", { stage: data.stage, title })}
         </p>
-        <p className="text-sm muted">{t("hero.days.other", { count: data.days_total })}</p>
+        <p className="text-sm muted">{t("hero.days", { count: data.days_total })}</p>
         <p className="text-sm muted">
           {data.days_to_next === null
             ? t("hero.next.max")
-            : t("hero.next.other", { count: data.days_to_next })}
+            : t("hero.next", { count: data.days_to_next })}
         </p>
         {data.resting && <p className="text-sm">{t("hero.resting", { name })}</p>}
       </div>

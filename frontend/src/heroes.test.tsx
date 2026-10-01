@@ -97,8 +97,20 @@ test("спутник: стадия, дни, одна реплика по обр�
   show(<CompanionCard />);
   expect((await screen.findByTestId("companion-stage")).textContent).toBe("Стадия 2: Подросток");
   expect(screen.getByTestId("companion-art").getAttribute("aria-label")).toContain("Лис");
+  expect(screen.getByText("9 дней с дневником")).toBeTruthy(); // форма many (не «дня»)
+  expect(screen.getByText("До следующей стадии осталось 12 дней")).toBeTruthy();
   expect(screen.getByTestId("companion-line").textContent).toContain("Итог дня сохранён");
   expect(screen.getByTestId("postcard").textContent).toContain(ru["hero.postcard.cbt_2"]);
+});
+
+test("дни и рост: формы множественного числа по count (one/few)", async () => {
+  stub({
+    "GET /api/companion": () => reply(200, companion({ days_total: 1, days_to_next: 1 })),
+  });
+  show(<CompanionCard />);
+  await screen.findByTestId("companion-stage");
+  expect(screen.getByText("1 день с дневником")).toBeTruthy();
+  expect(screen.getByText("До следующей стадии остался 1 день")).toBeTruthy();
 });
 
 test("высшая стадия и отдых: черепаха, «некуда расти», повторный выбор облика", async () => {

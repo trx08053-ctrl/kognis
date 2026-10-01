@@ -218,10 +218,13 @@ export const ru = {
   "hero.stage.4": "Знаток",
   "hero.stage.5": "Мудрец",
   "hero.stage.label": "Стадия {stage}: {title}",
+  // база для форм множественного числа (docs/I18N.md): t("hero.days", {count}) подставляет .one/.few/.many
+  "hero.days": "{count} дня с дневником",
   "hero.days.one": "{count} день с дневником",
   "hero.days.few": "{count} дня с дневником",
   "hero.days.many": "{count} дней с дневником",
   "hero.days.other": "{count} дня с дневником",
+  "hero.next": "До следующей стадии осталось {count} дня",
   "hero.next.one": "До следующей стадии остался {count} день",
   "hero.next.few": "До следующей стадии осталось {count} дня",
   "hero.next.many": "До следующей стадии осталось {count} дней",

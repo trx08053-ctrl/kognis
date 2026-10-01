@@ -28,6 +28,12 @@ from ._sparks import (
     item_by_code,
     purchase_ref,
 )
+from ._sparks_app import (
+    FreezeStockFullError,
+    ShopPosition,
+    SparksService,
+    SparksState,
+)
 from ._sparks_infra import NotEnoughSparksError, OwnedItemError, SparkRepository
 
 __all__ = [
@@ -41,6 +47,7 @@ __all__ = [
     "AlreadyAcceptedError",
     "CompanionState",
     "EarnedAchievement",
+    "FreezeStockFullError",
     "GameplayService",
     "HeroLine",
     "HeroService",
@@ -61,7 +68,10 @@ __all__ = [
     "RecoveryOffer",
     "RecoveryUnavailableError",
     "ShopItem",
+    "ShopPosition",
     "SparkRepository",
+    "SparksService",
+    "SparksState",
     "StepOutcome",
     "StepUnavailableError",
     "achievement_sparks",

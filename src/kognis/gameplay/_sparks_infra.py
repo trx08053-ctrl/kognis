@@ -19,6 +19,7 @@ from sqlalchemy import (
     insert,
     inspect,
     select,
+    text,
 )
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -124,8 +125,11 @@ class SparkRepository:
         """Списать искры за покупку; уже купленное с этим ref — ошибка без списания.
 
         Владение проверяется раньше баланса: «уже куплено» точнее «не хватает».
-        Проверка баланса и списание в одной транзакции держат неотрицательность баланса.
+        Проверка баланса и списание в одной транзакции держат неотрицательность баланса;
+        на Postgres покупки одного владельца сериализует advisory-лок (READ COMMITTED
+        иначе допустил бы два списания одного баланса), SQLite пишет только один.
         """
+        self._lock_owner(owner_id)
         if self.has_purchase(owner_id, item, ref):
             raise OwnedItemError
         if self.balance(owner_id) < price:
@@ -144,6 +148,12 @@ class SparkRepository:
                 )
         except IntegrityError:
             raise OwnedItemError from None
+
+    def _lock_owner(self, owner_id: int) -> None:
+        """Покупки одного владельца — по очереди (миграции проверок не требует)."""
+        bind = self._session.bind
+        if bind is not None and bind.dialect.name == "postgresql":
+            self._session.execute(text("SELECT pg_advisory_xact_lock(:owner)"), {"owner": owner_id})
 
     def freeze_days(self, owner_id: int) -> frozenset[date]:
         """Дни покупки заморозок: запас серии пополняется в эти даты (кап в _streak).

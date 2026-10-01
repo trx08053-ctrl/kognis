@@ -35,6 +35,7 @@ from ._quests import quests_router
 from ._quizzes import quizzes_router
 from ._reviews import day_review_router
 from ._settings import settings_router
+from ._sparks import sparks_router
 
 HERE = Path(__file__).resolve().parent
 # сборка фронтенда: <корень проекта>/frontend/dist (в образе — /app/frontend/dist)
@@ -135,6 +136,7 @@ def create_app(
     app.include_router(day_review_router(db, user_today))
     app.include_router(progress_router(db, user_today))
     app.include_router(companion_router(db, user_today))
+    app.include_router(sparks_router(db, user_today))
     provider = ai_provider or get_provider()
     app.include_router(analysis_router(db, provider, user_today))
     app.include_router(quests_router(db, user_today, provider))

@@ -74,7 +74,7 @@
   - `make_engine` — `src/kognis/db/__init__.py`
   - `metadata` — `src/kognis/db/__init__.py`
   - `transaction` — `src/kognis/db/__init__.py`
-- Тесты: `tests/diary/test_boundaries.py`, `tests/diary/test_diary.py`, `tests/diary/test_period.py`, `tests/gameplay/test_heroes.py`, `tests/gameplay/test_migration_0016.py`, `tests/gameplay/test_migration_0017.py`, `tests/gameplay/test_mutants.py`, `tests/gameplay/test_quests.py`, `tests/gameplay/test_service.py`, `tests/gameplay/test_xp_balance.py`, `tests/gameplay/test_xp_ownership.py`, `tests/integration/test_postgres.py`, `tests/users/test_locale.py`, `tests/users/test_users.py`, `tests/web/test_achievements.py`, `tests/web/test_hardening.py`
+- Тесты: `tests/diary/test_boundaries.py`, `tests/diary/test_diary.py`, `tests/diary/test_period.py`, `tests/gameplay/test_heroes.py`, `tests/gameplay/test_migration_0016.py`, `tests/gameplay/test_migration_0017.py`, `tests/gameplay/test_migration_0018.py`, `tests/gameplay/test_mutants.py`, `tests/gameplay/test_quests.py`, `tests/gameplay/test_service.py`, `tests/gameplay/test_xp_balance.py`, `tests/gameplay/test_xp_ownership.py`, `tests/integration/test_postgres.py`, `tests/users/test_locale.py`, `tests/users/test_users.py`, `tests/web/test_achievements.py`, `tests/web/test_hardening.py`
 
 ## `kognis.diary`
 
@@ -132,7 +132,7 @@
   - `RecoveryUnavailableError` — `src/kognis/gameplay/_app.py`
   - `StepOutcome` — `src/kognis/gameplay/_quests.py`
   - `StepUnavailableError` — `src/kognis/gameplay/_quests.py`
-- Тесты: `tests/gameplay/test_domain.py`, `tests/gameplay/test_heroes.py`, `tests/gameplay/test_migration_0016.py`, `tests/gameplay/test_migration_0017.py`, `tests/gameplay/test_mutants.py`, `tests/gameplay/test_quests.py`, `tests/gameplay/test_service.py`, `tests/gameplay/test_streak_model.py`, `tests/gameplay/test_xp_balance.py`, `tests/gameplay/test_xp_ownership.py`, `tests/security/test_domain_limits.py`, `tests/web/test_achievements.py`, `tests/web/test_gameplay.py`
+- Тесты: `tests/gameplay/test_domain.py`, `tests/gameplay/test_heroes.py`, `tests/gameplay/test_migration_0016.py`, `tests/gameplay/test_migration_0017.py`, `tests/gameplay/test_migration_0018.py`, `tests/gameplay/test_mutants.py`, `tests/gameplay/test_quests.py`, `tests/gameplay/test_service.py`, `tests/gameplay/test_streak_model.py`, `tests/gameplay/test_xp_balance.py`, `tests/gameplay/test_xp_ownership.py`, `tests/security/test_domain_limits.py`, `tests/web/test_achievements.py`, `tests/web/test_gameplay.py`
 
 ## `kognis.safety`
 

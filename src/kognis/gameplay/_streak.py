@@ -104,12 +104,8 @@ def streak_state(active_days: Iterable[date], today: date, rules: StreakRules) -
     """
     days = sorted({d for d in active_days if d <= today})
     if not days:
-        # купленные заморозки не теряются и до первой записи: запас под тем же капом
-        stock = min(
-            FREEZE_STOCK_MAX,
-            FREEZE_STOCK_START + sum(1 for b in rules.bought if b <= today),
-        )
-        return StreakState(0, 0, stock, ())
+        # без единого активного дня запас стартовый (он же кап) — покупать заморозку не у чего
+        return StreakState(0, 0, FREEZE_STOCK_START, ())
 
     def refill(day: date) -> None:
         """Заморозки, купленные в сам этот день (гэпы закрывает `_cross`)."""

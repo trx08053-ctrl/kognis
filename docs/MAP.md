@@ -74,7 +74,7 @@
   - `make_engine` — `src/kognis/db/__init__.py`
   - `metadata` — `src/kognis/db/__init__.py`
   - `transaction` — `src/kognis/db/__init__.py`
-- Тесты: `tests/diary/test_boundaries.py`, `tests/diary/test_diary.py`, `tests/diary/test_period.py`, `tests/e2e/test_sparks.py`, `tests/gameplay/test_heroes.py`, `tests/gameplay/test_migration_0016.py`, `tests/gameplay/test_migration_0017.py`, `tests/gameplay/test_migration_0018.py`, `tests/gameplay/test_migration_0019.py`, `tests/gameplay/test_mutants.py`, `tests/gameplay/test_quests.py`, `tests/gameplay/test_service.py`, `tests/gameplay/test_sparks.py`, `tests/gameplay/test_xp_balance.py`, `tests/gameplay/test_xp_ownership.py`, `tests/integration/test_postgres.py`, `tests/users/test_locale.py`, `tests/users/test_users.py`, `tests/web/test_achievements.py`, `tests/web/test_hardening.py`, `tests/web/test_sparks.py`
+- Тесты: `tests/diary/test_boundaries.py`, `tests/diary/test_diary.py`, `tests/diary/test_period.py`, `tests/e2e/test_sparks.py`, `tests/gameplay/test_heroes.py`, `tests/gameplay/test_migration_0016.py`, `tests/gameplay/test_migration_0017.py`, `tests/gameplay/test_migration_0018.py`, `tests/gameplay/test_migration_0019.py`, `tests/gameplay/test_migration_0020.py`, `tests/gameplay/test_mutants.py`, `tests/gameplay/test_quests.py`, `tests/gameplay/test_service.py`, `tests/gameplay/test_sparks.py`, `tests/gameplay/test_xp_balance.py`, `tests/gameplay/test_xp_ownership.py`, `tests/integration/test_postgres.py`, `tests/users/test_locale.py`, `tests/users/test_users.py`, `tests/web/test_achievements.py`, `tests/web/test_hardening.py`, `tests/web/test_sparks.py`
 
 ## `kognis.diary`
 
@@ -149,7 +149,7 @@
   - `achievement_sparks` — `src/kognis/gameplay/_sparks.py`
   - `item_by_code` — `src/kognis/gameplay/_sparks.py`
   - `purchase_ref` — `src/kognis/gameplay/_sparks.py`
-- Тесты: `tests/e2e/test_sparks.py`, `tests/gameplay/test_daily.py`, `tests/gameplay/test_domain.py`, `tests/gameplay/test_heroes.py`, `tests/gameplay/test_migration_0016.py`, `tests/gameplay/test_migration_0017.py`, `tests/gameplay/test_migration_0018.py`, `tests/gameplay/test_migration_0019.py`, `tests/gameplay/test_mutants.py`, `tests/gameplay/test_quests.py`, `tests/gameplay/test_service.py`, `tests/gameplay/test_sparks.py`, `tests/gameplay/test_streak_model.py`, `tests/gameplay/test_xp_balance.py`, `tests/gameplay/test_xp_ownership.py`, `tests/integration/test_postgres.py`, `tests/security/test_domain_limits.py`, `tests/web/test_achievements.py`, `tests/web/test_gameplay.py`, `tests/web/test_sparks.py`
+- Тесты: `tests/e2e/test_sparks.py`, `tests/gameplay/test_daily.py`, `tests/gameplay/test_domain.py`, `tests/gameplay/test_heroes.py`, `tests/gameplay/test_migration_0016.py`, `tests/gameplay/test_migration_0017.py`, `tests/gameplay/test_migration_0018.py`, `tests/gameplay/test_migration_0019.py`, `tests/gameplay/test_migration_0020.py`, `tests/gameplay/test_mutants.py`, `tests/gameplay/test_quests.py`, `tests/gameplay/test_service.py`, `tests/gameplay/test_sparks.py`, `tests/gameplay/test_streak_model.py`, `tests/gameplay/test_xp_balance.py`, `tests/gameplay/test_xp_ownership.py`, `tests/integration/test_postgres.py`, `tests/security/test_domain_limits.py`, `tests/web/test_achievements.py`, `tests/web/test_gameplay.py`, `tests/web/test_sparks.py`
 
 ## `kognis.safety`
 

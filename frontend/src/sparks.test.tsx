@@ -137,6 +137,17 @@ test("каждый аксессуар каталога рисуется на с�
   }
 });
 
+test("купленный фон рисуется за спутником", () => {
+  for (const code of ["bg_stars", "bg_forest"]) {
+    const { unmount } = render(
+      <CompanionArt appearance="owl" stage={2} label="тест" background={code} />,
+    );
+    expect(screen.getByTestId("companion-background")).toBeTruthy();
+    expect(screen.getByTestId("companion-art").getAttribute("data-background")).toBe(code);
+    unmount();
+  }
+});
+
 test("неизвестный код товара не ломает витрину", async () => {
   stub({
     "GET /api/sparks": () =>

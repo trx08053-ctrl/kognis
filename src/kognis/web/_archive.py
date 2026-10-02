@@ -5,6 +5,7 @@
 """
 
 import datetime as dt
+from calendar import monthrange
 from collections.abc import Callable
 
 from fastapi import APIRouter
@@ -18,12 +19,24 @@ from kognis.users import User
 from ._deps import Authed
 
 PROTECTION_PLAIN = "plain"
-MONTH_AGO_DAYS = 30  # «В этот день»: запись месяц назад
-YEAR_AGO_DAYS = 365  # и год назад
-MOOD_YEAR_DAYS = 365  # мозаика настроения: последние 365 дней
+MOOD_YEAR_DAYS = 365  # мозаика настроения: окно последних 365 дней
 
 AGO_MONTH = "month"  # интерфейс сам подпишет, как давно была запись
 AGO_YEAR = "year"
+
+
+def _year_ago(day: dt.date) -> dt.date:
+    """Календарный юбилей года; 29 февраля → 28 февраля невисокосного года."""
+    try:
+        return day.replace(year=day.year - 1)
+    except ValueError:
+        return day.replace(year=day.year - 1, day=28)
+
+
+def _month_ago(day: dt.date) -> dt.date:
+    """Тот же день предыдущего календарного месяца, кламп к его длине (31 → 28/29/30)."""
+    year, month = (day.year, day.month - 1) if day.month > 1 else (day.year - 1, 12)
+    return dt.date(year, month, min(day.day, monthrange(year, month)[1]))
 
 
 class ArchiveEntryOut(BaseModel):
@@ -53,13 +66,12 @@ def archive_router(db: Engine, today: Callable[[User], dt.date]) -> APIRouter:
 
     @router.get("/on-this-day")
     def on_this_day(user: Authed) -> OnThisDayOut:
-        """Свои открытые записи за этот день год и месяц назад."""
+        """Свои открытые записи за этот день год и месяц назад (календарные юбилеи)."""
         day = today(user)
         with transaction(db) as session:
             service = DiaryService(session)
             found: list[ArchiveEntryOut] = []
-            for ago, offset in ((AGO_YEAR, YEAR_AGO_DAYS), (AGO_MONTH, MONTH_AGO_DAYS)):
-                target = day - dt.timedelta(days=offset)
+            for ago, target in ((AGO_YEAR, _year_ago(day)), (AGO_MONTH, _month_ago(day))):
                 for entry in service.list_entries_between(user.id, target, target):
                     if entry.protection != PROTECTION_PLAIN:
                         continue  # под замком и приватные — не для архива

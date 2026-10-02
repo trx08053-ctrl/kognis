@@ -105,3 +105,26 @@ def test_mood_year_covers_last_365_days(api: TestClient, clock: Clock) -> None:
         TODAY.isoformat(): 9,
         (TODAY - dt.timedelta(days=364)).isoformat(): 3,
     }
+
+
+def test_on_this_day_uses_calendar_anniversaries(api: TestClient, clock: Clock) -> None:
+    """Юбилеи календарные, не «365 дней»: 29 февраля и кламп длины месяца (ревью 1)."""
+    day = dt.date(2028, 3, 1)
+    clock.day = day
+    # год назад: 1 марта 2027 (не 2027-03-02, как дал бы timedelta(365) через 29.02.2028)
+    # месяц назад: 1 февраля 2028
+    add_entry(api, dt.date(2027, 3, 1), "календарный год")
+    add_entry(api, dt.date(2028, 2, 1), "календарный месяц")
+    add_entry(api, dt.date(2027, 3, 2), "ошибка timedelta(365)")  # не показывается
+    texts = {e["text"] for e in api.get("/api/archive/on-this-day").json()["entries"]}
+    assert texts == {"календарный год", "календарный месяц"}
+
+    clock.day = dt.date(2028, 3, 31)  # «месяц назад» = 29.02 (31-е клампится к длине месяца)
+    add_entry(api, dt.date(2028, 2, 29), "29 февраля")
+    texts = {e["text"] for e in api.get("/api/archive/on-this-day").json()["entries"]}
+    assert "29 февраля" in texts
+
+    clock.day = dt.date(2028, 2, 29)  # 29 февраля → юбилей года выпадает на 28.02.2027
+    add_entry(api, dt.date(2027, 2, 28), "28 февраля невисокосного")
+    texts = {e["text"] for e in api.get("/api/archive/on-this-day").json()["entries"]}
+    assert "28 февраля невисокосного" in texts

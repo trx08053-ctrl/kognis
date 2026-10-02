@@ -245,8 +245,6 @@ export const ru = {
   "spark.item.bg_stars.hint": "Звёздное небо за спутником",
   "spark.item.bg_forest": "Фон «Лес»",
   "spark.item.bg_forest.hint": "Тихая опушка за спутником",
-  "spark.item.theme_slate": "Тема дневника «Графит»",
-  "spark.item.theme_slate.hint": "Спокойная тёмная палитра дневника",
   "spark.item.freeze": "Заморозка серии",
   "spark.item.freeze.hint": "Одна дополнительная заморозка на неделю",
   "spark.item.freeze.note": "запас всегда не больше {max}",

@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, expect, test, vi } from "vitest";
+import { shiftDay } from "./dates";
 import { ru } from "./i18n/ru";
 import { ArchivePage } from "./pages/ArchivePage";
 
@@ -82,19 +83,23 @@ test("«В этот день»: пусто — мягкая подсказка �
 });
 
 test("мозаика: клетка дня с итогом окрашена, счётчик дней сходится", async () => {
-  const today = new Date();
-  const iso = (offset: number) => {
-    const day = new Date(today);
-    day.setDate(today.getDate() - offset);
-    return day.toISOString().slice(0, 10);
-  };
+  const today = "2026-10-01"; // «сегодня» приходит с сервера — по поясу профиля, не из браузера
   stub({
+    "GET /api/me": () =>
+      reply(200, {
+        id: 1,
+        email: "a@example.com",
+        advanced: false,
+        timezone: "UTC",
+        locale: "ru",
+        today,
+      }),
     "GET /api/archive/on-this-day": () => reply(200, { entries: [] }),
     "GET /api/archive/mood-year": () =>
       reply(200, {
         days: [
-          { date: iso(0), mood: 9 },
-          { date: iso(10), mood: 2 },
+          { date: shiftDay(today, 0), mood: 9 },
+          { date: shiftDay(today, -10), mood: 2 },
         ],
       }),
   });
@@ -115,6 +120,15 @@ test("мозаика: клетка дня с итогом окрашена, сч
 
 test("ошибка сервера: сообщение вместо падения страницы", async () => {
   stub({
+    "GET /api/me": () =>
+      reply(200, {
+        id: 1,
+        email: "a@example.com",
+        advanced: false,
+        timezone: "UTC",
+        locale: "ru",
+        today: "2026-10-01",
+      }),
     "GET /api/archive/on-this-day": () =>
       reply(500, { detail: { code: "server.internal", params: {} } }),
     "GET /api/archive/mood-year": () =>

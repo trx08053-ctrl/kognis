@@ -60,7 +60,8 @@ def test_catalog_shape(api: TestClient) -> None:
     assert body["balance"] == 0
     assert body["freezes"] == 2  # стартовый запас заморозок
     codes = {item["code"] for item in body["catalog"]}
-    assert {"scarf", "hat", "bg_stars", "theme_slate", "freeze"} <= codes
+    assert {"scarf", "hat", "bg_stars", "bg_forest", "freeze"} <= codes
+    assert "theme_slate" not in codes  # темы без эффекта в каталоге нет (TASK kognis-crn, 8)
 
 
 @pytest.mark.acceptance("kognis-crn", "AC1")
@@ -70,7 +71,7 @@ def test_accruals_and_insufficient_balance(api: TestClient, clock: Clock) -> Non
         entry(api, clock, MON + dt.timedelta(days=offset))
     body = catalog(api)
     assert body["balance"] == 40  # недельная цель 20 + first_entry 10 + streak_3 10
-    refused = buy(api, "theme_slate")  # стоит 100 — не хватает
+    refused = buy(api, "bg_forest")  # стоит 75 — не хватает
     assert refused.status_code == 409
     assert refused.json()["detail"]["code"] == "sparks.not_enough"
     assert catalog(api)["balance"] == 40  # без списания

@@ -22,14 +22,13 @@ KIND_SPARK_ACHIEVEMENT = "achievement"
 KIND_SPARK_QUEST = "quest"
 KIND_SPARK_DAILY = "daily_quest"
 
-# товары: косметика спутника и дневника, дополнительная заморозка серии
+# товары: косметика спутника и дополнительная заморозка серии; темы дневника — позже (см. SHOP)
 ITEM_ACCESSORY = "accessory"
 ITEM_BACKGROUND = "background"
-ITEM_THEME = "theme"
 ITEM_FREEZE = "freeze"
 
 COSMETIC_ONCE = "once"  # ref косметики: покупается один раз навсегда
-FREEZE_WEEKS_LIMIT = 1  # заморозка — не чаще одной покупки в ISO-неделю
+# недельный лимит заморозок держится уникальностью owner+item+ref (ref = ISO-неделя)
 
 
 @dataclass(frozen=True)
@@ -45,9 +44,9 @@ SHOP: tuple[ShopItem, ...] = (
     ShopItem("backpack", ITEM_ACCESSORY, 50),
     ShopItem("bg_stars", ITEM_BACKGROUND, 75),
     ShopItem("bg_forest", ITEM_BACKGROUND, 75),
-    ShopItem("theme_slate", ITEM_THEME, 100),
     ShopItem("freeze", ITEM_FREEZE, 30),
 )
+# темы дневника появятся в каталоге, когда будут отличаться от системной тёмной (TASK kognis-crn, 8)
 
 
 def item_by_code(code: str) -> ShopItem:

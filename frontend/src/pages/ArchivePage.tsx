@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { getMoodYear, getOnThisDay } from "../api";
 import { ErrorMessage } from "../components/ErrorMessage";
+import { shiftDay, useToday } from "../dates";
 import { formatDate, useI18n } from "../i18n";
 
 const MOOD_COLORS = [
@@ -62,17 +63,16 @@ function OnThisDay() {
 
 function MoodMosaic() {
   const { t } = useI18n();
+  const today = useToday(); // «сегодня» сервера — по часовому поясу профиля (не браузера)
   const year = useQuery({ queryKey: ["mood-year"], queryFn: getMoodYear, retry: false });
   const byDay = new Map(year.data?.days.map((d) => [d.date, d.mood]) ?? []);
-  // 365 клеток: с сегодня назад; дни без итога — пустые
+  // 365 клеток: с сегодня назад (shiftDay — полдень UTC, без сдвигов на летнее время)
   const cells: { date: string; mood: number | null }[] = [];
-  const start = new Date();
-  for (let offset = 364; offset >= 0; offset--) {
-    const day = new Date(start);
-    day.setDate(start.getDate() - offset);
-    const iso = day.toISOString().slice(0, 10);
+  for (let offset = 364; offset >= 0 && today; offset--) {
+    const iso = shiftDay(today, -offset);
     cells.push({ date: iso, mood: byDay.get(iso) ?? null });
   }
+  if (!today) return null; // «сегодня» ещё не загружено — мозаику не рисуем
   return (
     <section aria-labelledby="mood-year-title" className="card space-y-3">
       <h2 id="mood-year-title" className="text-xl font-semibold">

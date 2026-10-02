@@ -22,6 +22,13 @@ export function useOwnedAccessory(): string | null {
   return owned?.code ?? null;
 }
 
+// купленный фон рисуется за спутником; из нескольких — первый по каталогу
+export function useOwnedBackground(): string | null {
+  const sparks = useSparks();
+  const owned = sparks.data?.catalog.find((i) => i.kind === "background" && i.owned);
+  return owned?.code ?? null;
+}
+
 function Position({
   item,
   onBuy,

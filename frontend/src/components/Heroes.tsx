@@ -5,7 +5,7 @@ import { type FormEvent, type ReactNode, useEffect, useState } from "react";
 import { type Companion, getCompanion, markStageSeen, saveCompanion } from "../api";
 import { isKey, type Key, useI18n } from "../i18n";
 import { ErrorMessage } from "./ErrorMessage";
-import { useOwnedAccessory } from "./Sparks";
+import { useOwnedAccessory, useOwnedBackground } from "./Sparks";
 
 const APPEARANCES = ["fox", "owl", "turtle", "whale"] as const;
 type Appearance = (typeof APPEARANCES)[number];
@@ -65,6 +65,29 @@ function Ears({ kind }: { kind: Appearance }) {
 
 const ACCESSORIES = ["scarf", "hat", "backpack"] as const;
 type Accessory = (typeof ACCESSORIES)[number];
+const BACKGROUNDS = ["bg_stars", "bg_forest"] as const;
+type Background = (typeof BACKGROUNDS)[number];
+
+// купленные фоны из магазина искр: декор за спутником у любого облика
+function BackgroundArt({ kind }: { kind: Background }) {
+  if (kind === "bg_stars") {
+    return (
+      <g data-testid="companion-background">
+        <circle cx="24" cy="22" r="1.5" fill="#fbbf24" />
+        <circle cx="92" cy="18" r="1.2" fill="#fbbf24" />
+        <circle cx="18" cy="86" r="1.6" fill="#e0f2fe" />
+        <circle cx="100" cy="78" r="1.3" fill="#e0f2fe" />
+        <circle cx="60" cy="12" r="1.1" fill="#fbbf24" />
+      </g>
+    );
+  }
+  return (
+    <g data-testid="companion-background">
+      <path d="M8 104 l20 -26 l16 20 l14 -18 l22 24z" fill="#2f7a54" opacity="0.45" />
+      <path d="M60 104 l18 -22 l24 22z" fill="#22a06b" opacity="0.45" />
+    </g>
+  );
+}
 
 // аксессуары из магазина искр: рисуются поверх спутника у любого облика
 function AccessoryArt({ kind }: { kind: Accessory }) {
@@ -110,14 +133,17 @@ export function CompanionArt({
   stage,
   label,
   accessory = null,
+  background = null,
 }: {
   appearance: Appearance;
   stage: number;
   label: string;
   accessory?: string | null;
+  background?: string | null;
 }) {
   const radius = 24 + stage * 3;
   const worn = ACCESSORIES.find((a) => a === accessory);
+  const scene = BACKGROUNDS.find((b) => b === background);
   return (
     <svg
       viewBox="0 0 120 120"
@@ -127,7 +153,9 @@ export function CompanionArt({
       data-testid="companion-art"
       data-stage={stage}
       data-accessory={worn ?? "none"}
+      data-background={scene ?? "none"}
     >
+      {scene && <BackgroundArt kind={scene} />}
       {stage >= 5 && (
         <circle cx="60" cy="64" r="54" fill="none" stroke="#f59e0b" strokeWidth="3" opacity="0.7" />
       )}
@@ -321,6 +349,7 @@ function Stage({ data }: { data: Companion }) {
   const { t } = useI18n();
   const text = useText();
   const accessory = useOwnedAccessory();
+  const background = useOwnedBackground();
   const name = data.name ?? "";
   const title = text(`hero.stage.${data.stage}`);
   return (
@@ -329,6 +358,7 @@ function Stage({ data }: { data: Companion }) {
         appearance={asAppearance(data.appearance)}
         stage={data.stage}
         accessory={accessory}
+        background={background}
         label={t("hero.art.label", {
           name,
           appearance: text(`hero.appearance.${asAppearance(data.appearance)}`),

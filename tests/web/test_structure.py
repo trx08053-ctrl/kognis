@@ -26,5 +26,5 @@ def test_each_router_lives_in_its_own_file() -> None:
     }
     found = {name: rs for name, rs in routers.items() if rs}
     assert all(len(rs) == 1 for rs in found.values()), found
-    assert len(found) == 11, found  # +_daily.py (kognis-crn: маршрутизатор квеста дня)
+    assert len(found) == 12, found  # +_archive.py (kognis-crn: маршрутизатор архива)
     assert "_app.py" not in found  # _app.py только собирает приложение

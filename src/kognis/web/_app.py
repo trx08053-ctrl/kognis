@@ -24,6 +24,7 @@ from kognis.db import make_engine
 from kognis.users import User
 
 from ._analysis import analysis_router
+from ._archive import archive_router
 from ._auth import auth_router
 from ._companion import companion_router
 from ._daily import daily_router
@@ -139,6 +140,7 @@ def create_app(
     app.include_router(companion_router(db, user_today))
     app.include_router(sparks_router(db, user_today))
     app.include_router(daily_router(db, user_today))
+    app.include_router(archive_router(db, user_today))
     provider = ai_provider or get_provider()
     app.include_router(analysis_router(db, provider, user_today))
     app.include_router(quests_router(db, user_today, provider))

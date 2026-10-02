@@ -94,3 +94,30 @@ NOT CHECKED: запускал только verify --status и check_scope (са�
 | Раунд 2 MINOR: докстринг `_sparks.py` | «косметика спутника, фоны, заморозка серии» | (раунд 2) |
 | Раунд 2 MINOR: theme_slate в интеграционном тесте | Заменён на `bg_forest` (75) | (раунд 2) |
 | Раунд 2 MINOR: цепочка фона не покрыта | Вит-тест «владение → useOwnedBackground → карточка спутника» | (раунд 2) |
+
+---
+
+## Ревью 3 · 2026-10-02 · 5e887b6
+
+```
+VERDICT: approve
+EVIDENCE: verified — scripts/verify.py --status exit 0, evidence .evidence/ebe09675542506b43f12ad906bec7332174ceb9f.json:
+  head 5e887b664233 (= HEAD ветки task/kognis-crn), tree ebe096755425, ok=true, dirty=false,
+  все 20 проверок exit 0, 595 тестов. git status чист, незакоммиченного нет.
+BLOCKERS: (нет)
+MAJOR: (нет)
+MINOR:
+     - tasks/kognis-crn/REVIEW.md:96 — файл без завершающего перевода строки (стиль был и до
+       правок, diff это наследует); тривиально.
+NOT CHECKED: e2e-скриншоты и визуальный рендер фонов в браузере; tests/integration/test_postgres.py
+  в контейнере Postgres (правка в 1 строку читал, не гонял); мутационное тестирование; файлы
+  kognis-zjg в diff main...HEAD — вне зоны ревью (база фактически 877db6a); нестабильность
+  test_concurrent_purchases_never_go_negative из раунда 2 — в полном прогоне verify (6:15,
+  595 тестов) не воспроизвелась.
+```
+
+Ревьюер подтвердил по факту все три major раунда 2: tsbuildinfo untracked (blob удалён в 5e887b6,
+check-ignore срабатывает по .gitignore:42), сигнал check_scope ушёл («расхождений нет», причина —
+построчный парсинг `**Модули:**` в check_scope.py:29–31), таблица «Устранено» и оба отчёта
+раундов фактически точны (blob/коммиты/tree сверены с git и .evidence). Дифф 054b022..HEAD — только
+правки раунда 2; вит-тест цепочки фона 9/9 зелёный; ослаблений нет.

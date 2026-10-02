@@ -1,8 +1,8 @@
 # PROGRESS kognis-crn
 
 ## Следующий шаг
-Ревью сабагентом `reviewer` → `tasks/kognis-crn/REVIEW.md`; blocker/major устранить, затем
-заполнить раздел 9 TASK.md и `just task-done kognis-crn`.
+Ревью approve (раунд 3, REVIEW.md). `just task-done kognis-crn`; далее — `just land` (перенос веток
+в main) — решение человека.
 
 ## Сделано
 | Дата | Шаг | Коммит | Evidence / проверка |

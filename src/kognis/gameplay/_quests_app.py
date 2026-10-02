@@ -8,6 +8,14 @@ from sqlalchemy.orm import Session
 from kognis.errors import CodedValueError
 
 from ._app import GameplayService
+from ._daily import (
+    DAILY_QUEST_XP,
+    KIND_DAILY_QUEST,
+    DailyState,
+    options_for,
+    weekly_recommendation,
+)
+from ._daily_infra import DailyRepository
 from ._infra import ProgressRepository
 from ._quests import (
     KIND_QUEST,
@@ -38,8 +46,9 @@ from ._quests import (
     template_by_code,
 )
 from ._quests_infra import NewQuest, QuestRepository, QuizRepository
-from ._sparks import KIND_SPARK_QUEST, SPARK_QUEST
+from ._sparks import KIND_SPARK_DAILY, KIND_SPARK_QUEST, SPARK_DAILY, SPARK_QUEST
 from ._sparks_infra import SparkRepository
+from ._streak import week_ref
 
 
 class QuestService:
@@ -49,6 +58,7 @@ class QuestService:
         self._quizzes = QuizRepository(session)
         self._xp = ProgressRepository(session)
         self._sparks = SparkRepository(session)
+        self._daily = DailyRepository(session)
 
     @staticmethod
     def library() -> tuple[QuestTemplate, ...]:
@@ -150,6 +160,42 @@ class QuestService:
         if reward:
             GameplayService(self._session).refresh(owner_id, today)  # «Исследователь»
         return QuizOutcome(xp, QuizAnswers(code, today, answers))
+
+    def daily(self, owner_id: int, today: date) -> DailyState:
+        """Задание дня: три варианта, один выбор в день; штрафа за невыполнение нет."""
+        pick = self._daily.pick_on(owner_id, today)
+        return DailyState(
+            options=options_for(owner_id, today),
+            picked=pick[0] if pick else None,
+            done=bool(pick and pick[1]),
+        )
+
+    def choose_daily(self, owner_id: int, code: str, today: date) -> DailyState:
+        """Выбрать одно из трёх заданий дня; повторный выбор в этот день — ошибка."""
+        if code not in options_for(owner_id, today):
+            raise CodedValueError("gameplay.daily_unknown")
+        self._daily.choose(owner_id, today, code)  # уже выбрано → DailyDoneTodayError
+        return self.daily(owner_id, today)
+
+    def complete_daily(self, owner_id: int, today: date) -> DailyState:
+        """Отметить выбранное задание выполненным: +XP и искры один раз за день."""
+        if self._daily.pick_on(owner_id, today) is None:
+            raise CodedValueError("gameplay.daily_not_picked")
+        if self._daily.mark_done(owner_id, today):  # повтор — ничего не начисляется
+            ref = today.isoformat()
+            self._xp.add_event_once(owner_id, KIND_DAILY_QUEST, ref, today, DAILY_QUEST_XP)
+            self._sparks.add_spark_once(owner_id, KIND_SPARK_DAILY, ref, today, SPARK_DAILY)
+        GameplayService(self._session).refresh(owner_id, today)
+        return self.daily(owner_id, today)
+
+    def weekly(self, owner_id: int, today: date) -> str | None:
+        """Квест недели от наставника: детерминированный, не из уже принятых открытых."""
+        open_codes = frozenset(
+            q.template_code
+            for q in self._quests.list_for(owner_id)
+            if q.template_code and q.completed_on is None
+        )
+        return weekly_recommendation(owner_id, week_ref(today), open_codes)
 
     def _accept(self, owner_id: int, new: NewQuest, today: date) -> Quest:
         if self._quests.has_open(owner_id, new.source, new.source_ref):

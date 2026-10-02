@@ -13,12 +13,14 @@ from ._streak import week_ref
 
 SPARK_WEEKLY_GOAL = 20  # недельная цель по дням с дневником
 SPARK_QUEST = 15  # завершённый квест
+SPARK_DAILY = 5  # выполненное задание дня
 ACHIEVEMENT_SPARKS = {1: 10, 2: 25, 3: 50}  # уровень достижения (bronze/silver/gold)
 
 # источник события искр в журнале: уникальность (owner, kind, ref) исключает двойное начисление
 KIND_SPARK_WEEKLY_GOAL = "weekly_goal"
 KIND_SPARK_ACHIEVEMENT = "achievement"
 KIND_SPARK_QUEST = "quest"
+KIND_SPARK_DAILY = "daily_quest"
 
 # товары: косметика спутника и дневника, дополнительная заморозка серии
 ITEM_ACCESSORY = "accessory"

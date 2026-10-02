@@ -1,6 +1,8 @@
 """Модуль gameplay: опыт, уровни, серия, достижения, квесты, квизы (D8)."""
 
 from ._app import GameplayService, RecoveryUnavailableError
+from ._daily import DailyState
+from ._daily_infra import DailyDoneTodayError
 from ._domain import ACHIEVEMENTS, AchievementDef, EarnedAchievement, Progress, RecoveryOffer
 from ._heroes import APPEARANCES, HeroLine, Postcard
 from ._heroes_app import CompanionState, HeroService, MentorState
@@ -46,6 +48,8 @@ __all__ = [
     "AchievementDef",
     "AlreadyAcceptedError",
     "CompanionState",
+    "DailyDoneTodayError",
+    "DailyState",
     "EarnedAchievement",
     "FreezeStockFullError",
     "GameplayService",

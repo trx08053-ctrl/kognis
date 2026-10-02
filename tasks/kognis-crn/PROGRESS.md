@@ -1,9 +1,8 @@
 # PROGRESS kognis-crn
 
 ## Следующий шаг
-Шаг 5 плана: фронтенд — `just api-types` (схемы), api-клиент (sparks/daily/archive), раздел искр
-с магазином + аксессуары в SVG спутника, квест дня на странице квестов, страница архива
-(«В этот день» + мозаика), словари `spark.*`/`daily.*`/`archive.*`, вит-тесты, `just fe-check`.
+Ревью сабагентом `reviewer` → `tasks/kognis-crn/REVIEW.md`; blocker/major устранить, затем
+заполнить раздел 9 TASK.md и `just task-done kognis-crn`.
 
 ## Сделано
 | Дата | Шаг | Коммит | Evidence / проверка |
@@ -13,6 +12,10 @@
 | 2026-10-01 | Шаг 1: домен искр `_sparks.py` (начисления за факт, каталог-данные), журнал `spark_events`/`spark_purchases` (миграция 0019, expand), хуки в `_grant` и `complete_step`, купленные заморозки в серии (`StreakRules.bought`, кап 2) | `c0ced75` | `tests/gameplay/` + `test_gameplay.py` 84 passed; миграции ok; тест миграции 0019; `test_streak_model` с bought-сценариями |
 | 2026-10-01 | Шаг 2: сервис `SparksService`, API `GET /api/sparks` + `POST /api/sparks/purchase` (409-коды, заморозка при полном запасе), advisory-лок покупок на Postgres | `517eaed` | AC1: `tests/web/test_sparks.py` 6 passed (в т.ч. конкурентность без минуса) |
 | 2026-10-01 | Шаг 3: квест дня `_daily.py` (пул 9, детерминированный выбор 3), `daily_picks` (миграция 0020), API `/api/daily-quest` (выбор 1/день, выполнение), недельная рекомендация наставника, +5 искров за день, коды ошибок в словаре | `ad7fb16` | AC2: `test_daily.py` + `test_daily_quest.py` 12 passed; gameplay+web 271 passed; миграции ok |
+| 2026-10-01 | Шаг 4: архив — `GET /api/archive/on-this-day` (год/месяц назад, только plain), `/api/archive/mood-year` (мозаика) | `8400517` | AC3: `tests/web/test_archive.py` 4 passed (IDOR-изоляция, без замков, окно 365 дней) |
+| 2026-10-01 | Шаг 5: фронтенд — api-клиент, магазин `Sparks.tsx`, квест дня `DailyQuest.tsx`, `ArchivePage` (мозаика Year-in-Pixels), аксессуары в SVG, маршрут `/archive`, словари | `844d462` | vitest 112 passed; tsc/biome чистые; ветки 89.84% ≥ планки |
+| 2026-10-01 | Шаг 6: e2e AC4 — покупка шарфа меняет облик спутника, скриншот + axe без serious/critical | `581cb64` | `just e2e -k accessory`: 1 passed; `.evidence/screens/e2e-sparks-accessory.png` |
+| 2026-10-01 | verify: планка покрытия веток и строк закрыта тестами (гонка покупок, advisory-лок в Postgres-интеграции, error-пути), карточка модуля и MAP обновлены | `4ba0bc1` | `just verify` зелёный: tree `fe218d5f4845`, evidence `.evidence/fe218d5f484528854e66f8bb325454ca190d1d0e.json` |
 
 ## Блокеры и вопросы человеку
 -

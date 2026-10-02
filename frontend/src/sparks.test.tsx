@@ -148,6 +148,35 @@ test("купленный фон рисуется за спутником", () =>
   }
 });
 
+test("купленный фон виден на карточке спутника целиком (владение → рендер)", async () => {
+  const companion = {
+    chosen: true,
+    appearance: "fox",
+    name: "Луна",
+    address: "ty",
+    stage: 2,
+    days_total: 9,
+    days_to_next: 12,
+    resting: false,
+    line: null,
+    postcard: null,
+    mentors: [],
+  };
+  stub({
+    "GET /api/sparks": () =>
+      reply(200, {
+        balance: 0,
+        freezes: 2,
+        catalog: [{ code: "bg_stars", kind: "background", price: 75, owned: true }],
+      }),
+    "GET /api/companion": () => reply(200, companion),
+  });
+  show(<CompanionCard />);
+  const art = await screen.findByTestId("companion-art");
+  await waitFor(() => expect(art.getAttribute("data-background")).toBe("bg_stars"));
+  expect(screen.getByTestId("companion-background")).toBeTruthy();
+});
+
 test("неизвестный код товара не ломает витрину", async () => {
   stub({
     "GET /api/sparks": () =>

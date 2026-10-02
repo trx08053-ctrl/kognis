@@ -22,12 +22,7 @@
   `src/kognis/diary` и `analysis` — только чтение через публичный API, `frontend/` (страницы, api.ts, ru.ts).
 
 ## 2a. Область влияния
-- **Модули:** `src/kognis/gameplay` (новые `_sparks.py`, `_sparks_app.py`, `_sparks_infra.py`,
-  `_daily.py`, `_daily_infra.py`; хуки в `_app.py`, `_quests_app.py`, `_streak.py`, `__init__.py`),
-  `src/kognis/web` (новые `_sparks.py`, `_daily.py`, `_archive.py`, регистрация в `_app.py`,
-  `tests/web/test_structure.py`), `frontend/` (компоненты `Sparks.tsx`, `DailyQuest.tsx`,
-  `Heroes.tsx`, страница `ArchivePage.tsx`, `api.ts`, `i18n/ru.ts`, `style.css`, `App.tsx`,
-  `Shell.tsx`, `ProfilePage.tsx`, `QuestsPage.tsx`), `docs/` (ARCHITECTURE, modules/gameplay, MAP).
+- **Модули:** `src/kognis/gameplay`, `src/kognis/web`, `frontend/`, `docs/` — новые `_sparks.py`/`_sparks_app.py`/`_sparks_infra.py`/`_daily.py`/`_daily_infra.py` (gameplay), `_sparks.py`/`_daily.py`/`_archive.py` (web), компоненты `Sparks.tsx`/`DailyQuest.tsx`/`Heroes.tsx` и страница `ArchivePage.tsx` (frontend), карточка модуля и MAP (docs).
 - **Публичные интерфейсы:** новые маршруты `/api/sparks` (баланс, каталог, покупки), `/api/sparks/purchase`,
   `/api/daily-quest` (варианты, выбор, выполнение), `/api/archive/on-this-day`, `/api/archive/mood-year`;
   существующие контракты не меняются.

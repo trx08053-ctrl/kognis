@@ -48,7 +48,7 @@ def test_spark_purchase_on_postgres(pg_engine: Engine) -> None:
         repo = SparkRepository(session)
         repo.add_spark_once(1, "weekly_goal", "2026-W37", date(2026, 9, 7), 60)
         with pytest.raises(NotEnoughSparksError):
-            repo.add_purchase(1, "theme_slate", "once", 100, date(2026, 9, 7))
+            repo.add_purchase(1, "bg_forest", "once", 75, date(2026, 9, 7))
         repo.add_purchase(1, scarf.code, "once", scarf.price, date(2026, 9, 7))
         assert repo.balance(1) == 10
         with pytest.raises(OwnedItemError):

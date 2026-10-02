@@ -80,11 +80,11 @@ def test_on_this_day_shows_own_entries_from_year_and_month_ago(
 
 
 @pytest.mark.acceptance("kognis-crn", "AC3")
-def test_archive_is_isolated_between_users(api: TestClient, clock: Clock) -> None:
+def test_archive_is_isolated_between_users(api: TestClient, engine: Engine, clock: Clock) -> None:
     """Чужие записи и итоги в архиве не видны (IDOR): у каждого — только свои."""
     add_entry(api, TODAY - dt.timedelta(days=365), "чужая запись")
     review(api, clock, TODAY, 8)
-    other = TestClient(create_app(engine_for(api), clock=clock, data_key=DATA_KEY))
+    other = TestClient(create_app(engine, clock=clock, data_key=DATA_KEY))
     register_and_login(other, "b@example.com")
     empty = other.get("/api/archive/on-this-day").json()
     assert empty["entries"] == []  # записи пользователя A не видны
@@ -105,8 +105,3 @@ def test_mood_year_covers_last_365_days(api: TestClient, clock: Clock) -> None:
         TODAY.isoformat(): 9,
         (TODAY - dt.timedelta(days=364)).isoformat(): 3,
     }
-
-
-def engine_for(client: TestClient):
-    """Engine приложения, на котором создан клиент (общая база для двух пользователей)."""
-    return client.app.state.db

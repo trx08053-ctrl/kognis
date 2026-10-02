@@ -19,8 +19,9 @@ const MOOD_COLORS = [
 ] as const;
 
 function moodColor(mood: number): string {
+  // индекс зажат с обеих сторон: клетка всегда в палитре
   const idx = Math.min(MOOD_COLORS.length - 1, Math.max(0, mood - 1));
-  return MOOD_COLORS[idx] ?? "#15803d";
+  return MOOD_COLORS[idx] as string;
 }
 
 function Ago({ ago }: { ago: string }) {

@@ -111,3 +111,23 @@ test("кризис: блока квеста дня нет", () => {
   const { container } = show(<DailyQuest crisis />);
   expect(container.querySelector('[data-testid="daily-quest"]')).toBeNull();
 });
+
+test("ошибка сервера: показывается сообщение, блок не падает", async () => {
+  stub({
+    "GET /api/daily-quest": () => reply(500, { detail: { code: "server.internal", params: {} } }),
+  });
+  show(<DailyQuest />);
+  expect(await screen.findByText(ru["error.server.internal"])).toBeTruthy();
+});
+
+test("без квеста недели — подсказки нет; неизвестный код варианта не падает", async () => {
+  stub({
+    "GET /api/daily-quest": () =>
+      reply(200, daily({ weekly: null, options: ["water", "unknown_code", "breathe"] })),
+    "GET /api/quests/library": () => reply(200, []),
+  });
+  show(<DailyQuest />);
+  const options = await screen.findAllByTestId(/^daily-option-/);
+  expect(options).toHaveLength(3);
+  expect(screen.queryByTestId("daily-weekly")).toBeNull();
+});

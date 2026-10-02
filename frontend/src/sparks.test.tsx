@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, expect, test, vi } from "vitest";
-import { CompanionCard } from "./components/Heroes";
+import { CompanionArt, CompanionCard } from "./components/Heroes";
 import { SparksPanel } from "./components/Sparks";
 import { ru } from "./i18n/ru";
 
@@ -124,6 +124,31 @@ test("аксессуар после покупки виден на спутни�
   const art = await screen.findByTestId("companion-art");
   await waitFor(() => expect(art.getAttribute("data-accessory")).toBe("scarf"));
   expect(screen.getByTestId("companion-accessory")).toBeTruthy();
+});
+
+test("каждый аксессуар каталога рисуется на спутнике", () => {
+  for (const code of ["scarf", "hat", "backpack"]) {
+    const { unmount } = render(
+      <CompanionArt appearance="fox" stage={3} label="тест" accessory={code} />,
+    );
+    expect(screen.getByTestId("companion-accessory")).toBeTruthy();
+    expect(screen.getByTestId("companion-art").getAttribute("data-accessory")).toBe(code);
+    unmount();
+  }
+});
+
+test("неизвестный код товара не ломает витрину", async () => {
+  stub({
+    "GET /api/sparks": () =>
+      reply(200, {
+        balance: 0,
+        freezes: 2,
+        catalog: [{ code: "mystery", kind: "accessory", price: 10, owned: false }],
+      }),
+  });
+  show(<SparksPanel />);
+  expect(await screen.findByTestId("shop-mystery")).toBeTruthy();
+  expect(screen.getByTestId("shop-mystery").textContent).not.toContain("undefined");
 });
 
 test("кризис: блока искр нет", () => {

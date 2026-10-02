@@ -3,7 +3,7 @@
 Один выбор в день — уникальностью (owner, day); повтор в тот же день отклоняется.
 """
 
-from datetime import date
+from datetime import UTC, date, datetime
 
 from sqlalchemy import (
     Column,
@@ -15,6 +15,7 @@ from sqlalchemy import (
     UniqueConstraint,
     insert,
     select,
+    update,
 )
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -22,7 +23,11 @@ from sqlalchemy.orm import Session
 from kognis.db import metadata
 from kognis.errors import CodedError
 
-from ._infra import _now
+
+def _now() -> datetime:
+    """Отметка времени записи (UTC без пояса — так хранит SQLite)."""
+    return datetime.now(UTC).replace(tzinfo=None)
+
 
 daily_picks_table = Table(
     "daily_picks",
@@ -70,11 +75,16 @@ class DailyRepository:
             raise DailyDoneTodayError from None
 
     def mark_done(self, owner_id: int, day: date) -> bool:
-        """Отметить выполнение; False — выбора на день ещё нет или уже отмечено."""
+        """Отметить выполнение; False — выбора на день ещё нет или уже отмечено.
+
+        Гонку двух параллельных отметок исключают уникальные события XP и искр
+        (одна запись на день), поэтому повторная отметка здесь безвредна.
+        """
+        current = self.pick_on(owner_id, day)
+        if current is None or current[1] is not None:
+            return False
         t = daily_picks_table
-        stmt = (
-            t.update()
-            .where(t.c.owner_id == owner_id, t.c.day == day, t.c.done_on.is_(None))
-            .values(done_on=day)
+        self._session.execute(
+            update(t).where(t.c.owner_id == owner_id, t.c.day == day).values(done_on=day)
         )
-        return self._session.execute(stmt).rowcount == 1
+        return True

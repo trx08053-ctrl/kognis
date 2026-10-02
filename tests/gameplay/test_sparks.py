@@ -115,3 +115,24 @@ def test_sparks_are_per_user(engine: Engine) -> None:
         assert repo.balance(1) == 20
         assert repo.balance(2) == 0
         assert repo.purchases(2) == []
+
+
+def test_parallel_purchase_hitting_unique_is_owned_not_a_charge(
+    engine: Engine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Параллельная покупка успела записаться раньше проверки владения:
+    конфликт уникальности — «уже куплено», без второго списания."""
+
+    def always_new(_self: SparkRepository, *_args: object) -> bool:
+        return False
+
+    scarf = item_by_code("scarf")
+    with transaction(engine) as session:
+        repo = SparkRepository(session)
+        repo.add_spark_once(1, "weekly_goal", "2026-W37", MON, 100)
+        repo.add_purchase(1, scarf.code, purchase_ref(scarf, MON), scarf.price, MON)
+        monkeypatch.setattr(SparkRepository, "has_purchase", always_new)
+        with pytest.raises(OwnedItemError):
+            repo.add_purchase(1, scarf.code, purchase_ref(scarf, MON), scarf.price, TUE)
+        monkeypatch.undo()
+        assert repo.balance(1) == 50  # списание одно

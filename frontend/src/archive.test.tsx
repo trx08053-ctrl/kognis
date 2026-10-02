@@ -112,3 +112,14 @@ test("мозаика: клетка дня с итогом окрашена, сч
     expect(painted.length).toBe(1); // настроение 9 — зелёная клетка
   });
 });
+
+test("ошибка сервера: сообщение вместо падения страницы", async () => {
+  stub({
+    "GET /api/archive/on-this-day": () =>
+      reply(500, { detail: { code: "server.internal", params: {} } }),
+    "GET /api/archive/mood-year": () =>
+      reply(500, { detail: { code: "server.internal", params: {} } }),
+  });
+  show();
+  await waitFor(() => expect(screen.getAllByText(ru["error.server.internal"])).toHaveLength(2));
+});

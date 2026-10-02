@@ -5,7 +5,7 @@
 (owner, item, ref). Отрицательным баланс быть не может: списание только покупкой.
 """
 
-from datetime import date
+from datetime import UTC, date, datetime
 
 from sqlalchemy import (
     Column,
@@ -27,8 +27,12 @@ from sqlalchemy.orm import Session
 from kognis.db import metadata
 from kognis.errors import CodedError
 
-from ._infra import _now
 from ._sparks import ITEM_FREEZE
+
+
+def _now() -> datetime:
+    """Отметка времени записи (UTC без пояса — так хранит SQLite)."""
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class NotEnoughSparksError(CodedError):
@@ -151,8 +155,7 @@ class SparkRepository:
 
     def _lock_owner(self, owner_id: int) -> None:
         """Покупки одного владельца — по очереди (миграции проверок не требует)."""
-        bind = self._session.bind
-        if bind is not None and bind.dialect.name == "postgresql":
+        if self._session.get_bind().dialect.name == "postgresql":
             self._session.execute(text("SELECT pg_advisory_xact_lock(:owner)"), {"owner": owner_id})
 
     def freeze_days(self, owner_id: int) -> frozenset[date]:
@@ -162,7 +165,7 @@ class SparkRepository:
         покупок не бывает, серия считается без них.
         """
         if self._has_purchases is None:
-            self._has_purchases = inspect(self._session.bind).has_table("spark_purchases")
+            self._has_purchases = inspect(self._session.get_bind()).has_table("spark_purchases")
         if not self._has_purchases:
             return frozenset()
         t = spark_purchases_table

@@ -1,11 +1,11 @@
 {
-  "coverage": 99.93,
+  "coverage": 99.94,
   "suppressions": [
     "tests/conftest.py: pytest.skip(\"нет Docker: PostgreSQL — в CI\")  # justified: harness-web песочница"
   ],
   "frontend_coverage": {
-    "branches": 88.9,
-    "lines": 95.29
+    "branches": 90.07,
+    "lines": 95.75
   },
   "i18n_hardcoded": [
     "frontend/src/pages/AnalysisPage.tsx: up: \"настроение растёт\",",

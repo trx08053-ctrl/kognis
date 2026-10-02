@@ -38,7 +38,8 @@ local.db
 .deploy/
 frontend/node_modules/
 frontend/dist/
-frontend/tsconfig.tsbuildinfo  # билд-артефакт tsc, меняется при каждой сборке
+# билд-артефакт tsc, меняется при каждой сборке
+frontend/tsconfig.tsbuildinfo
 
 # Beads / Dolt files (added by bd init)
 .dolt/

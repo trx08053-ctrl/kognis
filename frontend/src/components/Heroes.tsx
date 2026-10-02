@@ -5,6 +5,7 @@ import { type FormEvent, type ReactNode, useEffect, useState } from "react";
 import { type Companion, getCompanion, markStageSeen, saveCompanion } from "../api";
 import { isKey, type Key, useI18n } from "../i18n";
 import { ErrorMessage } from "./ErrorMessage";
+import { useOwnedAccessory } from "./Sparks";
 
 const APPEARANCES = ["fox", "owl", "turtle", "whale"] as const;
 type Appearance = (typeof APPEARANCES)[number];
@@ -62,17 +63,61 @@ function Ears({ kind }: { kind: Appearance }) {
   );
 }
 
+const ACCESSORIES = ["scarf", "hat", "backpack"] as const;
+type Accessory = (typeof ACCESSORIES)[number];
+
+// аксессуары из магазина искр: рисуются поверх спутника у любого облика
+function AccessoryArt({ kind }: { kind: Accessory }) {
+  if (kind === "scarf") {
+    return (
+      <path
+        d="M44 84 q16 8 32 0 l2 8 q-18 8 -36 0z"
+        fill="#ef4444"
+        stroke={INK}
+        strokeWidth="1.5"
+        data-testid="companion-accessory"
+      />
+    );
+  }
+  if (kind === "hat") {
+    return (
+      <g data-testid="companion-accessory">
+        <path d="M38 40 q22 -26 44 0z" fill="#8b5cf6" stroke={INK} strokeWidth="1.5" />
+        <circle cx="60" cy="16" r="4" fill="#fbbf24" stroke={INK} strokeWidth="1.5" />
+      </g>
+    );
+  }
+  return (
+    <g data-testid="companion-accessory">
+      <rect
+        x="92"
+        y="70"
+        width="18"
+        height="20"
+        rx="4"
+        fill="#0ea5e9"
+        stroke={INK}
+        strokeWidth="1.5"
+      />
+      <path d="M96 70 v-4 h10 v4" fill="none" stroke={INK} strokeWidth="1.5" />
+    </g>
+  );
+}
+
 // спутник: облик задаёт силуэт, стадия 1…5 добавляет детали (лист, шарф, звезда, сияние) и размер
 export function CompanionArt({
   appearance,
   stage,
   label,
+  accessory = null,
 }: {
   appearance: Appearance;
   stage: number;
   label: string;
+  accessory?: string | null;
 }) {
   const radius = 24 + stage * 3;
+  const worn = ACCESSORIES.find((a) => a === accessory);
   return (
     <svg
       viewBox="0 0 120 120"
@@ -81,6 +126,7 @@ export function CompanionArt({
       className="hero-art hero-float"
       data-testid="companion-art"
       data-stage={stage}
+      data-accessory={worn ?? "none"}
     >
       {stage >= 5 && (
         <circle cx="60" cy="64" r="54" fill="none" stroke="#f59e0b" strokeWidth="3" opacity="0.7" />
@@ -118,6 +164,7 @@ export function CompanionArt({
           strokeWidth="1.2"
         />
       )}
+      {worn && <AccessoryArt kind={worn} />}
     </svg>
   );
 }
@@ -273,6 +320,7 @@ function ChooseForm({ onDone, initial }: { onDone: () => void; initial: Companio
 function Stage({ data }: { data: Companion }) {
   const { t } = useI18n();
   const text = useText();
+  const accessory = useOwnedAccessory();
   const name = data.name ?? "";
   const title = text(`hero.stage.${data.stage}`);
   return (
@@ -280,6 +328,7 @@ function Stage({ data }: { data: Companion }) {
       <CompanionArt
         appearance={asAppearance(data.appearance)}
         stage={data.stage}
+        accessory={accessory}
         label={t("hero.art.label", {
           name,
           appearance: text(`hero.appearance.${asAppearance(data.appearance)}`),

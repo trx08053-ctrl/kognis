@@ -160,6 +160,21 @@ body {
     height: 7rem;
     flex: none;
   }
+  .mood-mosaic {
+    display: grid;
+    grid-template-columns: repeat(31, minmax(0, 1fr));
+    gap: 2px;
+  }
+  .mood-cell {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 2px;
+  }
+  @media (max-width: 640px) {
+    .mood-mosaic {
+      grid-template-columns: repeat(16, minmax(0, 1fr));
+    }
+  }
   .hero-mentor {
     width: 2.75rem;
     height: 2.75rem;

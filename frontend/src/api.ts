@@ -211,3 +211,28 @@ export const submitQuiz = (code: string, answers: string[]): Promise<QuizResult>
 
 export const openEntry = (id: number, password: string): Promise<Entry> =>
   post<Entry>(`/api/entries/${id}/open`, { password });
+
+// Мотивация 2.0 (4/4): искры (баланс и покупки), квест дня, хранитель архива
+export type Sparks = Schemas["SparksOut"];
+export type ShopPosition = Schemas["ShopPositionOut"];
+
+export const getSparks = (): Promise<Sparks> => fetch("/api/sparks").then((r) => parse<Sparks>(r));
+export const purchaseItem = (item: string): Promise<Sparks> =>
+  post<Sparks>("/api/sparks/purchase", { item });
+
+export type Daily = Schemas["DailyOut"];
+
+export const getDailyQuest = (): Promise<Daily> =>
+  fetch("/api/daily-quest").then((r) => parse<Daily>(r));
+export const chooseDailyQuest = (code: string): Promise<Daily> =>
+  post<Daily>("/api/daily-quest/choose", { code });
+export const completeDailyQuest = (): Promise<Daily> => post<Daily>("/api/daily-quest/done");
+
+export type ArchiveEntry = Schemas["ArchiveEntryOut"];
+export type OnThisDay = Schemas["OnThisDayOut"];
+export type MoodYear = Schemas["MoodYearOut"];
+
+export const getOnThisDay = (): Promise<OnThisDay> =>
+  fetch("/api/archive/on-this-day").then((r) => parse<OnThisDay>(r));
+export const getMoodYear = (): Promise<MoodYear> =>
+  fetch("/api/archive/mood-year").then((r) => parse<MoodYear>(r));

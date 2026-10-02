@@ -12,6 +12,7 @@ import {
   type QuizResult,
   submitQuiz,
 } from "../api";
+import { DailyQuest } from "../components/DailyQuest";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { MentorLine } from "../components/Heroes";
 
@@ -209,6 +210,7 @@ export function QuestsPage() {
       <h2 id="quests-title" className="text-xl font-semibold">
         Квесты
       </h2>
+      <DailyQuest />
       <section aria-labelledby="my-quests-title" className="space-y-3">
         <h3 id="my-quests-title" className="text-lg font-semibold">
           Мои квесты

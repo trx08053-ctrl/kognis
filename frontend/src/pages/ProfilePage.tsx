@@ -5,6 +5,7 @@ import { ErrorMessage } from "../components/ErrorMessage";
 import { LanguageSwitcher } from "../components/LanguageSwitcher";
 import { MotivationPanel } from "../components/Motivation";
 import { Achievements } from "../components/Progress";
+import { SparksPanel } from "../components/Sparks";
 import { timeZoneNames } from "../dates";
 
 const inputClass = "input";
@@ -83,6 +84,7 @@ export function ProfilePage({ user }: { user: User }) {
         <LanguageSwitcher />
       </section>
       <MotivationPanel />
+      <SparksPanel />
       <Achievements />
     </div>
   );

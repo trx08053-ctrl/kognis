@@ -36,6 +36,14 @@ export interface components {
       "answers": (string)[];
       "consent"?: boolean;
     };
+    ArchiveEntryOut: {
+      "id": number;
+      "date": string;
+      "ago": string;
+      "text": string;
+      "tags": (string)[];
+      "emotions": (string)[];
+    };
     CategoryOut: {
       "category": string;
       "value": number;
@@ -68,6 +76,15 @@ export interface components {
     Credentials: {
       "email": string;
       "password": string;
+    };
+    DailyChooseIn: {
+      "code": string;
+    };
+    DailyOut: {
+      "options": (string)[];
+      "picked": string | null;
+      "done": boolean;
+      "weekly": string | null;
     };
     DayReviewIn: {
       "wellbeing": number;
@@ -149,6 +166,10 @@ export interface components {
       "direction": string;
       "unlocked": boolean;
     };
+    MoodDayOut: {
+      "date": string;
+      "mood": number;
+    };
     MoodOut: {
       "points": (components["schemas"]["MoodPointOut"])[];
       "average_mood": number | null;
@@ -159,6 +180,12 @@ export interface components {
       "date": string;
       "mood": number;
       "wellbeing": number;
+    };
+    MoodYearOut: {
+      "days": (components["schemas"]["MoodDayOut"])[];
+    };
+    OnThisDayOut: {
+      "entries": (components["schemas"]["ArchiveEntryOut"])[];
     };
     PatternOut: {
       "title": string;
@@ -194,6 +221,9 @@ export interface components {
       "achievements": (components["schemas"]["AchievementOut"])[];
       "categories": (components["schemas"]["CategoryOut"])[];
       "hidden": (components["schemas"]["HiddenOut"])[];
+    };
+    PurchaseIn: {
+      "item": string;
     };
     QuestOut: {
       "id": number;
@@ -249,6 +279,17 @@ export interface components {
       "email": string;
       "password": string;
       "timezone"?: string | null;
+    };
+    ShopPositionOut: {
+      "code": string;
+      "kind": string;
+      "price": number;
+      "owned": boolean;
+    };
+    SparksOut: {
+      "balance": number;
+      "freezes": number;
+      "catalog": (components["schemas"]["ShopPositionOut"])[];
     };
     StepDoneOut: {
       "quest": components["schemas"]["QuestOut"];

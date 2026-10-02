@@ -109,5 +109,6 @@ const NAV: { to: string; label: Key; Icon: () => ReactNode }[] = [
   { to: "/day", label: "shell.nav.day", Icon: SunIcon },
   { to: "/analysis", label: "shell.nav.analysis", Icon: SparkIcon },
   { to: "/quests", label: "shell.nav.quests", Icon: FlagIcon },
+  { to: "/archive", label: "shell.nav.archive", Icon: BookIcon },
   { to: "/profile", label: "shell.nav.profile", Icon: UserIcon },
 ];

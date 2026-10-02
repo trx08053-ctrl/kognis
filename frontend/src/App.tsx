@@ -6,6 +6,7 @@ import { ErrorMessage } from "./components/ErrorMessage";
 import { Shell } from "./components/Shell";
 import { APP_NAME, useI18n } from "./i18n";
 import { AnalysisPage } from "./pages/AnalysisPage";
+import { ArchivePage } from "./pages/ArchivePage";
 import { DayReviewPage } from "./pages/DayReviewPage";
 import { HomePage } from "./pages/HomePage";
 import { LandingPage } from "./pages/LandingPage";
@@ -78,6 +79,14 @@ export function App() {
           element={
             <Shell user={user}>
               <QuestsPage />
+            </Shell>
+          }
+        />
+        <Route
+          path="/archive"
+          element={
+            <Shell user={user}>
+              <ArchivePage />
             </Shell>
           }
         />

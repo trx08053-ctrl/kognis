@@ -278,10 +278,8 @@ test("шапка показывает уровень и серию, опыт —
         level_start_xp: 50,
         next_level_xp: 120,
         streak: 3,
-        best_streak: 3,
         days_30: 3,
         days_total: 3,
-        week_days: 3,
       }),
   });
   renderApp();

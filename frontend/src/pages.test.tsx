@@ -380,7 +380,8 @@ test("оболочка: смена темы и выход", async () => {
     "POST /api/auth/logout": () => new Response(null, { status: 204 }),
   });
   renderAt("/");
-  const theme = await screen.findByTestId("theme-toggle");
+  fireEvent.click(await screen.findByTestId("user-menu"));
+  const theme = screen.getByTestId("theme-toggle");
   const before = theme.textContent;
   fireEvent.click(theme);
   expect(screen.getByTestId("theme-toggle").textContent).not.toBe(before);

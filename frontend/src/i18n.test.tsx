@@ -72,6 +72,7 @@ afterEach(() => {
 test("смена языка переключает тексты Shell без перезагрузки и меняет <html lang>", async () => {
   renderShell();
   expect(screen.getByTestId("disclaimer").textContent).toContain("не медицинская помощь");
+  fireEvent.click(screen.getByTestId("user-menu"));
   expect(screen.getByRole("button", { name: "Выйти" })).toBeTruthy();
   expect(document.documentElement.lang).toBe("ru");
   expect(document.documentElement.dir).toBe("ltr");

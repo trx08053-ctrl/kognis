@@ -79,6 +79,7 @@ afterEach(() => {
 test("язык профиля включается после входа", async () => {
   stubApi("en");
   renderApp();
+  fireEvent.click(await screen.findByTestId("user-menu"));
   expect(await screen.findByText("Log out")).toBeTruthy();
   expect(document.documentElement.lang).toBe("en");
 });
@@ -86,6 +87,7 @@ test("язык профиля включается после входа", async
 test("ручной выбор языка после применения профиля не перебивается", async () => {
   stubApi("en");
   renderApp();
+  fireEvent.click(await screen.findByTestId("user-menu"));
   expect(await screen.findByText("Log out")).toBeTruthy();
   fireEvent.click(screen.getByText("to-ru"));
   expect(await screen.findByText("Выйти")).toBeTruthy();
@@ -95,6 +97,7 @@ test("ручной выбор языка после применения про�
 test("язык профиля без словаря игнорируется", async () => {
   stubApi("xx");
   renderApp();
+  fireEvent.click(await screen.findByTestId("user-menu"));
   expect(await screen.findByText("Выйти")).toBeTruthy();
   expect(document.documentElement.lang).toBe("ru");
 });

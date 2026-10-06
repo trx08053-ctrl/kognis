@@ -8,16 +8,13 @@ export function useProgress() {
   return useQuery({ queryKey: ["progress"], queryFn: getProgress });
 }
 
-export function ProgressWidget() {
+// полоска опыта живёт в разделе «Профиль» рядом с достижениями, а не на каждом экране
+function ProgressMeter({ data }: { data: Progress }) {
   const { t } = useI18n();
-  const progress = useProgress();
-  if (progress.isError) return <ErrorMessage error={progress.error} />;
-  const data = progress.data;
-  if (!data) return null;
   const span = data.next_level_xp - data.level_start_xp;
   const done = Math.min(span, data.xp - data.level_start_xp);
   return (
-    <section aria-label={t("progress.title")} data-testid="progress" className="space-y-2 card">
+    <section aria-label={t("progress.title")} data-testid="progress" className="space-y-2">
       <div
         className="meter"
         role="progressbar"
@@ -119,6 +116,7 @@ export function Achievements() {
         {t("achievements.title")}
       </h3>
       <ErrorMessage error={progress.error} />
+      {progress.data && <ProgressMeter data={progress.data} />}
       {progress.data && (
         <div className="grid gap-3 sm:grid-cols-2" data-testid="achievement-grid">
           {progress.data.categories.map((c) => (

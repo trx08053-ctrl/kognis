@@ -94,6 +94,7 @@ export const ru = {
   "shell.theme_dark": "Тёмная тема",
   "landing.open_diary": "Открыть дневник",
   "shell.logo": "Kognis — на главную страницу сайта",
+  "shell.menu": "Меню пользователя",
   "shell.logout": "Выйти",
   "shell.nav": "Разделы",
   "shell.nav.diary": "Дневник",

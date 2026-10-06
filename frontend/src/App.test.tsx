@@ -96,6 +96,7 @@ test("аноним видит форму входа и после входа —
   fireEvent.click(screen.getByTestId("auth-submit"));
 
   expect(await screen.findByText("Тревожный день")).toBeTruthy();
+  fireEvent.click(screen.getByTestId("user-menu"));
   expect(screen.getByTestId("whoami").textContent).toBe("ann@example.com");
   expect(fetchMock).toHaveBeenCalledWith(
     "/api/auth/login",
@@ -265,7 +266,7 @@ test("приватная запись: предупреждение, на сер
   expect((await screen.findByTestId("private-text")).textContent).toBe("Тайная мысль");
 });
 
-test("виджет показывает уровень, серию и опыт", async () => {
+test("шапка показывает уровень и серию, опыт — только в разделе «Профиль»", async () => {
   stubApi({
     "GET /api/me": () => reply(200, ME),
     "GET /api/entries": () => reply(200, []),
@@ -286,7 +287,9 @@ test("виджет показывает уровень, серию и опыт",
   renderApp();
   expect((await screen.findByTestId("level")).textContent).toBe("Уровень 2");
   expect(screen.getByTestId("streak").textContent).toBe("Серия: 3 дн.");
-  expect(screen.getByTestId("xp").textContent).toBe("Опыт: 60 из 120");
+  expect(screen.queryByTestId("xp")).toBeNull();
+  fireEvent.click(screen.getByRole("link", { name: "Профиль" }));
+  expect((await screen.findByTestId("xp")).textContent).toBe("Опыт: 60 из 120");
 });
 
 test("страница достижений показывает дату получения", async () => {
@@ -488,6 +491,7 @@ test("регистрация повторяется без пояса, если 
   fireEvent.change(screen.getByLabelText("Email"), { target: { value: "ann@example.com" } });
   fireEvent.change(screen.getByLabelText("Пароль"), { target: { value: "correct horse" } });
   fireEvent.click(screen.getByTestId("auth-submit"));
+  fireEvent.click(await screen.findByTestId("user-menu"));
   expect(await screen.findByTestId("whoami")).toBeTruthy();
   expect(bodies).toEqual([
     { email: "ann@example.com", password: "correct horse", timezone: "Europe/Nowhere" },

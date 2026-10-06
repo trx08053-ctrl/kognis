@@ -37,7 +37,9 @@ def test_first_page_shown_and_more_loads_next(page: Page, live_server: str) -> N
     page.get_by_label("Email").fill("ann@example.com")
     page.get_by_label("Пароль").fill(VALID_PW)
     page.get_by_test_id("auth-submit").click()
+    page.get_by_test_id("user-menu").click()
     expect(page.get_by_test_id("whoami")).to_have_text("ann@example.com")
+    page.keyboard.press("Escape")
 
     # год записей и итогов «задним числом» — через API того же сеанса
     api = page.context.request

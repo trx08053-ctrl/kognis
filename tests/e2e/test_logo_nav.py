@@ -32,6 +32,13 @@ def page(browser: Browser, live_server: str) -> Iterator[Page]:
     context.close()
 
 
+def expect_signed_in(page: Page, email: str) -> None:
+    """Email виден в меню аватара (kognis-2zb); меню закрывается Escape."""
+    page.get_by_test_id("user-menu").click()
+    expect(page.get_by_test_id("whoami")).to_have_text(email)
+    page.keyboard.press("Escape")
+
+
 @pytest.mark.acceptance("kognis-aoa", "AC1")
 @pytest.mark.e2e
 def test_signed_in_logo_opens_landing_and_button_returns_to_diary(page: Page) -> None:
@@ -40,7 +47,7 @@ def test_signed_in_logo_opens_landing_and_button_returns_to_diary(page: Page) ->
     page.get_by_label("Email").fill("logo@example.com")
     page.get_by_label("Пароль").fill(VALID_PW)
     page.get_by_test_id("auth-submit").click()
-    expect(page.get_by_test_id("whoami")).to_have_text("logo@example.com")
+    expect_signed_in(page, "logo@example.com")
 
     page.get_by_role("link", name="Kognis — на главную страницу сайта").click()
     expect(page.get_by_role("heading", level=1)).to_contain_text("первый шаг к спокойствию")
@@ -48,7 +55,7 @@ def test_signed_in_logo_opens_landing_and_button_returns_to_diary(page: Page) ->
     expect(page.get_by_test_id("auth-submit")).to_have_count(0)
 
     page.get_by_test_id("open-diary-hero").click()
-    expect(page.get_by_test_id("whoami")).to_have_text("logo@example.com")
+    expect_signed_in(page, "logo@example.com")
     assert not page.url.endswith("/welcome")
 
 

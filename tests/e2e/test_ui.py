@@ -63,19 +63,31 @@ def page(browser: Browser, live_server: str) -> Iterator[Page]:
     page.context.close()
 
 
+def open_user_menu(page: Page) -> None:
+    """Email, тема и выход — в меню аватара (kognis-2zb): whoami виден только в нём."""
+    page.get_by_test_id("user-menu").click()
+
+
+def expect_signed_in(page: Page, email: str) -> None:
+    """Проверка, что пользователь вошёл: email в меню аватара; меню закрывается Escape."""
+    open_user_menu(page)
+    expect(page.get_by_test_id("whoami")).to_have_text(email)
+    page.keyboard.press("Escape")
+
+
 def register(page: Page, email: str) -> None:
     page.get_by_role("button", name="Нет аккаунта? Зарегистрироваться").click()
     page.get_by_label("Email").fill(email)
     page.get_by_label("Пароль").fill(VALID_PW)
     page.get_by_test_id("auth-submit").click()
-    expect(page.get_by_test_id("whoami")).to_have_text(email)
+    expect_signed_in(page, email)
 
 
 def login(page: Page, email: str) -> None:
     page.get_by_label("Email").fill(email)
     page.get_by_label("Пароль").fill(VALID_PW)
     page.get_by_test_id("auth-submit").click()
-    expect(page.get_by_test_id("whoami")).to_have_text(email)
+    expect_signed_in(page, email)
 
 
 @pytest.mark.acceptance("kognis-b8z", "AC2")
@@ -212,17 +224,19 @@ def test_locked_entry_flow_and_accessibility(page: Page) -> None:
 @pytest.mark.acceptance("kognis-50k", "AC3")
 @pytest.mark.e2e
 def test_progress_widget_and_achievements_page(page: Page) -> None:
-    """Запись даёт опыт в виджете и достижение «Первая запись» с датой; axe без серьёзных."""
+    """Запись даёт опыт (в «Профиле») и достижение «Первая запись» с датой; axe без серьёзных."""
     register(page, "ann@example.com")
     expect(page.get_by_test_id("level")).to_have_text("Уровень 1")
     page.get_by_label("Что произошло и что вы чувствуете").fill("Первый шаг")
     page.get_by_test_id("save-entry").click()
-    expect(page.get_by_test_id("xp")).to_have_text("Опыт: 10 из 50")
     expect(page.get_by_test_id("streak")).to_have_text("Серия: 1 дн.")
+    # полоска опыта живёт в «Профиле» (kognis-2zb), а не на каждом экране
+    expect(page.get_by_test_id("xp")).to_have_count(0)
+    page.get_by_role("link", name="Профиль").click()
+    expect(page.get_by_test_id("xp")).to_have_text("Опыт: 10 из 50")
     SCREENS.mkdir(parents=True, exist_ok=True)
     page.screenshot(path=str(SCREENS / "e2e-progress.png"), full_page=True)
 
-    page.get_by_role("link", name="Профиль").click()
     item = page.get_by_test_id("achievements").get_by_role("listitem")
     expect(item).to_have_count(1)
     expect(item).to_contain_text("Первая запись")
@@ -404,7 +418,7 @@ def test_quests_screen(browser: Browser, engine: Engine) -> None:
         register(page, "ann@example.com")
         page.get_by_label("Что произошло и что вы чувствуете").fill("Сегодня страшно звонить")
         page.get_by_test_id("save-entry").click()
-        expect(page.get_by_test_id("xp")).to_have_text("Опыт: 10 из 50")
+        api_xp(page, url, 10)
         page.get_by_role("link", name="Разбор").click()
         page.get_by_label("Согласен(на) передать записи").check()
         page.get_by_test_id("run-analysis").click()
@@ -417,7 +431,7 @@ def test_quests_screen(browser: Browser, engine: Engine) -> None:
         expect(quest).to_contain_text("Выполнено шагов: 0 из 3")
         quest.get_by_role("button", name="Отметить").first.click()
         expect(quest).to_contain_text("Выполнено шагов: 1 из 3")
-        expect(page.get_by_test_id("xp")).to_have_text("Опыт: 25 из 50")
+        api_xp(page, url, 25)
 
         page.get_by_role("button", name="Принять: Поймай автоматическую мысль").click()
         expect(page.get_by_test_id("quest")).to_have_count(2)
@@ -430,7 +444,7 @@ def test_quests_screen(browser: Browser, engine: Engine) -> None:
             box.fill("Ответ")
         quiz.get_by_role("button", name="Сохранить ответы").click()
         expect(quiz.get_by_test_id("quiz-done")).to_contain_text("+10")
-        expect(page.get_by_test_id("xp")).to_have_text("Опыт: 35 из 50")
+        api_xp(page, url, 35)
         SCREENS.mkdir(parents=True, exist_ok=True)
         page.screenshot(path=str(SCREENS / "e2e-quests.png"), full_page=True)
         check_axe(page)
@@ -462,6 +476,26 @@ def is_dark(page: Page) -> bool:
     return bool(page.evaluate("document.documentElement.classList.contains('dark')"))
 
 
+def open_theme_toggle(page: Page) -> None:
+    """Переключатель темы — в меню аватара (kognis-2zb); после — Escape, чтобы закрыть меню."""
+    page.get_by_test_id("user-menu").click()
+    page.get_by_test_id("theme-toggle").click()
+    page.keyboard.press("Escape")
+
+
+def api_xp(page: Page, url: str, want: int) -> None:
+    """Опыт из /api/progress: на экранах больше нет полоски опыта (kognis-2zb), она в «Профиле».
+    Опыт начисляется чуть позже действия — значение дожидается, как прежде виджет."""
+    deadline = time.monotonic() + 5
+    got = -1
+    while time.monotonic() < deadline:
+        got = int(page.context.request.get(f"{url}/api/progress").json()["xp"])
+        if got == want:
+            return
+        time.sleep(0.1)
+    raise AssertionError(f"опыт: {got}, ожидали {want}")
+
+
 @pytest.mark.acceptance("kognis-0wr", "AC1")
 @pytest.mark.e2e
 def test_dark_theme_follows_system_and_is_remembered(browser: Browser, live_server: str) -> None:
@@ -477,14 +511,17 @@ def test_dark_theme_follows_system_and_is_remembered(browser: Browser, live_serv
     dark.close()
 
     register(lp, "ann@example.com")
+    lp.get_by_test_id("user-menu").click()
     toggle = lp.get_by_test_id("theme-toggle")
     toggle.click()
     assert is_dark(lp)
     lp.reload()  # выбор хранится в браузере
+    lp.get_by_test_id("user-menu").click()
     expect(lp.get_by_test_id("whoami")).to_be_visible()
     assert is_dark(lp)
     lp.get_by_test_id("theme-toggle").click()
     lp.reload()
+    lp.get_by_test_id("user-menu").click()
     expect(lp.get_by_test_id("whoami")).to_be_visible()
     assert not is_dark(lp)
     light.close()
@@ -553,7 +590,7 @@ def test_key_screens_have_no_serious_a11y_violations_in_both_themes(
 
     for theme in ("light", "dark"):
         if theme == "dark":
-            page.get_by_test_id("theme-toggle").click()
+            open_theme_toggle(page)
             assert is_dark(page)
         for name, action in [
             ("home", ""),
@@ -646,7 +683,7 @@ def test_responsive_navigation_screens_and_a11y(browser: Browser, live_server: s
             assert box["height"] >= size["height"] - 1, "панель не на всю высоту"
         for theme in ("light", "dark"):
             if theme == "dark":
-                page.get_by_test_id("theme-toggle").click()
+                open_theme_toggle(page)
                 assert is_dark(page)
             for name, link in ROUTES:
                 page.get_by_role("link", name=link, exact=True).click()
@@ -776,6 +813,7 @@ def test_theme_button_name_describes_action(browser: Browser, live_server: str) 
     page.goto(live_server)
     register(page, "ann@example.com")
     assert not is_dark(page)
+    page.get_by_test_id("user-menu").click()
     page.get_by_role("button", name="Тёмная тема").click()
     assert is_dark(page)
     expect(page.get_by_role("button", name="Тёмная тема")).to_have_count(0)
@@ -801,7 +839,9 @@ def test_shell_texts_unchanged_after_i18n(page: Page) -> None:
     nav = page.get_by_role("navigation", name="Разделы")
     for name in ["Дневник", "Итог дня", "Разбор", "Квесты", "Профиль"]:
         expect(nav.get_by_role("link", name=name, exact=True)).to_be_visible()
+    page.get_by_test_id("user-menu").click()
     expect(page.get_by_role("button", name="Выйти")).to_be_visible()
+    page.keyboard.press("Escape")
     page.get_by_role("link", name="Профиль", exact=True).click()
     expect(page.get_by_test_id("timezone-select")).to_be_visible()
     expect(page.get_by_test_id("language-select")).to_have_count(0)

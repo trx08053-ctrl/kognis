@@ -60,12 +60,14 @@ def test_topbar_is_compact_and_experience_lives_in_profile(page: Page) -> None:
     expect(page.get_by_test_id("level")).to_have_text("Уровень 1")
     expect(page.get_by_test_id("days-30-badge")).to_be_visible()
     expect(page.get_by_test_id("user-menu")).to_be_visible()
-    # второй постоянный блок (опыт) и реквизиты меню шапку больше не занимают
-    expect(page.get_by_test_id("xp")).to_have_count(0)
-    expect(page.get_by_test_id("progress")).to_have_count(0)
-    expect(page.get_by_test_id("whoami")).to_have_count(0)
     SCREENS.mkdir(parents=True, exist_ok=True)
     page.screenshot(path=str(SCREENS / "e2e-topbar.png"), full_page=True)
+    # второй постоянный блок (опыт) и реквизиты меню шапку больше не занимают — ни в одном разделе
+    for link in ("Дневник", "Итог дня", "Разбор", "Квесты"):
+        page.get_by_role("link", name=link, exact=True).click()
+        expect(page.get_by_test_id("xp")).to_have_count(0)
+        expect(page.get_by_test_id("progress")).to_have_count(0)
+    expect(page.get_by_test_id("whoami")).to_have_count(0)
 
     page.get_by_role("link", name="Профиль").click()
     expect(page.get_by_test_id("progress")).to_be_visible()

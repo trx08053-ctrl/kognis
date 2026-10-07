@@ -1,6 +1,7 @@
 """Искры по HTTP (kognis-crn, AC1): начисления, покупка, идемпотентность, конкурентность."""
 
 import datetime as dt
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
@@ -110,6 +111,7 @@ def test_freeze_purchase_refused_when_stock_full(api: TestClient, clock: Clock) 
     assert r.json()["detail"]["code"] == "sparks.freeze_full"
 
 
+@pytest.mark.acceptance("kognis-ox4", "AC1")
 def test_concurrent_purchases_never_go_negative(engine: Engine, clock: Clock) -> None:
     """Параллельные покупки при балансе на одну: минуса не возникает ни в каком исходе."""
     client = TestClient(create_app(engine, clock=clock))
@@ -119,11 +121,15 @@ def test_concurrent_purchases_never_go_negative(engine: Engine, clock: Clock) ->
     with transaction(engine) as session:
         SparkRepository(session).add_spark_once(1, "weekly_goal", "2026-W37", MON, 100)
 
+    # барьер вводит все покупки одновременно: без сериализации гонка проявляется всегда
+    start = threading.Barrier(3)
+
     def purchase(item: str) -> Any:
         client = TestClient(create_app(engine, clock=clock))
         assert client.post(
             "/api/auth/login", json={"email": "a@example.com", "password": PW}
         ).is_success
+        start.wait()
         return buy(client, item)
 
     codes = ["scarf", "hat", "backpack"]  # по 50: хватит максимум на две

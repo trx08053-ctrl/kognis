@@ -131,7 +131,7 @@ class SparkRepository:
         Владение проверяется раньше баланса: «уже куплено» точнее «не хватает».
         Проверка баланса и списание в одной транзакции держат неотрицательность баланса;
         на Postgres покупки одного владельца сериализует advisory-лок (READ COMMITTED
-        иначе допустил бы два списания одного баланса), SQLite пишет только один.
+        иначе допустил бы два списания одного баланса), на SQLite — write-lock транзакции.
         """
         self._lock_owner(owner_id)
         if self.has_purchase(owner_id, item, ref):
@@ -157,6 +157,10 @@ class SparkRepository:
         """Покупки одного владельца — по очереди (миграции проверок не требует)."""
         if self._session.get_bind().dialect.name == "postgresql":
             self._session.execute(text("SELECT pg_advisory_xact_lock(:owner)"), {"owner": owner_id})
+        else:
+            # SQLite: no-op-запись берёт write-lock до конца транзакции; без неё проверка
+            # баланса и списание не атомарны и параллельные покупки уводят баланс в минус
+            self._session.execute(text("UPDATE spark_events SET id = id WHERE 0"))
 
     def freeze_days(self, owner_id: int) -> frozenset[date]:
         """Дни покупки заморозок: запас серии пополняется в эти даты (кап в _streak).

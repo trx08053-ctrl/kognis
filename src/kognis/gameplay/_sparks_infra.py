@@ -158,8 +158,9 @@ class SparkRepository:
         if self._session.get_bind().dialect.name == "postgresql":
             self._session.execute(text("SELECT pg_advisory_xact_lock(:owner)"), {"owner": owner_id})
         else:
-            # SQLite: no-op-запись берёт write-lock до конца транзакции; без неё проверка
-            # баланса и списание не атомарны и параллельные покупки уводят баланс в минус
+            # не-Postgres (в проекте это SQLite): no-op-запись берёт write-lock до конца
+            # транзакции (таблица не важна — блок на всю базу); без неё проверка баланса
+            # и списание не атомарны и параллельные покупки уводят баланс в минус
             self._session.execute(text("UPDATE spark_events SET id = id WHERE 0"))
 
     def freeze_days(self, owner_id: int) -> frozenset[date]:

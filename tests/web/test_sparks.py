@@ -113,30 +113,30 @@ def test_freeze_purchase_refused_when_stock_full(api: TestClient, clock: Clock) 
 
 @pytest.mark.acceptance("kognis-ox4", "AC1")
 def test_concurrent_purchases_never_go_negative(engine: Engine, clock: Clock) -> None:
-    """Параллельные покупки при балансе на одну: минуса не возникает ни в каком исходе."""
-    client = TestClient(create_app(engine, clock=clock))
-    assert client.post(
-        "/api/auth/register", json={"email": "a@example.com", "password": PW}
-    ).is_success
-    with transaction(engine) as session:
-        SparkRepository(session).add_spark_once(1, "weekly_goal", "2026-W37", MON, 100)
+    """Параллельные покупки при балансе на одну: минуса не возникает ни в каком исходе.
 
-    # барьер вводит все покупки одновременно: без сериализации гонка проявляется всегда
-    start = threading.Barrier(3)
-
-    def purchase(item: str) -> Any:
-        client = TestClient(create_app(engine, clock=clock))
-        assert client.post(
-            "/api/auth/login", json={"email": "a@example.com", "password": PW}
-        ).is_success
-        start.wait()
-        return buy(client, item)
-
+    Десять раундов на разных владельцах: окно «прочитал баланс → списал» зависит
+    от планировщика, одного захода для регрессии мало.
+    """
     codes = ["scarf", "hat", "backpack"]  # по 50: хватит максимум на две
-    with ThreadPoolExecutor(max_workers=3) as pool:
-        results = list(pool.map(purchase, codes))
-    successes = sum(1 for r in results if r.status_code == 200)
-    body = catalog(client)
-    assert body["balance"] >= 0  # минуса нет ни в каком исходе
-    assert len(owned_codes(body)) == successes  # успешных — ровно столько, сколько куплено
-    assert 50 * successes + body["balance"] == 100  # искры не появились из ниоткуда
+    for owner_id in range(1, 11):
+        email = f"buyer{owner_id}@example.com"
+        client = TestClient(create_app(engine, clock=clock))
+        assert client.post("/api/auth/register", json={"email": email, "password": PW}).is_success
+        with transaction(engine) as session:
+            SparkRepository(session).add_spark_once(owner_id, "weekly_goal", "2026-W37", MON, 100)
+        start = threading.Barrier(len(codes), timeout=30)
+
+        def purchase(item: str, barrier: threading.Barrier = start, email: str = email) -> Any:
+            buyer = TestClient(create_app(engine, clock=clock))
+            assert buyer.post("/api/auth/login", json={"email": email, "password": PW}).is_success
+            barrier.wait()
+            return buy(buyer, item)
+
+        with ThreadPoolExecutor(max_workers=len(codes)) as pool:
+            results = list(pool.map(purchase, codes))
+        successes = sum(1 for r in results if r.status_code == 200)
+        body = catalog(client)
+        assert body["balance"] >= 0  # минуса нет ни в каком исходе
+        assert len(owned_codes(body)) == successes  # успешных — ровно столько, сколько куплено
+        assert 50 * successes + body["balance"] == 100  # искры не появились из ниоткуда

@@ -8,10 +8,10 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # diff-cover и no-weakening сравнивают с main
-      - uses: jdx/mise-action@v3
+      - uses: jdx/mise-action@v5
       - run: uv sync --locked
       - run: pnpm --dir frontend install --frozen-lockfile
       # e2e и скриншоты; Docker на раннере есть — интеграция с PostgreSQL выполняется, не пропускается
@@ -20,7 +20,7 @@ jobs:
       - run: python3 scripts/check_security.py update
       - run: python3 scripts/verify.py
       - if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: evidence
           path: .evidence/
@@ -32,8 +32,8 @@ jobs:
     needs: verify
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: jdx/mise-action@v3 # trivy для сканирования образа в stage
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v5 # trivy для сканирования образа в stage
       - run: python3 scripts/web.py stage
       - run: python3 scripts/web.py status
       # DAST: OWASP ZAP baseline против работающего staging; правила — .zap-rules.tsv (защищён)
